@@ -669,8 +669,9 @@ class ControlKnob(wx.Panel):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
                           style=wx.NO_BORDER | wx.WANTS_CHARS)
         self.parent = parent
-        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)  
-        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
+        self.backColour = parent.GetBackgroundColour()
+        self.SetBackgroundColour(self.backColour)
         self.SetMinSize(self.GetSize())
         self.knobBitmap = KNOB.GetBitmap()
         self.outFunction = outFunction
@@ -684,8 +685,7 @@ class ControlKnob(wx.Panel):
         self.midictl = None
         self.new = ''
         self.floatPrecision = '%.3f'
-        if backColour: self.backColour = backColour
-        else: self.backColour = BACKGROUND_COLOUR
+
         if init != None: 
             self.SetValue(init)
             self.init = init
@@ -741,7 +741,7 @@ class ControlKnob(wx.Panel):
     def getLog(self):
         return self.log
     
-    def SetRange(self, minvalue, maxvalue):   
+    def SetRange(self, minvalue, maxvalue):
         self.minvalue = minvalue
         self.maxvalue = maxvalue
     
@@ -842,7 +842,7 @@ class ControlKnob(wx.Panel):
                 offY = self.clickPos[1] - pos[1]
                 off = offY
                 off *= 0.005 * (self.maxvalue - self.minvalue)
-                self.value = clamp(self.oldValue + off, self.minvalue, self.maxvalue)    
+                self.value = clamp(self.oldValue + off, self.minvalue, self.maxvalue)
                 self.selected = False
                 self.Refresh()
     
@@ -862,7 +862,6 @@ class ControlKnob(wx.Panel):
         dc.DrawRectangle(0, 0, w, h)
 
         dc.SetFont(self.font)
-        dc.SetTextForeground("#000000")
     
         # Draw text label
         reclab = wx.Rect(0, 1, w, 9)
@@ -898,7 +897,7 @@ class ControlKnob(wx.Panel):
             width = len(val) * (dc.GetCharWidth() - 3)
         else:
             width = len(val) * dc.GetCharWidth()
-        dc.SetTextForeground('#000000')
+        # dc.SetTextForeground('#000000')
         dc.DrawLabel(val, recval, wx.ALIGN_CENTER)
     
         # Send value

@@ -120,7 +120,7 @@ class HelpFrame(wx.Frame):
             style = wx.FRAME_TOOL_WINDOW | wx.FRAME_FLOAT_ON_PARENT | wx.NO_BORDER  
         wx.Frame.__init__(self, parent=parent, id=id, title=title, size=size, 
                         style=style)
-        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.SetBackgroundColour(parent.GetBackgroundColour())
         if vars.constants["PLATFORM"] == "darwin":
             close_accel = wx.ACCEL_CMD
         else:
@@ -132,7 +132,7 @@ class HelpFrame(wx.Frame):
         self.rtc.Bind(wx.EVT_LEFT_DOWN, self.onClose)
         self.rtc.SetEditable(False)
         wx.CallAfter(self.rtc.SetFocus)
-        self.rtc.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.rtc.SetBackgroundColour(parent.GetBackgroundColour())
         caret = self.rtc.GetCaret()
         caret.Hide()
 
@@ -173,7 +173,7 @@ class LFOFrame(wx.MiniFrame):
         self.parent = parent
         self.SetMaxSize((230,270))
         self.SetSize((230,270))
-        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.SetBackgroundColour(parent.GetBackgroundColour())
         if vars.constants["PLATFORM"] == "darwin":
             close_accel = wx.ACCEL_CMD
         else:
@@ -205,7 +205,7 @@ class LFOFrame(wx.MiniFrame):
         self.Bind(wx.EVT_MENU, self.onClose, id=vars.constants["ID"]["CloseLFO"])
         self.mouseOffset = (0,0)
         self.which = which
-        self.panel = LFOPanel(self, "LFO", "%s LFO" % label, synth, LFO_CONFIG["p1"], LFO_CONFIG["p2"], LFO_CONFIG["p3"], LFO_CONFIG["p4"], which)
+        self.panel = LFOPanel(self, "LFO", f"{label} LFO", synth, LFO_CONFIG["p1"], LFO_CONFIG["p2"], LFO_CONFIG["p3"], LFO_CONFIG["p4"], which)
         self.panel.SetPosition((0,0))
         self.panel.title.Bind(wx.EVT_LEFT_DOWN, self.onMouseDown)
         self.panel.title.Bind(wx.EVT_LEFT_UP, self.onMouseUp)
@@ -255,13 +255,16 @@ class LFOFrame(wx.MiniFrame):
 
 class LFOButtons(GenStaticText):
     def __init__(self, parent, label="LFO", synth=None, which=0, callback=None):
-        GenStaticText.__init__(self, parent, -1, label=label, size=(30,12))
+        GenStaticText.__init__(self, parent, -1, label=label, pos=(0, 40))
         self.parent = parent
         self.synth = synth
         self.which = which
         self.state = False
         self.callback = callback
-        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.SetBackgroundColour(parent.GetBackgroundColour())
+        self.onStateBackColour = "#006400"
+        self.offStateBackColour = parent.GetBackgroundColour()
+        self.defaultForegroundColour = parent.GetForegroundColour()
 
         self.font, psize = self.GetFont(), self.GetFont().GetPointSize()
 
@@ -272,7 +275,7 @@ class LFOButtons(GenStaticText):
         if vars.constants["PLATFORM"] != "darwin":
             self.font.SetPointSize(psize-2)
         else:
-            self.font.SetPointSize(psize-5)
+            self.font.SetPointSize(psize-3)
         self.SetFont(self.font)
 
         self.Bind(wx.EVT_ENTER_WINDOW, self.hover)
@@ -284,27 +287,32 @@ class LFOButtons(GenStaticText):
         self.state = state
         self.parent.lfo_frames[self.which].panel.synth = self.synth
         if self.state:
-            self.SetForegroundColour("#0000EE")
+            self.SetBackgroundColour(self.onStateBackColour)
+            self.SetForegroundColour(wx.WHITE)
         else:
-            self.SetForegroundColour("#000000")
+            self.SetBackgroundColour(self.offStateBackColour)
+            self.SetForegroundColour(self.defaultForegroundColour)
         self.callback(self.which, self.state)
-    
+
     def hover(self, evt):
         font, ptsize = self.GetFont(), self.GetFont().GetPointSize()
         font.SetPointSize(ptsize+1)
         self.SetFont(font)
         if self.state:
-            self.SetForegroundColour("#0000CC")
+            self.SetForegroundColour(wx.WHITE)
+            self.SetBackgroundColour(self.onStateBackColour)
         else:
             self.SetForegroundColour("#555555")
     
     def leave(self, evt):
         self.SetFont(self.font)
         if self.state:
-            self.SetForegroundColour("#0000EE")
+            self.SetForegroundColour(wx.WHITE)
+            self.SetBackgroundColour(self.onStateBackColour)
         else:
-            self.SetForegroundColour("#000000")
-    
+            self.SetForegroundColour(self.defaultForegroundColour)
+            self.SetBackgroundColour(self.offStateBackColour)
+
     def MouseDown(self, evt):
         if evt.ShiftDown():
             self.parent.lfo_frames[self.which].panel.synth = self.synth
@@ -314,18 +322,19 @@ class LFOButtons(GenStaticText):
             return
         if self.state:
             self.state = False
-            self.SetForegroundColour("#000000")
+            self.SetForegroundColour(self.defaultForegroundColour)
+            self.SetBackgroundColour(self.offStateBackColour)
         else:
             self.state = True
-            self.SetForegroundColour("#0000EE")
+            self.SetForegroundColour(wx.WHITE)
+            self.SetBackgroundColour(self.onStateBackColour)
         self.Refresh()
         self.callback(self.which, self.state)
 
 class ServerPanel(wx.Panel):
     def __init__(self, parent, colour=BACKGROUND_COLOUR):
         wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
-        self.colour = colour
-        self.SetBackgroundColour(colour)
+        self.colour = parent.GetBackgroundColour()
         self.SetMinSize((230,500))
         self.fileformat = vars.vars["FORMAT"]
         self.sampletype = vars.vars["BITS"]
@@ -472,7 +481,7 @@ class ServerPanel(wx.Panel):
     
         self.textAmp = wx.StaticText(self, id=-1, label="Global Amplitude (dB)")
         self.mainBox.Add(self.textAmp, 0, wx.TOP | wx.LEFT, 4)
-        self.sliderAmp = ZyneControlSlider(self, -60, 18, 0, outFunction=self.changeAmp, backColour=colour)
+        self.sliderAmp = ZyneControlSlider(self, -60, 18, 0, outFunction=self.changeAmp, backColour=self.colour)
         self.mainBox.Add(self.sliderAmp, 0, wx.EXPAND | wx.ALL, 2)
         self.serverSettings.append(1.0)
         self.meter = VuMeter(self)
@@ -484,26 +493,26 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(self.ppEqTitle, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 4)
 
         eqFreqBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobEqF1 = ControlKnob(self, 40, 250, 100, label=' Freq 1', backColour=colour, outFunction=self.changeEqF1)
+        self.knobEqF1 = ControlKnob(self, 40, 250, 100, label=' Freq 1', backColour=self.colour, outFunction=self.changeEqF1)
         eqFreqBox.Add(self.knobEqF1, 0, wx.LEFT | wx.RIGHT, 20)
         self.knobEqF1.setFloatPrecision(2)
-        self.knobEqF2 = ControlKnob(self, 300, 1000, 500, label=' Freq 2', backColour=colour, outFunction=self.changeEqF2)
+        self.knobEqF2 = ControlKnob(self, 300, 1000, 500, label=' Freq 2', backColour=self.colour, outFunction=self.changeEqF2)
         eqFreqBox.Add(self.knobEqF2, 0, wx.LEFT | wx.RIGHT, 20)
         self.knobEqF2.setFloatPrecision(2)
-        self.knobEqF3 = ControlKnob(self, 1200, 5000, 2000, label=' Freq 3', backColour=colour, outFunction=self.changeEqF3)
+        self.knobEqF3 = ControlKnob(self, 1200, 5000, 2000, label=' Freq 3', backColour=self.colour, outFunction=self.changeEqF3)
         eqFreqBox.Add(self.knobEqF3, 0, wx.LEFT | wx.RIGHT, 20)
         self.knobEqF3.setFloatPrecision(2)
 
         self.mainBox.Add(eqFreqBox, 0, wx.CENTER)
 
         eqGainBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobEqA1 = ControlKnob(self, -40, 18, 0, label='B1 gain', backColour=colour, outFunction=self.changeEqA1)
+        self.knobEqA1 = ControlKnob(self, -40, 18, 0, label='B1 gain', backColour=self.colour, outFunction=self.changeEqA1)
         eqGainBox.Add(self.knobEqA1, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA2 = ControlKnob(self, -40, 18, 0, label='B2 gain', backColour=colour, outFunction=self.changeEqA2)
+        self.knobEqA2 = ControlKnob(self, -40, 18, 0, label='B2 gain', backColour=self.colour, outFunction=self.changeEqA2)
         eqGainBox.Add(self.knobEqA2, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA3 = ControlKnob(self, -40, 18, 0, label='B3 gain', backColour=colour, outFunction=self.changeEqA3)
+        self.knobEqA3 = ControlKnob(self, -40, 18, 0, label='B3 gain', backColour=self.colour, outFunction=self.changeEqA3)
         eqGainBox.Add(self.knobEqA3, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA4 = ControlKnob(self, -40, 18, 0, label='B4 gain', backColour=colour, outFunction=self.changeEqA4)
+        self.knobEqA4 = ControlKnob(self, -40, 18, 0, label='B4 gain', backColour=self.colour, outFunction=self.changeEqA4)
         eqGainBox.Add(self.knobEqA4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(eqGainBox, 0, wx.CENTER)
@@ -513,13 +522,13 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND|wx.BOTTOM, 4)
     
         cpKnobBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobComp1 = ControlKnob(self, -60, 0, -3, label=' Thresh', backColour=colour, outFunction=self.changeComp1)
+        self.knobComp1 = ControlKnob(self, -60, 0, -3, label=' Thresh', backColour=self.colour, outFunction=self.changeComp1)
         cpKnobBox.Add(self.knobComp1, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp2 = ControlKnob(self, 1, 10, 2, label=' Ratio', backColour=colour, outFunction=self.changeComp2)
+        self.knobComp2 = ControlKnob(self, 1, 10, 2, label=' Ratio', backColour=self.colour, outFunction=self.changeComp2)
         cpKnobBox.Add(self.knobComp2, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp3 = ControlKnob(self, 0.001, 0.5, 0.01, label='Risetime', backColour=colour, outFunction=self.changeComp3)
+        self.knobComp3 = ControlKnob(self, 0.001, 0.5, 0.01, label='Risetime', backColour=self.colour, outFunction=self.changeComp3)
         cpKnobBox.Add(self.knobComp3, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp4 = ControlKnob(self, 0.01, 1, .1, label='Falltime', backColour=colour, outFunction=self.changeComp4)
+        self.knobComp4 = ControlKnob(self, 0.01, 1, .1, label='Falltime', backColour=self.colour, outFunction=self.changeComp4)
         cpKnobBox.Add(self.knobComp4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(cpKnobBox, 0, wx.CENTER)
@@ -852,7 +861,8 @@ class BasePanel(wx.Panel):
     def __init__(self, parent, name, title, synth, p1, p2, p3, from_lfo=False):
         wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
         self.SetMaxSize((230,265))
-        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.colour = parent.GetBackgroundColour()
+        self.SetBackgroundColour(self.colour)
         self.from_lfo = from_lfo
         self.sliders = []
         self.labels = []
@@ -887,17 +897,17 @@ class BasePanel(wx.Panel):
         self.sizer.Add(text, 0, wx.LEFT, 5)
         self.sizer.AddSpacer(1)
         if self.from_lfo or integer:
-            slider = ZyneControlSlider(self, minValue, maxValue, value, size=(212,16), log=log, integer=integer, outFunction=callback)
+            slider = ZyneControlSlider(self, minValue, maxValue, value, size=(212,16), log=log, integer=integer, outFunction=callback, backColour=self.colour)
             self.sizer.Add(slider, 0, wx.LEFT|wx.RIGHT, 5)
         else:
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
-            slider = ZyneControlSlider(self, minValue, maxValue, value, size=(195,16), log=log, integer=integer, outFunction=callback)
+            slider = ZyneControlSlider(self, minValue, maxValue, value, size=(195,16), log=log, integer=integer, outFunction=callback, backColour=self.colour)
             button = LFOButtons(self, synth=self.synth, which=i, callback=self.startLFO)
             lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i)
             self.buttons[i] = button
             self.lfo_frames[i] = lfo_frame
             hsizer.Add(slider, 0, wx.RIGHT, 1)
-            hsizer.Add(button, 0, wx.LEFT|wx.TOP, 1)
+            hsizer.Add(button, 0, wx.LEFT|wx.TOP, 2)
             self.sizer.Add(hsizer, 0, wx.LEFT|wx.RIGHT, 5)
         self.sizer.AddSpacer(2)
         self.sliders.append(slider)
@@ -911,7 +921,7 @@ class BasePanel(wx.Panel):
 
     def leaveX(self, evt):
         self.close.SetFont(self.font)
-        self.close.SetForegroundColour("white")
+        self.close.SetForegroundColour(parent.GetForegroundColour())
 
     def MouseDown(self, evt):
         if not self.from_lfo:
@@ -1349,6 +1359,7 @@ class LFOPanel(BasePanel):
         self.sizer.Add(self.headPanel, 0, wx.BOTTOM, 3)
 
         self.font = self.close.GetFont()
+
         if vars.constants["PLATFORM"] != "win32":
             ptsize = self.font.GetPointSize()
             self.font.SetPointSize(ptsize - 2)
