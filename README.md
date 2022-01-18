@@ -65,8 +65,9 @@ a good example if you to split your keyboard(s) or if you run more instances of 
 
 as running a http server in the same network which can be reached by any device to send MIDI control commands
 
+- parameters controlled by played note velocity and frequency
 
-Another reason for forking is to update the code for Python >= 3.6 and wxPython 4.
+e.g. longer release time for lower notes or change modulation based on MIDI note velocity
 
 
 ## Contact ##
