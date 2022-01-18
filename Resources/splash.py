@@ -52,7 +52,7 @@ class ZyneSplashScreen(wx.Frame):
         wx.CallAfter(self.Show)
         
     def SetWindowShape(self, *evt):
-        r = GetRoundShape(self.w, self.h)
+        r = GetRoundShape(self.w - 3, self.h - 3)
         self.hasShape = self.SetShape(r)
 
     def OnPaint(self, evt):
@@ -78,8 +78,9 @@ class ZyneSplashScreen(wx.Frame):
             font.SetPointSize(ptsize+1)
         dc.SetFont(font)
         dc.DrawLabel("Olivier Bélanger", wx.Rect(0, 305, 400, 15), wx.ALIGN_CENTER)
-        dc.DrawLabel("ajaxsoundstudio, %s" % vars.constants["YEAR"], wx.Rect(0, 340, 400, 15), wx.ALIGN_CENTER)
-        dc.DrawLabel("v. %s" % vars.constants["VERSION"], wx.Rect(0, 360, 400, 15), wx.ALIGN_CENTER)
+        dc.DrawLabel("Hans-Jörg Bibiko", wx.Rect(0, 320, 400, 15), wx.ALIGN_CENTER)
+        dc.DrawLabel(f"ajaxsoundstudio, {vars.constants['YEAR']}", wx.Rect(0, 340, 400, 15), wx.ALIGN_CENTER)
+        dc.DrawLabel(f"v. {vars.constants['VERSION']}", wx.Rect(0, 360, 400, 15), wx.ALIGN_CENTER)
      
     def OnClose(self):
         self.mainframe.Show()
