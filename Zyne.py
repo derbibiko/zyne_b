@@ -1,5 +1,9 @@
-#!/usr/bin/env python
-import wx, os, sys
+#!/usr/bin/env python3
+# encoding: utf-8
+
+import wx
+import os
+import sys
 import Resources.audio as audio
 import Resources.tutorial as tutorial
 import Resources.variables as vars
@@ -7,7 +11,11 @@ from Resources.panels import *
 from Resources.preferences import PreferencesDialog
 from Resources.splash import ZyneSplashScreen
 import wx.richtext as rt
-from wx.adv import AboutDialogInfo, AboutBox
+
+try:
+    from wx.adv import AboutDialogInfo, AboutBox
+except Exception as e:
+    from wx import AboutDialogInfo, AboutBox
 
 class TutorialFrame(wx.Frame):
     def __init__(self, *args, **kw):
@@ -125,7 +133,7 @@ class SamplingDialog(wx.Dialog):
         self.filename.SetFocus()
 
 class ZyneFrame(wx.Frame):
-    def __init__(self, parent=None, title="Zyne Synth - Untitled", size=(966, 660)):
+    def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 660)):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
         self.SetAcceleratorTable(wx.AcceleratorTable([(wx.ACCEL_NORMAL, ord("\t"), vars.constants["ID"]["Select"]),
                                                      (wx.ACCEL_SHIFT, ord("\t"), vars.constants["ID"]["DeSelect"])]))
@@ -157,17 +165,14 @@ class ZyneFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onRetrig, id=vars.constants["ID"]["Retrig"])
         if wx.Platform != "__WXMAC__":
             self.fileMenu.AppendSeparator()
-        pref_item = self.fileMenu.Append(vars.constants["ID"]["Prefs"], 'Preferences...\tCtrl+,', 'Open Cecilia preferences pane', kind=wx.ITEM_NORMAL)
+        self.fileMenu.Append(vars.constants["ID"]["Prefs"], 'Preferences...\tCtrl+,', 'Open Cecilia preferences pane', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onPreferences, id=vars.constants["ID"]["Prefs"])
         self.fileMenu.AppendSeparator()
         self.fileMenu.Append(vars.constants["ID"]["Run"], 'Run\tCtrl+R', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onRun, id=vars.constants["ID"]["Run"])
         self.fileMenu.AppendSeparator()
-        quit_item = self.fileMenu.Append(vars.constants["ID"]["Quit"], 'Quit\tCtrl+Q', kind=wx.ITEM_NORMAL)
+        self.fileMenu.Append(vars.constants["ID"]["Quit"], 'Quit\tCtrl+Q', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onQuit, id=vars.constants["ID"]["Quit"])
-        if wx.Platform == "__WXMAC__":
-            wx.App.SetMacExitMenuItemId(quit_item.GetId())
-            wx.App.SetMacPreferencesMenuItemId(pref_item.GetId())
         self.addMenu = wx.Menu()
         self.buildAddModuleMenu()
         self.genMenu = wx.Menu()
@@ -187,9 +192,8 @@ class ZyneFrame(wx.Frame):
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(False)
 
-        helpMenu = wx.Menu()        
+        helpMenu = wx.Menu()
         helpItem = helpMenu.Append(vars.constants["ID"]["About"], '&About Zyne %s' % vars.constants["VERSION"], 'wxPython RULES!!!')
-        wx.App.SetMacAboutMenuItemId(helpItem.GetId())
         self.Bind(wx.EVT_MENU, self.showAbout, helpItem)
         tuturialCreateModuleItem = helpMenu.Append(vars.constants["ID"]["Tutorial"], "How to create a custom module")
         self.Bind(wx.EVT_MENU, self.openTutorialCreateModule, tuturialCreateModuleItem)
@@ -477,7 +481,7 @@ class ZyneFrame(wx.Frame):
     def onNew(self, evt):
         self.deleteAllModules()
         self.openedFile = ""
-        self.SetTitle("Zyne Synth - Untitled")
+        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - Untitled")
     
     def onSave(self, evt):
         if self.openedFile != "":
@@ -654,7 +658,7 @@ class ZyneFrame(wx.Frame):
         with open(filename, "w") as f:
             f.write(str(dic))
         self.openedFile = filename
-        self.SetTitle("Zyne Synth - " + os.path.split(filename)[1])
+        self.SetTitle(f"{vars.constants['WIN_TITLE']} - " + os.path.split(filename)[1])
         self.updateLastSavedInPreferencesFile(filename)
     
     def openfile(self, filename):
@@ -671,7 +675,7 @@ class ZyneFrame(wx.Frame):
             self.openedFile = ""
         else:
             self.openedFile = filename
-        self.SetTitle("Zyne Synth - " + os.path.split(filename)[1])
+        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
         
     def onAddModule(self, evt):
         name = self.moduleNames[evt.GetId()-vars.constants["ID"]["Modules"]]
@@ -731,16 +735,15 @@ class ZyneFrame(wx.Frame):
     def showAbout(self, evt):
         info = AboutDialogInfo()
     
-        description = "Zyne is a simple soft synthesizer allowing the " \
-        "user to create original sounds and export bank of samples.\n\n" \
-        "Zyne is written with Python and " \
-        "WxPython and uses pyo as its audio engine.\n\n" \
-        "A special thank to Jean-Michel Dumas for beta testing and a lots of ideas!"
-    
-        info.Name = 'Zyne'
-        info.Version = '%s' % vars.constants["VERSION"]
-        info.Description = description
-        info.Copyright = '(C) 2018 Olivier Bélanger'
+        info.SetDescription(
+            "{vars.constants['WIN_TITLE']} is a simple soft synthesizer allowing the "
+            "user to create original sounds and export bank of samples.\n\n"
+            "Zyne is written with Python and WxPython and uses pyo as its audio engine.\n\n"
+            "A special thank to Jean-Michel Dumas for beta testing and a lots of ideas!")
+
+        info.SetName(vars.constants["WIN_TITLE"])
+        info.SetVersion(f'{vars.constants["VERSION"]}')
+        info.SetCopyright(f'© {vars.constants["YEAR"]} Olivier Bélanger\n(with modifications by Hans-Jörg Bibiko)')
         AboutBox(info)
 
 class ZyneApp(wx.App):
@@ -758,7 +761,10 @@ if __name__ == '__main__':
         file = sys.argv[1]
     
     app = ZyneApp(0)
-    splash = ZyneSplashScreen(None, os.path.join(vars.constants["RESOURCES_PATH"], "ZyneSplash.png"), app.frame)
+    app.SetAppName(vars.constants["WIN_TITLE"])
+    app.SetAppDisplayName(vars.constants["WIN_TITLE"])
+    splash = ZyneSplashScreen(
+        None, os.path.join(vars.constants["RESOURCES_PATH"], "ZyneSplash.png"), app.frame)
     if file:
         app.frame.openfile(file)
     app.MainLoop()
