@@ -7,7 +7,7 @@ if vars.vars["PYO_PRECISION"] == "single":
 else:
     from pyo64 import *
 
-from pyotools import PWM, VCO
+from .pyotools import PWM, VCO
 
 def get_output_devices():
     return pa_get_output_devices()
@@ -27,16 +27,16 @@ class FSServer:
         self.server = Server(duplex=0, audio=vars.vars["AUDIO_HOST"].lower())
         self.boot()
     
-    def scanning(self, x):
+    def scanning(self, ctlnum, midichnl):
         if vars.vars["LEARNINGSLIDER"] != None:
-            vars.vars["LEARNINGSLIDER"].setMidiCtl(x)
+            vars.vars["LEARNINGSLIDER"].setMidiCtl(ctlnum)
             vars.vars["LEARNINGSLIDER"].Enable()
             vars.vars["LEARNINGSLIDER"] = None
     
     def startMidiLearn(self):
         self.server.shutdown()
         self.server.boot()
-        self.scan = CtlScan(self.scanning, False)
+        self.scan = CtlScan2(self.scanning, False)
         self.server.start()
     
     def stopMidiLearn(self):
