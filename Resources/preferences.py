@@ -68,7 +68,7 @@ class PreferencesDialog(wx.Dialog):
             ctrlSizer.Add(but, 1, wx.ALL, 5)            
             driverSizer.Add(ctrlSizer, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, 5)
  
-        for key in vars.constants["VARIABLE_NAMES"]:
+        for key in vars.constants["VAR_PREF_LABELS"].keys():
             val = self.prefs[key]
             if key not in self.paths and key not in self.drivers and key != "AUDIO_HOST":
                 lbl = wx.StaticText(self, label=vars.constants["VAR_PREF_LABELS"][key])
@@ -186,7 +186,7 @@ class PreferencesDialog(wx.Dialog):
         preffile = os.path.join(os.path.expanduser("~"), ".zynerc")
         with codecs.open(preffile, "w", encoding="utf-8") as f:
             f.write("### Zyne version %s preferences ###\n" % vars.constants["VERSION"])
-            for name in vars.constants["VARIABLE_NAMES"]:
+            for name in vars.constants["VAR_PREF_LABELS"].keys():
                 widget = wx.FindWindowByName(name)
                 if isinstance(widget, wx.ComboBox):
                     value = widget.GetValue()
@@ -202,5 +202,3 @@ class PreferencesDialog(wx.Dialog):
                         f.write('%s = ""\n' % name)
             f.write("LAST_SAVED = %s\n" % vars.vars["LAST_SAVED"])
         self.EndModal(0)
-
- 
