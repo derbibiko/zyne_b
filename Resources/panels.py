@@ -515,7 +515,7 @@ class ServerPanel(wx.Panel):
         cpKnobBox = wx.BoxSizer(wx.HORIZONTAL)
         self.knobComp1 = ControlKnob(self, -60, 0, -3, label=' Thresh', backColour=colour, outFunction=self.changeComp1)
         cpKnobBox.Add(self.knobComp1, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp2 = ControlKnob(self, 1, 10, 2, label='  Ratio', backColour=colour, outFunction=self.changeComp2)
+        self.knobComp2 = ControlKnob(self, 1, 10, 2, label=' Ratio', backColour=colour, outFunction=self.changeComp2)
         cpKnobBox.Add(self.knobComp2, 0, wx.LEFT | wx.RIGHT, 10)
         self.knobComp3 = ControlKnob(self, 0.001, 0.5, 0.01, label='Risetime', backColour=colour, outFunction=self.changeComp3)
         cpKnobBox.Add(self.knobComp3, 0, wx.LEFT | wx.RIGHT, 10)
