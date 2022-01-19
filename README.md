@@ -51,7 +51,20 @@ and pick a matching package URL, e.g. for Ubuntu 20.04 `https://extras.wxpython.
 `python3 Zyne.py`
 
 
-## Why did I fork the original Zyne App (and pyo)##
+### How to create a macos App ###
+
+- install `pyinstaller`
+
+`pip3 install pyinstaller`
+
+- execute the following command from Zyne's root directory
+
+`./scripts/builder_pyinstaller_macos.sh`
+
+- you find the app in folder "dist" as "Zyne_B.app"
+
+
+## Why did I fork the original Zyne App (and pyo) ##
 
 The main reason is that I would like to add more functions that can be useful for live performances on stage.
 By myself I am using macos computers (but I'm also trying to keep the other OS in mind).
