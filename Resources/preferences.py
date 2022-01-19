@@ -1,23 +1,32 @@
-#!/usr/bin/env python
-# encoding: utf-8
-
-import wx, os, codecs
+import wx
+import os
 import Resources.variables as vars
 from Resources.audio import get_output_devices, get_midi_input_devices
 
+
 class PreferencesDialog(wx.Dialog):
     def __init__(self):
-        wx.Dialog.__init__(self, None, wx.ID_ANY, 'Zyne Preferences')
-        
+        wx.Dialog.__init__(self, None, wx.ID_ANY, 'Zyne_B Preferences')
+
         self.paths = ["CUSTOM_MODULES_PATH", "EXPORT_PATH"]
         self.drivers = ["OUTPUT_DRIVER", "MIDI_INTERFACE"]
-        self.ids = {"CUSTOM_MODULES_PATH": 10001, "EXPORT_PATH": 10002, 
+        self.ids = {"CUSTOM_MODULES_PATH": 10001, "EXPORT_PATH": 10002,
                     "OUTPUT_DRIVER": 20001, "MIDI_INTERFACE": 20002}
-        
+
         self.prefs = dict()
-        self.checkForPreferencesFile()
+        for key in vars.constants["VAR_PREF_LABELS"].keys():
+            val = str(vars.vars["PREF_FILE_SETTINGS"].get(key, vars.vars[key]))
+            if key == "AUDIO_HOST" and \
+                    vars.constants["PLATFORM"] == "darwin" \
+                    and not vars.constants["OSX_BUILD_WITH_JACK_SUPPORT"] \
+                    and val in ["Jack", "Coreaudio"]:
+                self.prefs[key] = "Portaudio"
+            else:
+                self.prefs[key] = val
+
+        self.preffilename = vars.constants["PREF_FILE_NAME"]
         self.createWidgets()
- 
+
     def createWidgets(self):
         btnSizer = wx.StdDialogButtonSizer()
         itemSizer = wx.FlexGridSizer(0, 2, 10, 5)
@@ -26,11 +35,11 @@ class PreferencesDialog(wx.Dialog):
         pathSizer = wx.BoxSizer(wx.VERTICAL)
         rowSizer = wx.BoxSizer(wx.HORIZONTAL)
         mainSizer = wx.BoxSizer(wx.VERTICAL)
-    
-        message = wx.StaticText(self, label="* Changes will be applied on next launch *")
-        mainSizer.Add(message, 0, wx.TOP|wx.LEFT|wx.ALIGN_CENTER_HORIZONTAL, 10)
-        font, entryfont, pointsize = message.GetFont(), message.GetFont(), message.GetFont().GetPointSize()
-        
+
+        message = wx.StaticText(self, label="– Changes will be applied on next launch –")
+        mainSizer.Add(message, 0, wx.TOP | wx.LEFT | wx.ALIGN_CENTER_HORIZONTAL, 10)
+        font, entryfont = message.GetFont(), message.GetFont()
+        pointsize = font.GetPointSize()
         font.SetWeight(wx.BOLD)
         if vars.constants["PLATFORM"] == "win32" or vars.constants["PLATFORM"].startswith("linux"):
             entryfont.SetPointSize(pointsize-1)
@@ -50,70 +59,72 @@ class PreferencesDialog(wx.Dialog):
         host = self.prefs["AUDIO_HOST"]
         lbl = wx.StaticText(self, label=vars.constants["VAR_PREF_LABELS"]["AUDIO_HOST"])
         lbl.SetFont(font)
-        driverSizer.Add(lbl, 0, wx.LEFT|wx.RIGHT, 10)
-        cbo = wx.ComboBox(self, value=host ,size=(100,-1), choices=host_choices,
-                                  style=wx.CB_DROPDOWN|wx.CB_READONLY, name="AUDIO_HOST")
+        driverSizer.Add(lbl, 0, wx.LEFT | wx.RIGHT, 10)
+        cbo = wx.ComboBox(self, value=host, size=(100, -1), choices=host_choices,
+                          style=wx.CB_DROPDOWN | wx.CB_READONLY, name="AUDIO_HOST")
         driverSizer.AddSpacer(5)
-        driverSizer.Add(cbo, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM|wx.EXPAND, 10)
- 
+        driverSizer.Add(cbo, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM | wx.EXPAND, 10)
+
         for key in self.drivers:
             lbl = wx.StaticText(self, label=vars.constants["VAR_PREF_LABELS"][key])
             lbl.SetFont(font)
             driverSizer.Add(lbl, 0, wx.LEFT, 10)
             ctrlSizer = wx.BoxSizer(wx.HORIZONTAL)
             txt = wx.TextCtrl(self, value=self.prefs[key], name=key)
-            ctrlSizer.Add(txt, 4, wx.ALL|wx.EXPAND, 5)
+            ctrlSizer.Add(txt, 4, wx.ALL | wx.EXPAND, 5)
             but = wx.Button(self, id=self.ids[key], label="Choose...")
             but.Bind(wx.EVT_BUTTON, self.getDriver, id=self.ids[key])
-            ctrlSizer.Add(but, 1, wx.ALL, 5)            
-            driverSizer.Add(ctrlSizer, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, 5)
- 
+            ctrlSizer.Add(but, 1, wx.ALL, 5)
+            driverSizer.Add(ctrlSizer, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
+
         for key in vars.constants["VAR_PREF_LABELS"].keys():
             val = self.prefs[key]
             if key not in self.paths and key not in self.drivers and key != "AUDIO_HOST":
                 lbl = wx.StaticText(self, label=vars.constants["VAR_PREF_LABELS"][key])
                 lbl.SetFont(font)
-                itemSizer.Add(lbl, 1, wx.ALIGN_CENTER_VERTICAL|wx.LEFT|wx.RIGHT, 5)
+                itemSizer.Add(lbl, 1, wx.ALIGN_CENTER_VERTICAL | wx.LEFT | wx.RIGHT, 5)
                 if key in vars.constants["VAR_CHOICES"]:
                     default = val
                     choices = vars.constants["VAR_CHOICES"][key]
-                    cbo = wx.ComboBox(self, value=val,size=(200,-1), choices=choices,
-                                  style=wx.CB_DROPDOWN|wx.CB_READONLY, name=key)
-                    itemSizer.Add(cbo, 0, wx.LEFT|wx.RIGHT, 5)
+                    cbo = wx.ComboBox(self, value=val, size=(200, -1), choices=choices,
+                                      style=wx.CB_DROPDOWN | wx.CB_READONLY, name=key)
+                    itemSizer.Add(cbo, 0, wx.LEFT | wx.RIGHT, 5)
                 else:
-                    txt = wx.TextCtrl(self, size=(200,-1), value=val, name=key)
-                    itemSizer.Add(txt, 0, wx.LEFT|wx.RIGHT, 5)
- 
+                    txt = wx.TextCtrl(self, size=(200, -1), value=val, name=key)
+                    itemSizer.Add(txt, 0, wx.LEFT | wx.RIGHT, 5)
+
         for key in self.paths:
-            if key == "CUSTOM_MODULES_PATH": func = self.getPath
-            elif key == "EXPORT_PATH": func = self.getPath
+            if key == "CUSTOM_MODULES_PATH":
+                func = self.getPath
+            elif key == "EXPORT_PATH":
+                func = self.getPath
             lbl = wx.StaticText(self, label=vars.constants["VAR_PREF_LABELS"][key])
             lbl.SetFont(font)
-            pathSizer.Add(lbl, 0, wx.LEFT|wx.RIGHT, 10)
+            pathSizer.Add(lbl, 0, wx.LEFT | wx.RIGHT, 10)
             ctrlSizer = wx.BoxSizer(wx.HORIZONTAL)
             txt = wx.TextCtrl(self, value=self.prefs[key], name=key)
             txt.SetFont(entryfont)
-            ctrlSizer.Add(txt, 1, wx.ALL|wx.EXPAND, 5)
+            ctrlSizer.Add(txt, 1, wx.ALL | wx.EXPAND, 5)
             but = wx.Button(self, id=self.ids[key], label="Choose...")
             but.Bind(wx.EVT_BUTTON, self.getPath, id=self.ids[key])
-            ctrlSizer.Add(but, 0, wx.ALL, 5)            
-            pathSizer.Add(ctrlSizer, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT|wx.EXPAND, 5)
-    
+            ctrlSizer.Add(but, 0, wx.ALL, 5)
+            pathSizer.Add(ctrlSizer, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT | wx.EXPAND, 5)
+
         saveBtn = wx.Button(self, wx.ID_OK, label="Save")
         saveBtn.SetDefault()
         saveBtn.Bind(wx.EVT_BUTTON, self.onSave)
         btnSizer.AddButton(saveBtn)
-         
+
         cancelBtn = wx.Button(self, wx.ID_CANCEL)
         btnSizer.AddButton(cancelBtn)
         btnSizer.Realize()
- 
+
         mainSizer.AddSpacer(5)
         mainSizer.Add(driverSizer, 0, wx.EXPAND)
-        mainSizer.Add(itemSizer, 0, wx.EXPAND|wx.LEFT|wx.RIGHT, 5)
+        mainSizer.Add(itemSizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 5)
         mainSizer.AddSpacer(5)
         mainSizer.Add(pathSizer, 0, wx.EXPAND)
-        mainSizer.Add(wx.StaticLine(self, size=(-1,1)), 0, wx.ALL|wx.EXPAND, 2)
+        mainSizer.Add(wx.StaticLine(self, size=(-1, 1)), 0, wx.ALL | wx.EXPAND, 2)
         mainSizer.Add(btnSizer, 0, wx.TOP | wx.BOTTOM | wx.ALIGN_RIGHT, 5)
         self.SetSizerAndFit(mainSizer)
 
@@ -130,13 +141,11 @@ class PreferencesDialog(wx.Dialog):
             driverList.append("Virtual Keyboard")
             msg = "Choose a Midi interface..."
         widget = wx.FindWindowByName(name)
-        dlg = wx.SingleChoiceDialog(self, message=msg, caption="Driver Selector", 
+        dlg = wx.SingleChoiceDialog(self, message=msg, caption="Driver Selector",
                                     choices=driverList, style=wx.CHOICEDLG_STYLE)
         if dlg.ShowModal() == wx.ID_OK:
             selection = dlg.GetStringSelection()
             widget.SetValue(selection)
-        else:
-            pass
         dlg.Destroy()
 
     def getPath(self, evt):
@@ -153,39 +162,12 @@ class PreferencesDialog(wx.Dialog):
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
             widget.SetValue(path)
-        else:
-            pass
         dlg.Destroy()
 
-    def checkForPreferencesFile(self):
-        preffile = os.path.join(os.path.expanduser("~"), ".zynerc")
-        if os.path.isfile(preffile):
-            with codecs.open(preffile, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-                pref_rel_version = int(lines[0].split()[3].split(".")[1])
-                cur_rel_version = int(vars.constants["VERSION"].split(".")[1])
-                if lines[0].startswith("### Zyne"):
-                    if pref_rel_version != cur_rel_version: 
-                        print("Zyne preferences out-of-date, using default values.")
-                        lines = vars.constants["DEFAULT_PREFS"].splitlines()
-                else:
-                    print("Zyne preferences out-of-date, using default values.")
-                    lines = vars.constants["DEFAULT_PREFS"].splitlines()
-        else:
-            lines = vars.constants["DEFAULT_PREFS"].splitlines()
-        for line in lines[1:]:
-            line = line.strip()
-            if line:
-                sline = line.split("=")
-                if sline[0].strip() == "AUDIO_HOST" and vars.constants["PLATFORM"] == "darwin" and not vars.constants["OSX_BUILD_WITH_JACK_SUPPORT"] and sline[1].strip() in ["Jack", "Coreaudio"]:
-                    self.prefs[sline[0].strip()] = "Portaudio"
-                else:
-                    self.prefs[sline[0].strip()] = sline[1].strip()
-
     def onSave(self, event):
-        preffile = os.path.join(os.path.expanduser("~"), ".zynerc")
-        with codecs.open(preffile, "w", encoding="utf-8") as f:
-            f.write("### Zyne version %s preferences ###\n" % vars.constants["VERSION"])
+        preffile = os.path.join(os.path.expanduser("~"), self.preffilename)
+        with open(preffile, "w", encoding="utf-8") as f:
+            f.write(f"### Zyne_B version {vars.constants['VERSION']} preferences ###\n")
             for name in vars.constants["VAR_PREF_LABELS"].keys():
                 widget = wx.FindWindowByName(name)
                 if isinstance(widget, wx.ComboBox):
@@ -194,11 +176,11 @@ class PreferencesDialog(wx.Dialog):
                 else:
                     value = widget.GetValue()
                 try:
-                    f.write("%s = %s\n" % (name, value))
+                    f.write(f"{name} = {value}\n")
                 except UnicodeEncodeError:
                     try:
-                        f.write("%s = " % name + value + "\n")
-                    except:
-                        f.write('%s = ""\n' % name)
-            f.write("LAST_SAVED = %s\n" % vars.vars["LAST_SAVED"])
+                        f.write(f"{name} = " + value + "\n")
+                    except Exception:
+                        f.write(f'{name} = ""\n')
+            f.write(f"LAST_SAVED = {vars.vars['LAST_SAVED']}\n")
         self.EndModal(0)

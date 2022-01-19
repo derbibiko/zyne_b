@@ -342,6 +342,8 @@ class ServerPanel(wx.Panel):
         self.virtualvoice = 0
         self.keyboardShown = 0
         self.serverSettings = []
+        self.selected_output_driver_name = None
+        self.selected_midi_interface_name = None
 
         self.mainBox = wx.BoxSizer(wx.VERTICAL)
 
@@ -366,6 +368,8 @@ class ServerPanel(wx.Panel):
         popsize = (-1, h+12)
         butsize = (125, h+12)
 
+        if vars.constants["PLATFORM"] == "darwin":
+            self.driverText.SetFont(font)
         if vars.vars["AUDIO_HOST"] != "Jack":
             preferedDriver = vars.vars["OUTPUT_DRIVER"]
             self.driverList, self.driverIndexes = get_output_devices()
@@ -377,8 +381,10 @@ class ServerPanel(wx.Panel):
                 self.fsserver.setOutputDevice(driverIndex)
                 self.fsserver.boot()
                 self.popupDriver.SetStringSelection(preferedDriver)
+                self.selected_output_driver_name = preferedDriver
             elif self.defaultDriver:
                 self.popupDriver.SetSelection(self.driverIndexes.index(self.defaultDriver))
+                self.selected_output_driver_name = self.defaultDriver
             self.popupDriver.Bind(wx.EVT_CHOICE, self.changeDriver)
         else:
             self.popupDriver = wx.Choice(self, id=-1, choices=[], size=popsize)
@@ -387,6 +393,8 @@ class ServerPanel(wx.Panel):
 
         preferedInterface = vars.vars["MIDI_INTERFACE"]
         self.interfaceText = wx.StaticText(self, id=-1, label="Midi interface")
+        if vars.constants["PLATFORM"] == "darwin":
+            self.interfaceText.SetFont(font)
         self.mainBox.Add(self.interfaceText, 0, wx.TOP | wx.LEFT, 4)
         self.interfaceList, self.interfaceIndexes = get_midi_input_devices()
         if self.interfaceList != []:
@@ -402,11 +410,13 @@ class ServerPanel(wx.Panel):
                 else:
                     wx.CallAfter(self.prepareForVirtualKeyboard)
                 self.popupInterface.SetStringSelection(preferedInterface)
+                self.selected_midi_interface_name = preferedInterface
             elif self.defaultInterface:
                 self.fsserver.shutdown()
                 self.fsserver.setMidiInputDevice(self.defaultInterface)
                 self.fsserver.boot()
                 self.popupInterface.SetSelection(self.interfaceIndexes.index(self.defaultInterface))
+                self.popupInterface.SetStringSelection(self.defaultInterface)
         else:    
             self.popupInterface = wx.Choice(self, id=-1, choices=["No interface", "Virtual Keyboard"], size=popsize)
             self.popupInterface.SetSelection(1)
@@ -535,10 +545,12 @@ class ServerPanel(wx.Panel):
     
         if vars.constants["PLATFORM"] != "win32":
             # reduce font for OSX and linux display
-            objs = [self.driverText, self.popupDriver, self.interfaceText, self.popupInterface, self.srText, self.popupSr, 
-                    self.polyText, self.popupPoly, self.bitText, self.popupBit, self.formatText, self.popupFormat, 
+            objs = [self.srText, self.popupSr, self.polyText, self.popupPoly, self.bitText,
+                    self.popupBit, self.formatText, self.popupFormat,
                     self.onOffText, self.onOff, self.recText, self.rec, self.textAmp]
-            font, psize = self.driverText.GetFont(), self.driverText.GetFont().GetPointSize()
+            if vars.constants["PLATFORM"] != "darwin":
+                objs += [self.driverText, self.popupDriver, self.interfaceText, self.popupInterface]
+            font, psize = self.popupPoly.GetFont(), self.popupPoly.GetFont().GetPointSize()
             font.SetPointSize(psize-2)
             for obj in objs:
                 obj.SetFont(font)
@@ -580,7 +592,13 @@ class ServerPanel(wx.Panel):
         self.fsserver.boot()
         self.setServerSettings(serverSettings)
         self.setPostProcSettings(postProcSettings)
-    
+
+    def getSelectedOutputDriverName(self):
+        return self.selected_output_driver_name
+
+    def getSelectedMidiInterfaceName(self):
+        return self.selected_midi_interface_name
+
     def getExtensionFromFileFormat(self):
         return {0: "wav", 1: "aif"}.get(self.fileformat, "wav")
     
@@ -732,6 +750,7 @@ class ServerPanel(wx.Panel):
     def changeDriver(self, evt):
         if vars.vars["AUDIO_HOST"] != "Jack":
             self.setDriverSetting(self.fsserver.setOutputDevice, self.driverIndexes[evt.GetInt()])
+            self.selected_output_driver_name = evt.GetString()
     
     def changeInterface(self, evt):
         mainFrame = self.GetTopLevelParent()
@@ -740,6 +759,7 @@ class ServerPanel(wx.Panel):
             vars.vars["VIRTUAL"] = False
             if evt.GetString() in self.interfaceList:
                 index = self.interfaceList.index(evt.GetString())
+                self.selected_midi_interface_name = evt.GetString()
             else:
                 index = 999
             self.setDriverSetting(self.fsserver.setMidiInputDevice, self.interfaceIndexes[index])
@@ -921,7 +941,7 @@ class BasePanel(wx.Panel):
 
     def leaveX(self, evt):
         self.close.SetFont(self.font)
-        self.close.SetForegroundColour(parent.GetForegroundColour())
+        self.close.SetForegroundColour(wx.WHITE)
 
     def MouseDown(self, evt):
         if not self.from_lfo:

@@ -1,6 +1,5 @@
 import os
 import sys
-import codecs
 import wx
 
 
@@ -10,6 +9,8 @@ constants["YEAR"] = "2022"
 constants["PLATFORM"] = sys.platform
 constants["OSX_BUILD_WITH_JACK_SUPPORT"] = False
 constants["WIN_TITLE"] = "Zyne (à la Bibiko)"
+constants["PREF_FILE_NAME"] = ".Zyne_Brc"
+constants["DEFAULT_ZY_NAME"] = "default.zy"
 
 # Change working directory if App is running 'frozen' (by e.g. pyinstaller)
 if getattr(sys, 'frozen', False):
@@ -25,23 +26,6 @@ else:
 
 if not os.path.isdir(constants["RESOURCES_PATH"]) and constants["PLATFORM"] == "win32":
     constants["RESOURCES_PATH"] = os.path.join(os.getenv("ProgramFiles"), "Zyne", "Resources")
-
-constants["DEFAULT_PREFS"] = """
-AUDIO_HOST = Portaudio
-OUTPUT_DRIVER = ""
-MIDI_INTERFACE = ""
-SR = 48000
-PYO_PRECISION = double
-FORMAT = wav
-BITS = 24
-POLY = 5
-SLIDERPORT = 0.05
-AUTO_OPEN = Default
-CUSTOM_MODULES_PATH = ""
-EXPORT_PATH = ""
-LAST_SAVED = ""
-
-"""
 
 constants["ID"] = {
     "New": 1000, "Open": 1001, "Save": 1002, "SaveAs": 1003, "Export": 1004,
@@ -102,38 +86,40 @@ vars["MIDI_ACTIVE"] = 0
 vars["NOTEONDUR"] = 1.0
 vars["VIRTUAL"] = False
 
+vars["PREF_FILE_SETTINGS"] = {}
 
-def checkForPreferencesFile():
-    preffile = os.path.join(os.path.expanduser("~"), ".zynerc")
+def readPreferencesFile():
+    preffile = os.path.join(os.path.expanduser("~"), constants["PREF_FILE_NAME"])
     if os.path.isfile(preffile):
-        with codecs.open(preffile, "r", encoding="utf-8") as f:
+        with open(preffile, "r", encoding="utf-8") as f:
             lines = f.readlines()
             pref_rel_version = int(lines[0].split()[3].split(".")[1])
             cur_rel_version = int(constants["VERSION"].split(".")[1])
-            if lines[0].startswith("### Zyne"):
+            if lines[0].startswith("### Zyne_B"):
                 if pref_rel_version != cur_rel_version:
-                    print("Zyne preferences out-of-date, using default values.")
-                    lines = constants["DEFAULT_PREFS"].splitlines()
+                    print("Zyne_B preferences out-of-date, using default values.")
+                else:
+                    for line in lines[1:]:
+                        if line:
+                            key, val = map(str.strip, line.split("="))
+                            if key == "AUDIO_HOST" and constants["PLATFORM"] == "darwin" \
+                                    and not constants["OSX_BUILD_WITH_JACK_SUPPORT"] \
+                                    and val in ["Jack", "Coreaudio"]:
+                                vars[key] = "Portaudio"
+                                vars["PREF_FILE_SETTINGS"][key] = vars[key]
+                            elif key in ["SR", "POLY", "BITS"]:
+                                vars[key] = int(val)
+                                vars["PREF_FILE_SETTINGS"][key] = vars[key]
+                            elif key in ["SLIDERPORT"]:
+                                vars[key] = float(val)
+                                vars["PREF_FILE_SETTINGS"][key] = vars[key]
+                            elif key == "AUDIO_HOST" and constants["PLATFORM"] == "darwin" \
+                                    and not constants["OSX_BUILD_WITH_JACK_SUPPORT"] \
+                                    and val in ["Jack", "Coreaudio"]:
+                                vars[key] = "Portaudio"
+                                vars["PREF_FILE_SETTINGS"][key] = vars[key]
+                            else:
+                                vars[key] = val
+                                vars["PREF_FILE_SETTINGS"][key] = vars[key]
             else:
-                print("Zyne preferences out-of-date, using default values.")
-                lines = constants["DEFAULT_PREFS"].splitlines()
-        prefs = dict()
-        for line in lines[1:]:
-            line = line.strip()
-            if line:
-                sline = line.split("=")
-                prefs[sline[0].strip()] = sline[1].strip()
-        for key in prefs.keys():
-            if key in ["SR", "POLY", "BITS"]:
-                vars[key] = int(prefs[key])
-            elif key in ["SLIDERPORT"]:
-                vars[key] = float(prefs[key])
-            elif key == "AUDIO_HOST" and constants["PLATFORM"] == "darwin" \
-                    and not constants["OSX_BUILD_WITH_JACK_SUPPORT"] \
-                    and prefs[key] in ["Jack", "Coreaudio"]:
-                vars[key] = "Portaudio"
-            else:
-                vars[key] = prefs[key]
-
-
-checkForPreferencesFile()
+                print("Zyne_B preferences out-of-date, using default values.")

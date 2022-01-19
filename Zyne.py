@@ -4,12 +4,14 @@
 import wx
 import os
 import sys
+import json
+import Resources.variables as vars
 import Resources.audio as audio
 import Resources.tutorial as tutorial
-import Resources.variables as vars
 from Resources.panels import *
 from Resources.preferences import PreferencesDialog
 from Resources.splash import ZyneSplashScreen
+from Resources.audio import get_output_devices, get_midi_input_devices
 import wx.richtext as rt
 
 try:
@@ -243,7 +245,7 @@ class ZyneFrame(wx.Frame):
         dropTarget = MyFileDropTarget(self.panel)
         self.panel.SetDropTarget(dropTarget)
         if vars.vars["AUTO_OPEN"] == 'Default':
-            self.openfile(os.path.join(vars.constants["RESOURCES_PATH"], "default.zy"))
+            self.openfile(os.path.join(vars.constants["RESOURCES_PATH"], vars.constants["DEFAULT_ZY_NAME"]))
         elif vars.vars["AUTO_OPEN"] == 'Last Saved':
             path = vars.vars["LAST_SAVED"]
             try:
@@ -454,7 +456,7 @@ class ZyneFrame(wx.Frame):
         dlg.Destroy()
     
     def updateLastSavedInPreferencesFile(self, path):
-        preffile = os.path.join(os.path.expanduser("~"), ".zynerc")
+        preffile = os.path.join(os.path.expanduser("~"), vars.constants["PREF_FILE_NAME"])
         if os.path.isfile(preffile):
             with open(preffile, "r") as f:
                 lines = f.readlines()
@@ -463,7 +465,7 @@ class ZyneFrame(wx.Frame):
             with open(preffile, "w") as f:
                 for line in lines:
                     if "LAST_SAVED" in line:
-                        f.write("LAST_SAVED = %s\n" % path)
+                        f.write(f"LAST_SAVED = {path}\n")
                     else:
                         f.write(line)
     
@@ -638,6 +640,7 @@ class ZyneFrame(wx.Frame):
                 slider = self.modules[i].sliders[j]
                 slider.SetValue(param)
                 slider.outFunction(param)
+
         for i, ctl_paramset in enumerate(ctl_params):
             for j, ctl_param in enumerate(ctl_paramset):
                 slider = self.modules[i].sliders[j]
@@ -654,29 +657,66 @@ class ZyneFrame(wx.Frame):
         modules, params, lfo_params, ctl_params = self.getModulesAndParams()
         serverSettings = self.serverPanel.getServerSettings()
         postProcSettings = self.serverPanel.getPostProcSettings()
-        dic = {"server": serverSettings, "postproc": postProcSettings, "modules": modules, "params": params, "lfo_params": lfo_params, "ctl_params": ctl_params}
+        out_drv = self.serverPanel.getSelectedOutputDriverName()
+        midi_itf = self.serverPanel.getSelectedMidiInterfaceName()
+        dic = {
+            "server": serverSettings, "postproc": postProcSettings,
+            "modules": modules, "params": params, "lfo_params": lfo_params,
+            "ctl_params": ctl_params,
+            "output_driver": out_drv, "midi_interface": midi_itf
+        }
         with open(filename, "w") as f:
-            f.write(str(dic))
+            f.write(json.dumps(dic))
         self.openedFile = filename
         self.SetTitle(f"{vars.constants['WIN_TITLE']} - " + os.path.split(filename)[1])
         self.updateLastSavedInPreferencesFile(filename)
-    
+
     def openfile(self, filename):
-        with open(filename, "r") as f: text = f.read()
-        dic = eval(text)
-        self.deleteAllModules()
-        self.serverPanel.shutdown()
-        self.serverPanel.boot()
-        self.serverPanel.setServerSettings(dic["server"])
-        if "postproc" in dic:
-            self.serverPanel.setPostProcSettings(dic["postproc"])            
-        self.setModulesAndParams(dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])
-        if filename.endswith("default.zy"):
-            self.openedFile = ""
-        else:
-            self.openedFile = filename
-        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
-        
+        try:
+            try:
+                with open(filename, "r") as json_file:
+                    dic = json.load(json_file)
+            except Exception as e:
+                # try to read original zy file notation via eval
+                with open(filename, "r") as f:
+                    text = f.read()
+                dic = eval(text)
+            self.deleteAllModules()
+            self.serverPanel.shutdown()
+            self.serverPanel.boot()
+            if filename.endswith(vars.constants["DEFAULT_ZY_NAME"]):
+                self.openedFile = ""
+            else:
+                self.serverPanel.setServerSettings(dic["server"])
+                self.openedFile = filename
+            if "postproc" in dic:
+                self.serverPanel.setPostProcSettings(dic["postproc"])
+            if "output_driver" in dic:
+                self.driverList, self.driverIndexes = get_output_devices()
+                if dic["output_driver"] in self.driverList:
+                    evt = wx.CommandEvent()
+                    self.serverPanel.popupDriver.SetStringSelection(dic["output_driver"])
+                    driverIndex = self.driverIndexes[self.driverList.index(dic["output_driver"])]
+                    evt.SetInt(driverIndex - 1)
+                    evt.SetString(dic["output_driver"])
+                    self.serverPanel.changeDriver(evt)
+            if "midi_interface" in dic:
+                self.interfaceList, self.interfaceIndexes = get_midi_input_devices()
+                if dic["midi_interface"] in self.interfaceList:
+                    evt = wx.CommandEvent()
+                    self.serverPanel.popupInterface.SetStringSelection(dic["midi_interface"])
+                    interfaceIndexes = self.interfaceIndexes[self.interfaceList.index(dic["midi_interface"])]
+                    evt.SetInt(interfaceIndexes - 1)
+                    evt.SetString(dic["midi_interface"])
+                    self.serverPanel.changeInterface(evt)
+            self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
+            wx.CallAfter(self.setModulesAndParams,
+                         dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])
+        except Exception as e:
+            wx.MessageBox(
+                f'The following error occurred when loading {filename}:\n"{e}"', 'Warning',
+                wx.OK | wx.ICON_WARNING)
+
     def onAddModule(self, evt):
         name = self.moduleNames[evt.GetId()-vars.constants["ID"]["Modules"]]
         dic = MODULES[name]
@@ -759,7 +799,7 @@ if __name__ == '__main__':
     file = None
     if len(sys.argv) >= 2:
         file = sys.argv[1]
-    
+    vars.readPreferencesFile()
     app = ZyneApp(0)
     app.SetAppName(vars.constants["WIN_TITLE"])
     app.SetAppDisplayName(vars.constants["WIN_TITLE"])
