@@ -245,10 +245,10 @@ class CtlBind:
         if is_log:
             norm_init = pow(float(value - mini) / (maxi - mini), .1)
             self.midictl = Midictl(ctl, 0, 1.0, norm_init)
-            self.midictl.setInterpolation(False)
+            # self.midictl.setInterpolation(False)
         else:
             self.midictl = Midictl(ctl, mini, maxi, value)
-            self.midictl.setInterpolation(False)
+            # self.midictl.setInterpolation(False)
         self.trigFunc = TrigFunc(self._midi_metro, self.valToWidget)
     
     def assignLfoMidiCtl(self, ctl, widget, i):
@@ -263,40 +263,40 @@ class CtlBind:
             if is_log:
                 norm_init = pow(float(value - mini) / (maxi - mini), .1)
                 self.lfo_midictl_0 = Midictl(ctl, 0, 1.0, norm_init)
-                self.lfo_midictl_0.setInterpolation(False)
+                # self.lfo_midictl_0.setInterpolation(False)
             else:
                 self.lfo_midictl_0 = Midictl(ctl, mini, maxi, value)
-                self.lfo_midictl_0.setInterpolation(False)
+                # self.lfo_midictl_0.setInterpolation(False)
             self.lfo_trigFunc_0 = TrigFunc(self._midi_metro, self.valToWidget0)
         elif i == 1:
             self.lfo_widget_1 = widget
             if is_log:
                 norm_init = pow(float(value - mini) / (maxi - mini), .1)
                 self.lfo_midictl_1 = Midictl(ctl, 0, 1.0, norm_init)
-                self.lfo_midictl_1.setInterpolation(False)
+                # self.lfo_midictl_1.setInterpolation(False)
             else:
                 self.lfo_midictl_1 = Midictl(ctl, mini, maxi, value)
-                self.lfo_midictl_1.setInterpolation(False)
+                # self.lfo_midictl_1.setInterpolation(False)
             self.lfo_trigFunc_1 = TrigFunc(self._midi_metro, self.valToWidget1)
         elif i == 2:
             self.lfo_widget_2 = widget
             if is_log:
                 norm_init = pow(float(value - mini) / (maxi - mini), .1)
                 self.lfo_midictl_2 = Midictl(ctl, 0, 1.0, norm_init)
-                self.lfo_midictl_2.setInterpolation(False)
+                # self.lfo_midictl_2.setInterpolation(False)
             else:
                 self.lfo_midictl_2 = Midictl(ctl, mini, maxi, value)
-                self.lfo_midictl_2.setInterpolation(False)
+                # self.lfo_midictl_2.setInterpolation(False)
             self.lfo_trigFunc_2 = TrigFunc(self._midi_metro, self.valToWidget2)
         elif i == 3:
             self.lfo_widget_3 = widget
             if is_log:
                 norm_init = pow(float(value - mini) / (maxi - mini), .1)
                 self.lfo_midictl_3 = Midictl(ctl, 0, 1.0, norm_init)
-                self.lfo_midictl_3.setInterpolation(False)
+                # self.lfo_midictl_3.setInterpolation(False)
             else:
                 self.lfo_midictl_3 = Midictl(ctl, mini, maxi, value)
-                self.lfo_midictl_3.setInterpolation(False)
+                # self.lfo_midictl_3.setInterpolation(False)
             self.lfo_trigFunc_3 = TrigFunc(self._midi_metro, self.valToWidget3)
 
     def __del__(self):
@@ -444,7 +444,7 @@ class ParamTranspo:
     def assignMidiCtl(self, ctl, widget):
         self.widget = widget
         self.midictl = Midictl(ctl, -36, 36, widget.GetValue())
-        self.midictl.setInterpolation(False)
+        # self.midictl.setInterpolation(False)
         self.trigFunc = TrigFunc(self._midi_metro, self.valToWidget)
     
     def __del__(self):
@@ -1101,21 +1101,9 @@ class VoltageControlledOsc(BaseSynth):
         self.out = DCBlock(self.mix)
 
 def checkForCustomModules():
-    path = ""
-    preffile = os.path.join(os.path.expanduser("~"), ".zynerc")
-    if os.path.isfile(preffile):
-        with codecs.open(preffile, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            if not lines[0].startswith("### Zyne") or not vars.constants["VERSION"] in lines[0]:
-                pass
-            else:
-                for line in lines:
-                    if "CUSTOM_MODULES_PATH" in line:
-                        line = line.strip()
-                        if line:
-                            sline = line.split("=")
-                            path = sline[1].strip()
-    if path != "":
+    vars.readPreferencesFile()
+    path = vars.vars["CUSTOM_MODULES_PATH"]
+    if len(path.strip()) > 0:
         if os.path.isdir(path):
             files = [f for f in os.listdir(path) if f.endswith(".py")]
             for file in files:
@@ -1124,7 +1112,7 @@ def checkForCustomModules():
                     with open(filepath, "r") as f:
                         exec(f.read(), globals())
                     vars.vars["EXTERNAL_MODULES"].update(MODULES)
-                except:
-                    pass
+                except Exception as e:
+                    print(f'The following error occurred when loading "{file}":\n{e}')
 
 checkForCustomModules()

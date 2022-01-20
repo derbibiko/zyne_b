@@ -692,23 +692,9 @@ class ZyneFrame(wx.Frame):
             if "postproc" in dic:
                 self.serverPanel.setPostProcSettings(dic["postproc"])
             if "output_driver" in dic:
-                self.driverList, self.driverIndexes = get_output_devices()
-                if dic["output_driver"] in self.driverList:
-                    evt = wx.CommandEvent()
-                    self.serverPanel.popupDriver.SetStringSelection(dic["output_driver"])
-                    driverIndex = self.driverIndexes[self.driverList.index(dic["output_driver"])]
-                    evt.SetInt(driverIndex - 1)
-                    evt.SetString(dic["output_driver"])
-                    self.serverPanel.changeDriver(evt)
+                self.serverPanel.setDriverByString(dic["output_driver"])
             if "midi_interface" in dic:
-                self.interfaceList, self.interfaceIndexes = get_midi_input_devices()
-                if dic["midi_interface"] in self.interfaceList:
-                    evt = wx.CommandEvent()
-                    self.serverPanel.popupInterface.SetStringSelection(dic["midi_interface"])
-                    interfaceIndexes = self.interfaceIndexes[self.interfaceList.index(dic["midi_interface"])]
-                    evt.SetInt(interfaceIndexes - 1)
-                    evt.SetString(dic["midi_interface"])
-                    self.serverPanel.changeInterface(evt)
+                self.serverPanel.setInterfaceByString(dic["midi_interface"])
             self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
             wx.CallAfter(self.setModulesAndParams,
                          dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])

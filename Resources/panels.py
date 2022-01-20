@@ -746,12 +746,32 @@ class ServerPanel(wx.Panel):
         self.fsserver.boot()
         self.GetTopLevelParent().setModulesAndParams(modules, params, lfo_params, ctl_params)
         self.setPostProcSettings(postProcSettings)
-    
+
+    def setDriverByString(self, s):
+        self.driverList, self.driverIndexes = get_output_devices()
+        if s in self.driverList:
+            evt = wx.CommandEvent()
+            idx = self.driverIndexes[self.driverList.index(s)]
+            evt.SetInt(idx - 1)
+            evt.SetString(s)
+            self.changeDriver(evt)
+            self.popupDriver.SetStringSelection(s)
+
     def changeDriver(self, evt):
         if vars.vars["AUDIO_HOST"] != "Jack":
             self.setDriverSetting(self.fsserver.setOutputDevice, self.driverIndexes[evt.GetInt()])
             self.selected_output_driver_name = evt.GetString()
-    
+
+    def setInterfaceByString(self, s):
+        self.interfaceList, self.interfaceIndexes = get_midi_input_devices()
+        if s in self.interfaceList:
+            evt = wx.CommandEvent()
+            idx = self.interfaceIndexes[self.interfaceList.index(s)]
+            evt.SetInt(idx - 1)
+            evt.SetString(s)
+            self.changeInterface(evt)
+            self.popupInterface.SetStringSelection(s)
+
     def changeInterface(self, evt):
         mainFrame = self.GetTopLevelParent()
         mainFrameSize = mainFrame.GetSize()
