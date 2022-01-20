@@ -629,16 +629,17 @@ class ServerPanel(wx.Panel):
         modules = self.GetTopLevelParent().modules
         for note in notes:
             self.onKeyboard(note)
-        
+
     def onKeyboard(self, note):
         pit = note[0]
-        vel = note[1]
+        vel = note[1] / 127.
+        voice = None
         if vel > 0 and pit not in self.virtualNotePressed.keys():
+            vals = self.virtualNotePressed.values()
             for i in range(vars.vars["POLY"]):
-                self.virtualvoice = (self.virtualvoice+1) % vars.vars["POLY"]
-                if self.virtualvoice not in self.virtualNotePressed.values():
+                if i not in vals:
                     break
-            voice = self.virtualNotePressed[pit] = self.virtualvoice
+            voice = self.virtualNotePressed[pit] = self.virtualvoice = i
         elif vel == 0 and pit in self.virtualNotePressed.keys():
             voice = self.virtualNotePressed[pit]
             del self.virtualNotePressed[pit]
@@ -646,8 +647,8 @@ class ServerPanel(wx.Panel):
         for module in modules:
             synth = module.synth
             synth._virtualpit[voice].setValue(pit)
-            synth._trigamp[voice].setValue(vel / 127.)
-    
+            synth._trigamp[voice].setValue(vel)
+
     def handleAudio(self, evt):
         popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
         menuIds = [vars.constants["ID"]["New"], vars.constants["ID"]["Open"], vars.constants["ID"]["MidiLearn"], 
