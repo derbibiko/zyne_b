@@ -46,9 +46,22 @@ and pick a matching package URL, e.g. for Ubuntu 20.04 `https://extras.wxpython.
 
 `python3 setup.py install --use-double`
 
+For Linux users (esp. Ubuntu) install libsndfile1-dev, portaudio19-dev, libportmidi-dev, liblo-dev, and python3-pyaudio first, then run
+
+`python3 setup.py install --use-double --user`
+
+If building pyo fails one can try to install the original pyo package via
+
+`pip3 install pyo`
+
 - go inside the folder "zyne" and execute the Python script "Zyne.py"
 
 `python3 Zyne.py`
+
+### Linux notes ###
+
+If Zyne.py cannot start due to audio settings it could be useful to install jackd2 and start it
+via `jack_control start` first (but do not use it). In addition to set the Sample Rate 48kHz could fix an issue as well.
 
 
 ### How to create a macos App ###

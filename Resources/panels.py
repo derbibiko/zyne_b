@@ -273,7 +273,7 @@ class LFOButtons(GenStaticText):
             self.font.SetWeight(wx.FONTWEIGHT_BOLD)
             
         if vars.constants["PLATFORM"] != "darwin":
-            self.font.SetPointSize(psize-2)
+            self.font.SetPointSize(psize-3)
         else:
             self.font.SetPointSize(psize-3)
         self.SetFont(self.font)
@@ -383,8 +383,9 @@ class ServerPanel(wx.Panel):
                 self.popupDriver.SetStringSelection(preferedDriver)
                 self.selected_output_driver_name = preferedDriver
             elif self.defaultDriver:
-                self.popupDriver.SetSelection(self.driverIndexes.index(self.defaultDriver))
-                self.selected_output_driver_name = self.defaultDriver
+                drivename = self.driverList[self.defaultDriver]
+                self.popupDriver.SetStringSelection(drivename)
+                self.selected_output_driver_name = drivename
             self.popupDriver.Bind(wx.EVT_CHOICE, self.changeDriver)
         else:
             self.popupDriver = wx.Choice(self, id=-1, choices=[], size=popsize)
@@ -415,8 +416,9 @@ class ServerPanel(wx.Panel):
                 self.fsserver.shutdown()
                 self.fsserver.setMidiInputDevice(self.defaultInterface)
                 self.fsserver.boot()
-                self.popupInterface.SetSelection(self.interfaceIndexes.index(self.defaultInterface))
-                self.popupInterface.SetStringSelection(self.defaultInterface)
+                interfacename = self.interfaceList[self.defaultInterface]
+                self.popupInterface.SetStringSelection(interfacename)
+                self.selected_midi_interface_name = interfacename
         else:    
             self.popupInterface = wx.Choice(self, id=-1, choices=["No interface", "Virtual Keyboard"], size=popsize)
             self.popupInterface.SetSelection(1)
