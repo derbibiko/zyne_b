@@ -173,6 +173,10 @@ class ZyneFrame(wx.Frame):
         self.fileMenu.Append(vars.constants["ID"]["Run"], 'Run\tCtrl+R', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onRun, id=vars.constants["ID"]["Run"])
         self.fileMenu.AppendSeparator()
+        if wx.Platform == "__WXMAC__" and '/Zyne_B.app' in sys.executable:
+            self.fileMenu.AppendSeparator()
+            self.fileMenu.Append(vars.constants["ID"]["NewInstance"], 'Open new Zyne_B Instance\tCtrl+Shift+N', kind=wx.ITEM_NORMAL)
+            self.Bind(wx.EVT_MENU, self.onNewInstance, id=vars.constants["ID"]["NewInstance"])
         self.fileMenu.Append(vars.constants["ID"]["Quit"], 'Quit\tCtrl+Q', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onQuit, id=vars.constants["ID"]["Quit"])
         self.addMenu = wx.Menu()
@@ -195,7 +199,7 @@ class ZyneFrame(wx.Frame):
         item.Enable(False)
 
         helpMenu = wx.Menu()
-        helpItem = helpMenu.Append(vars.constants["ID"]["About"], '&About Zyne %s' % vars.constants["VERSION"], 'wxPython RULES!!!')
+        helpItem = helpMenu.Append(vars.constants["ID"]["About"], '&About Zyne_B %s' % vars.constants["VERSION"], 'wxPython RULES!!!')
         self.Bind(wx.EVT_MENU, self.showAbout, helpItem)
         tuturialCreateModuleItem = helpMenu.Append(vars.constants["ID"]["Tutorial"], "How to create a custom module")
         self.Bind(wx.EVT_MENU, self.openTutorialCreateModule, tuturialCreateModuleItem)
@@ -230,6 +234,11 @@ class ZyneFrame(wx.Frame):
         self.sizer = wx.WrapSizer()
         self.panel = wx.Panel(self.splitWindow)
         self.serverPanel = ServerPanel(self.panel)
+
+        if vars.constants["PLATFORM"] == "darwin":
+            w, h = self.serverPanel.mainBox.GetSize()
+            self.SetMinSize((460, h + 30))
+
         mainSizer.Add(self.serverPanel)
         mainSizer.Add(self.sizer, 1, wx.EXPAND)
         self.panel.SetSizerAndFit(mainSizer)
@@ -299,6 +308,12 @@ class ZyneFrame(wx.Frame):
             self.modules[self.selected].setBackgroundColour("#DDDDE7")
             
             wx.CallAfter(self.SetFocus)
+
+    def onNewInstance(self, evt):
+        if wx.Platform == "__WXMAC__":
+            p = os.path.dirname(os.path.dirname(os.path.dirname(sys.executable)))
+            if p.endswith('/Zyne_B.app'):
+                os.system(f"open -n {p}")
 
     def onRun(self, evt):
         state = self.serverPanel.onOff.GetValue()
@@ -415,8 +430,9 @@ class ZyneFrame(wx.Frame):
                 self.SetMinSize((460, 542))
                 self.SetSize((-1, 554))
             elif vars.constants["PLATFORM"] == "darwin":
-                self.SetMinSize((460, 522))
-                self.SetSize((-1, 522))
+                w, h = self.serverPanel.mainBox.GetSize()
+                self.SetMinSize((460, h + 30))
+                self.SetSize((-1, h + 30))
             else:
                 self.SetMinSize((460, 520))
                 self.SetSize((-1, 660))
@@ -483,6 +499,7 @@ class ZyneFrame(wx.Frame):
     def onNew(self, evt):
         self.deleteAllModules()
         self.openedFile = ""
+        self.setServerPanelFooter("")
         self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - Untitled")
     
     def onSave(self, evt):
@@ -653,6 +670,16 @@ class ZyneFrame(wx.Frame):
             self.modules[i].reinitLFOS(lfo_param)
         self.refresh()
 
+    def setServerPanelFooter(self, s=None):
+        if s is None:
+            if self.openedFile:
+                s = os.path.split(self.openedFile)[1]
+                s = ".".join(s.split('.')[:-1]).replace('_', ' ')
+            else:
+                s = ""
+        self.serverPanel.footer.setLabel(s)
+        self.serverPanel.Layout()
+
     def savefile(self, filename):
         modules, params, lfo_params, ctl_params = self.getModulesAndParams()
         serverSettings = self.serverPanel.getServerSettings()
@@ -669,6 +696,7 @@ class ZyneFrame(wx.Frame):
             f.write(json.dumps(dic))
         self.openedFile = filename
         self.SetTitle(f"{vars.constants['WIN_TITLE']} - " + os.path.split(filename)[1])
+        self.setServerPanelFooter()
         self.updateLastSavedInPreferencesFile(filename)
 
     def openfile(self, filename):
@@ -695,7 +723,10 @@ class ZyneFrame(wx.Frame):
                 self.serverPanel.setDriverByString(dic["output_driver"])
             if "midi_interface" in dic:
                 self.serverPanel.setInterfaceByString(dic["midi_interface"])
-            self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
+            fn = os.path.split(filename)[1]
+            self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - {fn}")
+            if not fn.endswith(vars.constants["DEFAULT_ZY_NAME"]):
+                self.setServerPanelFooter()
             wx.CallAfter(self.setModulesAndParams,
                          dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])
         except Exception as e:
@@ -762,9 +793,9 @@ class ZyneFrame(wx.Frame):
         info = AboutDialogInfo()
     
         info.SetDescription(
-            "{vars.constants['WIN_TITLE']} is a simple soft synthesizer allowing the "
+            f"{vars.constants['WIN_TITLE']} is a simple soft synthesizer allowing the "
             "user to create original sounds and export bank of samples.\n\n"
-            "Zyne is written with Python and WxPython and uses pyo as its audio engine.\n\n"
+            "Zyne_B is written with Python and WxPython and uses pyo as its audio engine.\n\n"
             "A special thank to Jean-Michel Dumas for beta testing and a lots of ideas!")
 
         info.SetName(vars.constants["WIN_TITLE"])

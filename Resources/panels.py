@@ -557,6 +557,10 @@ class ServerPanel(wx.Panel):
             for obj in objs:
                 obj.SetFont(font)
 
+        self.footer = HeadTitle(self, "")
+        self.footer.SetBackgroundColour("#777780")
+        self.mainBox.Add(self.footer, 0, wx.BOTTOM | wx.EXPAND, 4)
+
         self.SetSizerAndFit(self.mainBox)
 
     def start(self):

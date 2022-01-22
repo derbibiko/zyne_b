@@ -8,7 +8,7 @@ constants["VERSION"] = "1.0.1"
 constants["YEAR"] = "2022"
 constants["PLATFORM"] = sys.platform
 constants["OSX_BUILD_WITH_JACK_SUPPORT"] = False
-constants["WIN_TITLE"] = "Zyne (à la Bibiko)"
+constants["WIN_TITLE"] = "Zyne_B (à la Bibiko)"
 constants["PREF_FILE_NAME"] = ".Zyne_Brc"
 constants["DEFAULT_ZY_NAME"] = "default.zy"
 
@@ -16,16 +16,16 @@ constants["DEFAULT_ZY_NAME"] = "default.zy"
 if getattr(sys, 'frozen', False):
     os.chdir(sys._MEIPASS)
 
-if '/Zyne.app' in os.getcwd():
+if '/Zyne_B.app' in os.getcwd():
     constants["RESOURCES_PATH"] = os.getcwd()
     currentw = os.getcwd()
-    spindex = currentw.index('/Zyne.app')
+    spindex = currentw.index('/Zyne_B.app')
     os.chdir(currentw[:spindex])
 else:
     constants["RESOURCES_PATH"] = os.path.join(os.getcwd(), 'Resources')
 
 if not os.path.isdir(constants["RESOURCES_PATH"]) and constants["PLATFORM"] == "win32":
-    constants["RESOURCES_PATH"] = os.path.join(os.getenv("ProgramFiles"), "Zyne", "Resources")
+    constants["RESOURCES_PATH"] = os.path.join(os.getenv("ProgramFiles"), "Zyne_B", "Resources")
 
 constants["ID"] = {
     "New": 1000, "Open": 1001, "Save": 1002, "SaveAs": 1003, "Export": 1004,
@@ -35,7 +35,8 @@ constants["ID"] = {
     "Modules": 1100, "About": wx.ID_ABOUT, "Tutorial": 6000, "MidiLearnHelp": 6001,
     "ExportHelp": 6002, "CloseTut": 7000, "CloseHelp": 7001, "CloseLFO": 7002,
     "DeSelect": 9998, "Select": 9999, "Uniform": 10000, "Triangular": 10001,
-    "Minimum": 10002, "Jitter": 10003, "Duplicate": 10100
+    "Minimum": 10002, "Jitter": 10003, "Duplicate": 10100,
+    "NewInstance": 1014
 }
 
 constants["VAR_PREF_LABELS"] = {

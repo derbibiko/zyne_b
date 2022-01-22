@@ -629,15 +629,19 @@ class HeadTitle(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         if togcall is not None:
             self.toggle = wx.CheckBox(self, id=-1)
-            mainsizer.Add(self.toggle, 0, wx.LEFT|wx.RIGHT|wx.CENTER, 2)
+            mainsizer.Add(self.toggle, 0, wx.LEFT | wx.RIGHT | wx.CENTER, 2)
             self.toggle.Bind(wx.EVT_CHECKBOX, togcall)
-        label = wx.StaticText(self, -1, title)
+        self.label = wx.StaticText(self, -1, title)
         if font is not None:
             label.SetFont(font)
-        label.SetForegroundColour("white")
-        sizer.Add(label, 0, wx.CENTER|wx.ALL, 2)
+        self.label.SetForegroundColour(wx.WHITE)
+        sizer.Add(self.label, 0, wx.CENTER | wx.ALL, 2)
         mainsizer.Add(sizer, 1)
         self.SetSizerAndFit(mainsizer)
+
+    def setLabel(self, s):
+        self.label.SetLabel(s)
+
 
 class ZyneControlSlider(ControlSlider):
     def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0,0),
