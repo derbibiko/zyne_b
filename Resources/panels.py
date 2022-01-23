@@ -676,7 +676,8 @@ class ServerPanel(wx.Panel):
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
                 if menuItem != None:
                     menuItem.Enable(True)
-    
+            self.meter.setRms(*[0 for i in range(self.meter.numSliders)])
+
     def handleRec(self, evt):
         if evt.GetInt() == 1:
             ext = self.getExtensionFromFileFormat()
