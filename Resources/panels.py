@@ -1,9 +1,13 @@
-import wx, os, math, copy, random, time
-from wx.lib.stattext import GenStaticText
+import copy
+import math
+import os
+import random
+import time
+import wx
 import Resources.variables as vars
-from Resources.widgets import *
-from pyo.lib._wxwidgets import VuMeter, BACKGROUND_COLOUR
 from Resources.audio import *
+from Resources.widgets import *
+from wx.lib.stattext import GenStaticText
 import wx.richtext as rt
 
 HEADTITLE_BACK_COLOUR = "#9999A0"
@@ -332,10 +336,10 @@ class LFOButtons(GenStaticText):
         self.callback(self.which, self.state)
 
 class ServerPanel(wx.Panel):
-    def __init__(self, parent, colour=BACKGROUND_COLOUR):
+    def __init__(self, parent, colour=wx.WHITE):
         wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
         self.colour = parent.GetBackgroundColour()
-        self.SetMinSize((230,500))
+        self.SetSize((230,500))
         self.fileformat = vars.vars["FORMAT"]
         self.sampletype = vars.vars["BITS"]
         self.virtualNotePressed = {}
@@ -356,7 +360,7 @@ class ServerPanel(wx.Panel):
         dropTarget = MyFileDropTarget(self)
         self.SetDropTarget(dropTarget)
 
-        self.title = HeadTitle(self, "Server Controls")
+        self.title = ZB_HeadTitle(self, "Server Controls")
         self.mainBox.Add(self.title, 0, wx.BOTTOM | wx.EXPAND, 4)
 
         self.driverText = wx.StaticText(self, id=-1, label="Output Driver")
@@ -493,54 +497,54 @@ class ServerPanel(wx.Panel):
     
         self.textAmp = wx.StaticText(self, id=-1, label="Global Amplitude (dB)")
         self.mainBox.Add(self.textAmp, 0, wx.TOP | wx.LEFT, 4)
-        self.sliderAmp = ZyneControlSlider(self, -60, 18, 0, outFunction=self.changeAmp, backColour=self.colour)
+        self.sliderAmp = ZyneB_ControlSlider(self, -60, 18, 0, outFunction=self.changeAmp, backColour=self.colour)
         self.mainBox.Add(self.sliderAmp, 0, wx.EXPAND | wx.ALL, 2)
         self.serverSettings.append(1.0)
-        self.meter = VuMeter(self)
+        self.meter = ZB_VuMeter(self)
         self.mainBox.Add(self.meter, 0, wx.EXPAND | wx.ALL, 2)
         self.setAmpCallable()
 
-        self.ppEqTitle = HeadTitle(self, "4 bands equalizer", togcall=self.handleOnOffEq)
+        self.ppEqTitle = ZB_HeadTitle(self, "4 bands equalizer", togcall=self.handleOnOffEq)
         self.onOffEq = self.ppEqTitle.toggle
         self.mainBox.Add(self.ppEqTitle, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 4)
 
         eqFreqBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobEqF1 = ControlKnob(self, 40, 250, 100, label=' Freq 1', backColour=self.colour, outFunction=self.changeEqF1)
+        self.knobEqF1 = ZB_ControlKnob(self, 40, 250, 100, label=' Freq 1', backColour=self.colour, outFunction=self.changeEqF1)
         eqFreqBox.Add(self.knobEqF1, 0, wx.LEFT | wx.RIGHT, 20)
         self.knobEqF1.setFloatPrecision(2)
-        self.knobEqF2 = ControlKnob(self, 300, 1000, 500, label=' Freq 2', backColour=self.colour, outFunction=self.changeEqF2)
+        self.knobEqF2 = ZB_ControlKnob(self, 300, 1000, 500, label=' Freq 2', backColour=self.colour, outFunction=self.changeEqF2)
         eqFreqBox.Add(self.knobEqF2, 0, wx.LEFT | wx.RIGHT, 20)
         self.knobEqF2.setFloatPrecision(2)
-        self.knobEqF3 = ControlKnob(self, 1200, 5000, 2000, label=' Freq 3', backColour=self.colour, outFunction=self.changeEqF3)
+        self.knobEqF3 = ZB_ControlKnob(self, 1200, 5000, 2000, label=' Freq 3', backColour=self.colour, outFunction=self.changeEqF3)
         eqFreqBox.Add(self.knobEqF3, 0, wx.LEFT | wx.RIGHT, 20)
         self.knobEqF3.setFloatPrecision(2)
 
         self.mainBox.Add(eqFreqBox, 0, wx.CENTER)
 
         eqGainBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobEqA1 = ControlKnob(self, -40, 18, 0, label='B1 gain', backColour=self.colour, outFunction=self.changeEqA1)
+        self.knobEqA1 = ZB_ControlKnob(self, -40, 18, 0, label='B1 gain', backColour=self.colour, outFunction=self.changeEqA1)
         eqGainBox.Add(self.knobEqA1, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA2 = ControlKnob(self, -40, 18, 0, label='B2 gain', backColour=self.colour, outFunction=self.changeEqA2)
+        self.knobEqA2 = ZB_ControlKnob(self, -40, 18, 0, label='B2 gain', backColour=self.colour, outFunction=self.changeEqA2)
         eqGainBox.Add(self.knobEqA2, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA3 = ControlKnob(self, -40, 18, 0, label='B3 gain', backColour=self.colour, outFunction=self.changeEqA3)
+        self.knobEqA3 = ZB_ControlKnob(self, -40, 18, 0, label='B3 gain', backColour=self.colour, outFunction=self.changeEqA3)
         eqGainBox.Add(self.knobEqA3, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA4 = ControlKnob(self, -40, 18, 0, label='B4 gain', backColour=self.colour, outFunction=self.changeEqA4)
+        self.knobEqA4 = ZB_ControlKnob(self, -40, 18, 0, label='B4 gain', backColour=self.colour, outFunction=self.changeEqA4)
         eqGainBox.Add(self.knobEqA4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(eqGainBox, 0, wx.CENTER)
     
-        self.ppCompTitle = HeadTitle(self, "Dynamic compressor", togcall=self.handleOnOffComp)
+        self.ppCompTitle = ZB_HeadTitle(self, "Dynamic compressor", togcall=self.handleOnOffComp)
         self.onOffComp = self.ppCompTitle.toggle
         self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND|wx.BOTTOM, 4)
     
         cpKnobBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobComp1 = ControlKnob(self, -60, 0, -3, label=' Thresh', backColour=self.colour, outFunction=self.changeComp1)
+        self.knobComp1 = ZB_ControlKnob(self, -60, 0, -3, label=' Thresh', backColour=self.colour, outFunction=self.changeComp1)
         cpKnobBox.Add(self.knobComp1, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp2 = ControlKnob(self, 1, 10, 2, label=' Ratio', backColour=self.colour, outFunction=self.changeComp2)
+        self.knobComp2 = ZB_ControlKnob(self, 1, 10, 2, label=' Ratio', backColour=self.colour, outFunction=self.changeComp2)
         cpKnobBox.Add(self.knobComp2, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp3 = ControlKnob(self, 0.001, 0.5, 0.01, label='Risetime', backColour=self.colour, outFunction=self.changeComp3)
+        self.knobComp3 = ZB_ControlKnob(self, 0.001, 0.5, 0.01, label='Risetime', backColour=self.colour, outFunction=self.changeComp3)
         cpKnobBox.Add(self.knobComp3, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp4 = ControlKnob(self, 0.01, 1, .1, label='Falltime', backColour=self.colour, outFunction=self.changeComp4)
+        self.knobComp4 = ZB_ControlKnob(self, 0.01, 1, .1, label='Falltime', backColour=self.colour, outFunction=self.changeComp4)
         cpKnobBox.Add(self.knobComp4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(cpKnobBox, 0, wx.CENTER)
@@ -557,7 +561,7 @@ class ServerPanel(wx.Panel):
             for obj in objs:
                 obj.SetFont(font)
 
-        self.footer = HeadTitle(self, "")
+        self.footer = ZB_HeadTitle(self, "")
         self.footer.SetBackgroundColour("#777780")
         self.mainBox.Add(self.footer, 0, wx.BOTTOM | wx.EXPAND, 4)
 
@@ -618,21 +622,19 @@ class ServerPanel(wx.Panel):
             self.keyboard.reset()
         else:
             modules = self.GetTopLevelParent().modules
-            for pit in list(self.virtualNotePressed.keys()):
-                voice = self.virtualNotePressed[pit]
-                del self.virtualNotePressed[pit]
+            for pit, voice in self.virtualNotePressed.items():
                 for module in modules:
                     synth = module.synth
                     synth._virtualpit[voice].setValue(pit)
                     synth._trigamp[voice].setValue(0)
+            self.virtualNotePressed = {}
         self.virtualvoice = 0
     
     def retrigVirtualNotes(self):
         notes = self.keyboard.getCurrentNotes()
         self.resetVirtualKeyboard(resetDisplay=False)
-        modules = self.GetTopLevelParent().modules
         for note in notes:
-            self.onKeyboard(note)
+            wx.CallLater(50, self.onKeyboard, note)
 
     def onKeyboard(self, note):
         pit = note[0]
@@ -691,15 +693,19 @@ class ServerPanel(wx.Panel):
         self.fsserver.setAmp(math.pow(10.0, float(value) * 0.05))
     
     def getServerSettings(self):
-        return [self.popupSr.GetSelection(), self.popupPoly.GetSelection(), self.popupBit.GetSelection(), 
-                self.popupFormat.GetSelection(), self.sliderAmp.GetValue()]
+        return [self.popupSr.GetSelection(), self.popupPoly.GetSelection(),
+                self.popupBit.GetSelection(), self.popupFormat.GetSelection(),
+                self.sliderAmp.GetValue()]
     
     def getPostProcSettings(self):
         dic = {}
-        dic["EQ"] = [self.onOffEq.GetValue(), self.knobEqF1.GetValue(), self.knobEqF2.GetValue(), self.knobEqF3.GetValue(),
-                    self.knobEqA1.GetValue(), self.knobEqA2.GetValue(), self.knobEqA3.GetValue(), self.knobEqA4.GetValue()]
-        dic["Comp"] = [self.onOffComp.GetValue(), self.knobComp1.GetValue(), self.knobComp2.GetValue(),
-                    self.knobComp3.GetValue(), self.knobComp4.GetValue()]
+        dic["EQ"] = [self.onOffEq.GetValue(), self.knobEqF1.GetValue(),
+                     self.knobEqF2.GetValue(), self.knobEqF3.GetValue(),
+                     self.knobEqA1.GetValue(), self.knobEqA2.GetValue(),
+                     self.knobEqA3.GetValue(), self.knobEqA4.GetValue()]
+        dic["Comp"] = [self.onOffComp.GetValue(), self.knobComp1.GetValue(),
+                       self.knobComp2.GetValue(), self.knobComp3.GetValue(),
+                       self.knobComp4.GetValue()]
         return dic
     
     def setServerSettings(self, serverSettings):
@@ -804,6 +810,7 @@ class ServerPanel(wx.Panel):
                 self.keyboardShown = 1
                 mainFrame.SetSize((mainFrameSize[0], mainFrameSize[1]+80))
                 mainFrame.showKeyboard()
+                mainFrame.keyboard.SetFocus()
         
     def changeSr(self, evt):
         if evt.GetInt() == 0: sr = 44100
@@ -918,15 +925,15 @@ class BasePanel(wx.Panel):
     
     def createAdsrKnobs(self):
         self.knobSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobDel = ControlKnob(self, 0, 60.0, 0, log=False, label='Delay', outFunction=self.changeDelay)
+        self.knobDel = ZB_ControlKnob(self, 0, 60.0, 0, log=False, label='Delay', outFunction=self.changeDelay)
         self.knobSizer.Add(self.knobDel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobAtt = ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
+        self.knobAtt = ZB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
         self.knobSizer.Add(self.knobAtt, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobDec = ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
+        self.knobDec = ZB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
         self.knobSizer.Add(self.knobDec, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobSus = ControlKnob(self, 0.001, 1.0, 0.7, label='Sustain', outFunction=self.changeSustain)
+        self.knobSus = ZB_ControlKnob(self, 0.001, 1.0, 0.7, label='Sustain', outFunction=self.changeSustain)
         self.knobSizer.Add(self.knobSus, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobRel = ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
+        self.knobRel = ZB_ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
         self.knobSizer.Add(self.knobRel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
         self.sizer.Add(self.knobSizer, 0, wx.BOTTOM|wx.LEFT, 1)
         self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
@@ -945,11 +952,13 @@ class BasePanel(wx.Panel):
         self.sizer.Add(text, 0, wx.LEFT, 5)
         self.sizer.AddSpacer(1)
         if self.from_lfo or integer:
-            slider = ZyneControlSlider(self, minValue, maxValue, value, size=(212,16), log=log, integer=integer, outFunction=callback, backColour=self.colour)
+            slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(212,16), log=log,
+                                         integer=integer, outFunction=callback, backColour=self.colour)
             self.sizer.Add(slider, 0, wx.LEFT|wx.RIGHT, 5)
         else:
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
-            slider = ZyneControlSlider(self, minValue, maxValue, value, size=(195,16), log=log, integer=integer, outFunction=callback, backColour=self.colour)
+            slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(195,16), log=log,
+                                         integer=integer, outFunction=callback, backColour=self.colour)
             button = LFOButtons(self, synth=self.synth, which=i, callback=self.startLFO)
             lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i)
             self.buttons[i] = button

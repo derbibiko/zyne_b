@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-import wx
+import json
 import os
 import sys
-import json
-import Resources.variables as vars
+import wx
 import Resources.audio as audio
 import Resources.tutorial as tutorial
+import Resources.variables as vars
+import wx.richtext as rt
+from Resources.audio import get_output_devices, get_midi_input_devices
 from Resources.panels import *
 from Resources.preferences import PreferencesDialog
 from Resources.splash import ZyneSplashScreen
-from Resources.audio import get_output_devices, get_midi_input_devices
-import wx.richtext as rt
+from Resources.widgets import ZB_Keyboard
+
 
 try:
     from wx.adv import AboutDialogInfo, AboutBox
@@ -199,7 +201,7 @@ class ZyneFrame(wx.Frame):
         item.Enable(False)
 
         helpMenu = wx.Menu()
-        helpItem = helpMenu.Append(vars.constants["ID"]["About"], '&About Zyne_B %s' % vars.constants["VERSION"], 'wxPython RULES!!!')
+        helpItem = helpMenu.Append(vars.constants["ID"]["About"], f'&About Zyne_B {vars.constants["VERSION"]}', 'wxPython RULES!!!')
         self.Bind(wx.EVT_MENU, self.showAbout, helpItem)
         tuturialCreateModuleItem = helpMenu.Append(vars.constants["ID"]["Tutorial"], "How to create a custom module")
         self.Bind(wx.EVT_MENU, self.openTutorialCreateModule, tuturialCreateModuleItem)
@@ -243,7 +245,7 @@ class ZyneFrame(wx.Frame):
         mainSizer.Add(self.sizer, 1, wx.EXPAND)
         self.panel.SetSizerAndFit(mainSizer)
     
-        self.keyboard = Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
+        self.keyboard = ZB_Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
         self.serverPanel.keyboard = self.keyboard
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
     
@@ -267,19 +269,19 @@ class ZyneFrame(wx.Frame):
         old = self.selected
         if num == 0:
             return
-        if self.selected == None:
+        if self.selected is None:
             self.selected = 0
         else:
             self.selected = (self.selected + 1) % num
-        if old != None:
-            self.modules[old].setBackgroundColour(BACKGROUND_COLOUR)
-        self.modules[self.selected].setBackgroundColour("#DDDDE7")
+        if old is not None:
+            self.modules[old].setBackgroundColour(self.GetBackgroundColour())
+        self.modules[self.selected].setBackgroundColour("#9999A7")
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(True)
 
     def clearSelection(self, evt):
-        if self.selected != None:
-            self.modules[self.selected].setBackgroundColour(BACKGROUND_COLOUR)
+        if self.selected is not None:
+            self.modules[self.selected].setBackgroundColour(self.GetBackgroundColour())
         self.selected = None
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(False)
@@ -304,8 +306,8 @@ class ZyneFrame(wx.Frame):
             
             old = self.selected
             self.selected = len(self.modules) - 1
-            self.modules[old].setBackgroundColour(BACKGROUND_COLOUR)
-            self.modules[self.selected].setBackgroundColour("#DDDDE7")
+            self.modules[old].setBackgroundColour(self.GetBackgroundColour())
+            self.modules[self.selected].setBackgroundColour("#9999A7")
             
             wx.CallAfter(self.SetFocus)
 
@@ -361,6 +363,7 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.setPostProcSettings(postProcSettings)
 
     def buildAddModuleMenu(self):
+        audio.checkForCustomModules()
         self.moduleNames = sorted(MODULES.keys())
         id = vars.constants["ID"]["Modules"]
         for i, name in enumerate(self.moduleNames):

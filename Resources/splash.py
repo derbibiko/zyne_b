@@ -29,7 +29,8 @@ class ZyneSplashScreen(wx.Frame):
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
-        self.mainframe = mainframe
+        wx.CallAfter(mainframe.Show)
+
         self.bmp = wx.Bitmap(os.path.join(img), wx.BITMAP_TYPE_PNG)
         self.w, self.h = self.bmp.GetWidth(), self.bmp.GetHeight()
         self.SetClientSize((self.w, self.h))
@@ -84,5 +85,4 @@ class ZyneSplashScreen(wx.Frame):
                      wx.Rect(0, 340, 400, 15), wx.ALIGN_CENTER)
 
     def OnClose(self):
-        self.mainframe.Show()
         self.Destroy()

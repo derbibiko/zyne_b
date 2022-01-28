@@ -1,627 +1,93 @@
-# encoding: utf-8
-import wx, math, copy
-from wx.lib.embeddedimage import PyEmbeddedImage
-from pyo.lib._wxwidgets import ControlSlider, BACKGROUND_COLOUR
-import Resources.variables as vars
+"""
+Copyright 2009-2015 Olivier Belanger - modifications by Hans-Jörg Bibiko 2022
 
-KNOB = PyEmbeddedImage(
-    "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"
-    "dU4Z0j+kV1A+yjFKc6SKV2lW/+f8kf1fdUvwRR//ic+4iC9ynMz5o8KIX+KaZ0uVV13XsZ6Z"
-    "zUVZHvJjbMrzLFumn1ScWRtIu1S+z+D/Drab+f/t7e3wjoh9eKb3x0wjfUGbILzS4pz2R/ye"
-    "Vh3LN7yXkV73fT6TadKeurIt5xz46P6faeb/7Dt9nkxK+LDsWO0mx1TKUPcz/VTeI6/036gd"
-    "Z/+u8EofH9b5bA4gHmXk/SfvPYrW+D+FzZhv6ef5boDtsWH26+yb9L18NxiNFfk+mv0/x5D0"
-    "VZYlyzur7xKPoq38jy/xbfa1nk5/L+jjSY612fdm81HWg/x6e8jxPNNkzOk26WSZbvk76K/a"
-    "yv+lslG+A5Zt+3t79zXtJP3A+wRp0aZ45hT/ZzzGJPIizV6+JT3q/K+UUkoppZ5Tl9rnzXTv"
-    "ZS/51pTrIJewYX0bzb5r+vfUX7X2ebU/rDnUmslszXqN0v99bSO/80ff/EtrIayb9PNrKMs5"
-    "6kf84zG7v5Te6HqW1yytUb8m7mzNaVbmv4r9stz7I1/WPPKc9sIzuc6ebST3XjlnDZd7OSaw"
-    "d7MmvNs6y5nriXWP9WbWmvq6UoX3Ota9TCttV8f0GZBXXqMep8R6JfdJl73upTKfo+6XbG+j"
-    "/s9aG7ZmP75rNPZXvNzHLegjrPOtCT9WL+yXY17/tyH3IRB7GXXMtcq0VabZ8xrZt/8TQZzR"
-    "/ZH/R2U+R33+P8X/GX/2/pB24py9GY74M//JWBN+ar36nJd7Avh6VKf0QbdPXs/yyrDRPhP3"
-    "sz9znXmPynyutvB/30cpn1CmPC8x1jF+MpbRnteGn1Ivwhg3+I8AG9O+EHNt938fc3KP8pj/"
-    "+X8i8yj1+93/szKfq2P+z7kdO/R+knUt9fEpfYO/iMs8tlX4MbtnGLbk/TrnYcZw4mLntDV7"
-    "nfgz9yiPlYN/a/EhbSdtyp7ZyP+jMp/zLsh+W9YpfUffzrpij9FYRdxMr+fX/dn7wZpwwpbq"
-    "lWHUg7mk+zfn8tE3GM/350Z59TDaQN+LTBsTP/Oelbn3tUtoab1APb70v1JKKaWUUkoppZRS"
-    "Sl1NOxERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER"
-    "ERERERERERERERERERERERERERERERERERERERERERGRO+Qfh5eOajemXSYAAAFTbWtCVPrO"
-    "yv4Af1WJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    "AAAAAAAAAAAAAAAAAAAAAAAAAAB4nO3W4WmDYBSGUQdxEQdxEBdxEAdxEQexvIELt6Yh/4oJ"
-    "54FDm0/7601szlOSJEmSJEmSJEmSJEmSJEmSJEkf0XEc577vT+c5y7V397+6T/dvXddzHMdz"
-    "mqbHz+wY/Sz31L11FsuyPF7HMAx/vod077JjlX2zYXatzfs9tX/VN7/+je5ftut7Vjnrn+V6"
-    "nX37xtm/ul7T/ctzvu9f/9fneX7aP9fs/31l23ru1+/btv36zPfnv/2/r/oe1/er90Cu1Xf7"
-    "nEXVnx3Xa5IkSZIkSZIkSfr3BgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    "AAAAAAAA+EA/CvmsuD1UqYgAAA7XbWtCVPrOyv4Af594AAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4nO2djZEc"
-    "KQyFHYgTcSAOxIk4EAfiRBzIXunqPte7Z0lAz8/+WK9qame7aRASCNCDnpeXwWAwGAwGg8Fg"
-    "MBgMBoPB4D/8+vXr5efPn3984jr3qufic6WsAGX498H/Uen5iv4zfP/+/eXTp09/fOI69zJ8"
-    "+fLl388uvn379jvvsDdlBPT7R0bU+7SelZ5P9b8CNtH+rvZf9VH6dpWmk9ft3/mdXVTyrOQE"
-    "XRq9XqXLrmftvHs+cGrnq3rr7B/la991ubRvex6aD3kFqv6veWX1jvufP3/+93voLdL9+PHj"
-    "9714hrqoLwtEOr0e6TNE/p4m8oi8uRdlq15IF9f1eeqgaSMvT0cd9Hr8jc+q/8ffr1+//n7u"
-    "Cjr7c01l0fIjTZTPM1mfIz33Mvu7DFGe2wibx9/QmaaJ74xbXHM9RRqd8zi0fUU+pEcXyKnp"
-    "VO74oAvassod11Qfqmctn/F91/76zBWs/H9WZtb/6X+dvIHM/upvqFNWd+wcelZ90S7igy/Q"
-    "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"
-    "j/cX3tpLeKun00DwW5DyzkmZvtRZQl0WVKqm4p6QB5mP5//60UtxBckuAuG9gFDW23cb/7zD"
-    "00FHXPSaV8LPi4HY4jn54w7PMlMes5flQVzok1lcnN95Pceo8Edq977M6cf11aLCTe5AGuKM"
-    "dNSCtoR2A0R/vvyDDnrOK7LZzEIOxLpct5+s/LzD1ayF99nrNsvba5k2TP64yqbaUt9fcv1u"
-    "nWx8VUHPrxA8EQqiuct8prIhgrg7uhLBOJlfMdxn6XPejfnGQ5+H/7/kIAs+6lZCiX7mLLa5"
-    "rhmgy5hf/yZmmeTVanDxL1fZ1I3Kd2EA+U8gvJqwSAwSM8nb+/6+AUlgmMjyddj5Fbv1uDHq"
-    "zaTJ+7cIyM/3/3/lK1/5yle+8pWvfOUrX/nKV77yla985Stf+cpXvvKVr3zlK1/5yle+8pWv"
-    "fOUrX/nKV77yla985Stf+cpXvvKVr3zlK1/5yle+8pWvfOUrX/nKV77yla985Stf+cpXvvKV"
-    "r3zlK1/5yle+8pWvfOUrX/nKV77yla985Stf+cpXvvKVr3zlK1/5yle+8pWvfOUrX/nKV77y"
-    "la985Stf+cpXvvKVr3zlK1/5yle+8hWA/wfdmhmZdymm9wAACEVJREFUWIXNmGtsHFcVx393"
-    "XruzXsd2/G7tpIbEpapUIRFRKZFQ1YBUCVSFQKUIlbYiKhUSVZEA9UMpBfohH0gUtXwDRENb"
-    "SqgQuJZCH0lMyyOKSGr6MnUeTuzY3SSt147ttXdn5s69fNiZ9XjspClxJI50tLOzs3d+8z/3"
-    "3jnnCK01/89mrPaAmzZtemI1x7sqQLFohhBisxDiy0IIRwiREUK4Qohc5HVa661CiLwQoi5x"
-    "3o2udYQQthDCjMYSQghxTYDRACK61gRywAOADTiRZ4Bs5EHqe3zcB2wHrMjNaMwrQlpXARZ7"
-    "POC/gRC4A/hX4rwBiDAMzwJ1gI5cAb1AD3AweqAwchV9aiGEBrROLQqx0iJJwcXKmYmn37Jr"
-    "167NW7Zs2S6E2KiUIgzDmsfflVL4vn967969w0eOHBkEfgXISGUZeRJ2GeQywBTcF4DPAM9H"
-    "YM7hw4fva2ho+HYmk9mglEJKSRAESCkJwxAp5RJAKSVSSkql0sj4+Pi+xx577AXAjyD9FUCX"
-    "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"
-    "xpabAAAAAElFTkSuQmCC")
+Some classes of this file were parts of pyo's _wxwidgets.py,
+a python module to help digital signal processing script creation.
+"""
+
+import copy
+import math
+import sys
+import wx
+import Resources.variables as vars
+from wx.lib.embeddedimage import PyEmbeddedImage
+
+
+p_mathlog10 = math.log10
+p_mathpow = math.pow
+p_mathsin = math.sin
+p_mathcos = math.cos
+p_math_pi = math.pi
+
+
+if "phoenix" in wx.version():
+    wx.GraphicsContext_Create = wx.GraphicsContext.Create
+    wx.EmptyBitmap = wx.Bitmap
+    wx.EmptyImage = wx.Image
+    wx.BitmapFromImage = wx.Bitmap
+    wx.Image_HSVValue = wx.Image.HSVValue
+    wx.Image_HSVtoRGB = wx.Image.HSVtoRGB
+
 
 def interpFloat(t, v1, v2):
     "interpolator for a single value; interprets t in [0-1] between v1 and v2"
-    return (v2-v1)*t + v1
+    return (v2 - v1) * t + v1
+
 
 def tFromValue(value, v1, v2):
     "returns a t (in range 0-1) given a value in the range v1 to v2"
-    return float(value-v1)/(v2-v1)
+    return (value - v1) / (v2 - v1)
 
-def clamp(v, minv, maxv):
+
+def clamp(v, vmin, vmax):
     "clamps a value within a range"
-    if v<minv: v=minv
-    if v> maxv: v=maxv
-    return v
+    return vmin if v < vmin else vmax if v > vmax else v
+
 
 def toLog(t, v1, v2):
-    return math.log10(t/v1) / math.log10(v2/v1)
+    return p_mathlog10(t/v1) / p_mathlog10(v2/v1)
+
 
 def toExp(t, v1, v2):
-    return math.pow(10, t * (math.log10(v2) - math.log10(v1)) + math.log10(v1))
+    v1log = p_mathlog10(v1)
+    return p_mathpow(10, t * (p_mathlog10(v2) - v1log) + v1log)
+
+
+POWOFTWO = {
+    2: 1,
+    4: 2,
+    8: 3,
+    16: 4,
+    32: 5,
+    64: 6,
+    128: 7,
+    256: 8,
+    512: 9,
+    1024: 10,
+    2048: 11,
+    4096: 12,
+    8192: 13,
+    16384: 14,
+    32768: 15,
+    65536: 16,
+}
+
+
+def powOfTwo(x):
+    "Return 2 raised to the power of x."
+    return 2 ** x
+
+
+def powOfTwoToInt(x):
+    "Return the exponent of 2 correponding to the value x."
+    return POWOFTWO[x]
+
 
 HEADTITLE_BACK_COLOUR = "#9999A0"
+BACKGROUND_COLOUR = "#EBEBEB"
 
-class HeadTitle(wx.Panel):
+
+class ZB_HeadTitle(wx.Panel):
     def __init__(self, parent, title, font=None, togcall=None):
         wx.Panel.__init__(self, parent, -1)
         self.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
@@ -643,57 +109,442 @@ class HeadTitle(wx.Panel):
         self.label.SetLabel(s)
 
 
-class ZyneControlSlider(ControlSlider):
-    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0,0),
-                 size=(200,16), log=False, outFunction=None, integer=False,
+class ZB_ControlSlider(wx.Panel):
+    def __init__(
+        self,
+        parent,
+        minvalue,
+        maxvalue,
+        init=None,
+        pos=(0, 0),
+        size=(200, 16),
+        log=False,
+        outFunction=None,
+        integer=False,
+        powoftwo=False,
+        backColour=None,
+        orient=wx.HORIZONTAL,
+        ctrllabel="",
+    ):
+        if size == (200, 16) and orient == wx.VERTICAL:
+            size = (40, 200)
+        wx.Panel.__init__(
+            self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
+            style=wx.NO_BORDER | wx.WANTS_CHARS | wx.EXPAND
+        )
+        self.parent = parent
+        if backColour:
+            self.backgroundColour = backColour
+        else:
+            self.backgroundColour = BACKGROUND_COLOUR
+        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
+        self.SetBackgroundColour(self.backgroundColour)
+        self.orient = orient
+        # self.SetMinSize(self.GetSize())
+        if self.orient == wx.VERTICAL:
+            self.knobSize = 17
+            self.knobHalfSize = 8
+            self.sliderWidth = size[0] - 29
+        else:
+            self.knobSize = 40
+            self.knobHalfSize = 20
+            self.sliderHeight = size[1] - 5
+        self.outFunction = outFunction
+        self.integer = integer
+        self.log = log
+        self.powoftwo = powoftwo
+        if self.powoftwo:
+            self.integer = True
+            self.log = False
+        self.ctrllabel = ctrllabel
+        self.SetRange(minvalue, maxvalue)
+        self.borderWidth = 1
+        self.selected = False
+        self._enable = True
+        self.propagate = True
+        self.midictl = None
+        self.new = ""
+        if init is not None:
+            self.SetValue(init)
+            self.init = init
+        else:
+            self.SetValue(minvalue)
+            self.init = minvalue
+        self.clampPos()
+        self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
+        self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.DoubleClick)
+        self.Bind(wx.EVT_MOTION, self.MouseMotion)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_SIZE, self.OnResize)
+        self.Bind(wx.EVT_CHAR, self.onChar)
+        self.Bind(wx.EVT_KILL_FOCUS, self.LooseFocus)
+
+        if sys.platform == "win32" or sys.platform.startswith("linux"):
+            self.dcref = wx.BufferedPaintDC
+            self.font = wx.Font(7, wx.FONTFAMILY_TELETYPE,
+                                wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        else:
+            self.dcref = wx.PaintDC
+            self.font = wx.Font(10, wx.FONTFAMILY_TELETYPE,
+                                wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+
+    def getCtrlLabel(self):
+        return self.ctrllabel
+
+    def setMidiCtl(self, x, propagate=True):
+        self.propagate = propagate
+        self.midictl = x
+        self.Refresh()
+
+    def getMidiCtl(self):
+        return self.midictl
+
+    def getMinValue(self):
+        return self.minvalue
+
+    def getMaxValue(self):
+        return self.maxvalue
+
+    def Enable(self):
+        self._enable = True
+        wx.CallAfter(self.Refresh)
+
+    def Disable(self):
+        self._enable = False
+        wx.CallAfter(self.Refresh)
+
+    def setSliderHeight(self, height):
+        self.sliderHeight = height
+        self.Refresh()
+
+    def setSliderWidth(self, width):
+        self.sliderWidth = width
+
+    def getInit(self):
+        return self.init
+
+    def SetRange(self, minvalue, maxvalue):
+        self.minvalue = minvalue
+        self.maxvalue = maxvalue
+
+    def getRange(self):
+        return [self.minvalue, self.maxvalue]
+
+    def scale(self):
+        if self.orient == wx.VERTICAL:
+            h = self.GetSize()[1]
+            inter = tFromValue(
+                h - self.pos, self.knobHalfSize, self.GetSize()[1] - self.knobHalfSize)
+        else:
+            inter = tFromValue(
+                self.pos, self.knobHalfSize, self.GetSize()[0] - self.knobHalfSize)
+        if not self.integer:
+            return interpFloat(inter, self.minvalue, self.maxvalue)
+        elif self.powoftwo:
+            return powOfTwo(int(interpFloat(inter, self.minvalue, self.maxvalue)))
+        else:
+            return int(interpFloat(inter, self.minvalue, self.maxvalue))
+
+    def SetValue(self, value, propagate=True):
+        self.propagate = propagate
+        if self.HasCapture():
+            self.ReleaseMouse()
+        if self.powoftwo:
+            value = powOfTwoToInt(value)
+        value = clamp(value, self.minvalue, self.maxvalue)
+        if self.log:
+            t = toLog(value, self.minvalue, self.maxvalue)
+            self.value = interpFloat(t, self.minvalue, self.maxvalue)
+        else:
+            t = tFromValue(value, self.minvalue, self.maxvalue)
+            self.value = interpFloat(t, self.minvalue, self.maxvalue)
+        if self.integer:
+            self.value = int(self.value)
+        if self.powoftwo:
+            self.value = powOfTwo(self.value)
+        self.clampPos()
+        self.selected = False
+        wx.CallAfter(self.Refresh)
+
+    def GetValue(self):
+        if self.log:
+            t = tFromValue(self.value, self.minvalue, self.maxvalue)
+            val = toExp(t, self.minvalue, self.maxvalue)
+        else:
+            val = self.value
+        if self.integer:
+            val = int(val)
+        return val
+
+    def LooseFocus(self, event):
+        self.new = ""
+        self.selected = False
+        self.Refresh()
+        event.Skip()
+
+    def onChar(self, event):
+        if self.selected:
+            old_val = self.GetValue()
+            char = ""
+            if event.GetKeyCode() in range(wx.WXK_NUMPAD0, wx.WXK_NUMPAD9 + 1):
+                char = str(event.GetKeyCode() - wx.WXK_NUMPAD0)
+            elif event.GetKeyCode() in [wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT]:
+                char = "-"
+            elif event.GetKeyCode() in [wx.WXK_DECIMAL, wx.WXK_NUMPAD_DECIMAL]:
+                char = "."
+            elif event.GetKeyCode() == wx.WXK_BACK:
+                if self.new != "":
+                    self.new = self.new[0:-1]
+            elif event.GetKeyCode() < 256:
+                char = chr(event.GetKeyCode())
+
+            if char in "0123456789.-":
+                self.new += char
+            elif event.GetKeyCode() in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
+                try:
+                    self.SetValue(float(self.new))
+                except Exception:
+                    self.SetValue(old_val)
+                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
+                wx.PostEvent(self.GetEventHandler(), evt)
+            elif event.GetKeyCode() == wx.WXK_ESCAPE:
+                self.SetValue(old_val)
+                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
+                wx.PostEvent(self.GetEventHandler(), evt)
+            self.Refresh()
+        event.StopPropagation()
+
+    def MouseDown(self, evt):
+        if evt.ShiftDown():
+            self.DoubleClick(evt)
+            return
+        if self._enable:
+            size = self.GetSize()
+            if self.orient == wx.VERTICAL:
+                self.pos = clamp(evt.GetPosition()[1], self.knobHalfSize, size[1] - self.knobHalfSize)
+            else:
+                self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, size[0] - self.knobHalfSize)
+            self.value = self.scale()
+            self.CaptureMouse()
+            self.selected = False
+            self.Refresh()
+        evt.Skip()
+
+    def MouseUp(self, evt):
+        if self.HasCapture():
+            self.ReleaseMouse()
+
+    def DoubleClick(self, event):
+        if self._enable:
+            w, h = self.GetSize()
+            pos = event.GetPosition()
+            if self.orient == wx.VERTICAL:
+                if wx.Rect(0, self.pos - self.knobHalfSize, w, self.knobSize).Contains(pos):
+                    self.selected = True
+            else:
+                if wx.Rect(self.pos - self.knobHalfSize, 0, self.knobSize, h).Contains(pos):
+                    self.selected = True
+            self.Refresh()
+        event.Skip()
+
+    def MouseMotion(self, evt):
+        if self._enable:
+            size = self.GetSize()
+            if self.HasCapture():
+                if self.orient == wx.VERTICAL:
+                    self.pos = clamp(evt.GetPosition()[1], self.knobHalfSize, size[1] - self.knobHalfSize)
+                else:
+                    self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, size[0] - self.knobHalfSize)
+                self.value = self.scale()
+                self.selected = False
+                self.Refresh()
+
+    def OnResize(self, evt):
+        self.clampPos()
+        self.Refresh()
+
+    def clampPos(self):
+        size = self.GetSize()
+        if self.powoftwo:
+            val = powOfTwoToInt(self.value)
+        else:
+            val = self.value
+        if self.orient == wx.VERTICAL:
+            self.pos = tFromValue(
+                val, self.minvalue, self.maxvalue) * (size[1] - self.knobSize) + self.knobHalfSize
+            self.pos = clamp(size[1] - self.pos, self.knobHalfSize, size[1] - self.knobHalfSize)
+        else:
+            self.pos = tFromValue(
+                val, self.minvalue, self.maxvalue) * (size[0] - self.knobSize) + self.knobHalfSize
+            self.pos = clamp(self.pos, self.knobHalfSize, size[0] - self.knobHalfSize)
+
+    def setBackgroundColour(self, colour):
+        self.backgroundColour = colour
+        self.SetBackgroundColour(self.backgroundColour)
+        self.Refresh()
+
+    def OnPaint(self, evt):
+        w, h = self.GetSize()
+
+        if w <= 0 or h <= 0:
+            evt.Skip()
+            return
+
+        dc = self.dcref(self)
+        gc = wx.GraphicsContext_Create(dc)
+
+        dc.SetBrush(wx.Brush(self.backgroundColour, wx.SOLID))
+        dc.Clear()
+
+        # Draw background
+        dc.SetPen(wx.Pen(self.backgroundColour, width=self.borderWidth, style=wx.SOLID))
+        dc.DrawRectangle(0, 0, w, h)
+
+        # Draw inner part
+        if self._enable:
+            sliderColour = "#99A7CC"
+        else:
+            sliderColour = "#BBBBBB"
+        if self.orient == wx.VERTICAL:
+            w2 = (w - self.sliderWidth) // 2
+            rec = wx.Rect(w2, 0, self.sliderWidth, h)
+            brush = gc.CreateLinearGradientBrush(w2, 0, w2 + self.sliderWidth, 0, "#646986", sliderColour)
+        else:
+            h2 = self.sliderHeight // 4
+            rec = wx.Rect(0, h2, w, self.sliderHeight)
+            brush = gc.CreateLinearGradientBrush(0, h2, 0, h2 + self.sliderHeight, "#646986", sliderColour)
+        gc.SetBrush(brush)
+        gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 2)
+
+        if self.midictl is not None:
+            if sys.platform == "win32" or sys.platform.startswith("linux"):
+                dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+            else:
+                dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+            dc.SetTextForeground("#FFFFFF")
+            if self.orient == wx.VERTICAL:
+                dc.DrawLabel(str(self.midictl), wx.Rect(w2, 2, self.sliderWidth, 12), wx.ALIGN_CENTER)
+                dc.DrawLabel(str(self.midictl), wx.Rect(w2, h - 12, self.sliderWidth, 12), wx.ALIGN_CENTER)
+            else:
+                dc.DrawLabel(str(self.midictl), wx.Rect(2, 0, h, h), wx.ALIGN_CENTER)
+                dc.DrawLabel(str(self.midictl), wx.Rect(w - h, 0, h, h), wx.ALIGN_CENTER)
+
+        # Draw knob
+        if self._enable:
+            knobColour = "#888888"
+        else:
+            knobColour = "#DDDDDD"
+        if self.orient == wx.VERTICAL:
+            rec = wx.Rect(0, self.pos - self.knobHalfSize, w, self.knobSize - 1)
+            if self.selected:
+                brush = wx.Brush("#333333", wx.SOLID)
+            else:
+                brush = gc.CreateLinearGradientBrush(0, 0, w, 0, "#323854", knobColour)
+            gc.SetBrush(brush)
+            gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 3)
+        else:
+            rec = wx.Rect(int(self.pos) - self.knobHalfSize, 0, self.knobSize - 1, h)
+            if self.selected:
+                brush = wx.Brush("#333333", wx.SOLID)
+            else:
+                brush = gc.CreateLinearGradientBrush(
+                    self.pos - self.knobHalfSize, 0, self.pos + self.knobHalfSize, 0, "#323854", knobColour
+                )
+            gc.SetBrush(brush)
+            gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 3)
+
+        dc.SetFont(self.font)
+
+        # Draw text
+        if self.selected and self.new:
+            val = self.new
+        else:
+            if self.integer:
+                val = "%d" % self.GetValue()
+            elif abs(self.GetValue()) >= 1000:
+                val = "%.0f" % self.GetValue()
+            elif abs(self.GetValue()) >= 100:
+                val = "%.1f" % self.GetValue()
+            elif abs(self.GetValue()) >= 10:
+                val = "%.2f" % self.GetValue()
+            elif abs(self.GetValue()) < 10:
+                val = "%.3f" % self.GetValue()
+        if sys.platform.startswith("linux"):
+            width = len(val) * (dc.GetCharWidth() - 3)
+        else:
+            width = len(val) * dc.GetCharWidth()
+        dc.SetTextForeground("#FFFFFF")
+        dc.DrawLabel(val, rec, wx.ALIGN_CENTER)
+
+        # Send value
+        if self.outFunction and self.propagate:
+            self.outFunction(self.GetValue())
+        self.propagate = True
+
+        evt.Skip()
+
+
+class ZyneB_ControlSlider(ZB_ControlSlider):
+    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0, 0),
+                 size=(200, 16), log=False, outFunction=None, integer=False,
                  powoftwo=False, backColour=None):
-        ControlSlider.__init__(self, parent, minvalue, maxvalue, init, pos, size,
-                               log, outFunction, integer, powoftwo, backColour)
+        ZB_ControlSlider.__init__(self, parent, minvalue, maxvalue, init, pos, size,
+                                  log, outFunction, integer, powoftwo, backColour)
 
     def setValue(self, x):
         wx.CallAfter(self.SetValue, x)
 
     def MouseDown(self, evt):
         if vars.vars["MIDILEARN"]:
-            if vars.vars["LEARNINGSLIDER"] == None:
+            if vars.vars["LEARNINGSLIDER"] is None:
                 vars.vars["LEARNINGSLIDER"] = self
                 self.Disable()
             elif vars.vars["LEARNINGSLIDER"] == self:
                 vars.vars["LEARNINGSLIDER"].setMidiCtl(None)
-                vars.vars["LEARNINGSLIDER"] = None
+                vars.vars["LEARNINGSLIDER"] is None
                 self.Enable()
             evt.StopPropagation()
         else:
-            ControlSlider.MouseDown(self, evt)
+            ZB_ControlSlider.MouseDown(self, evt)
 
-class ControlKnob(wx.Panel):
-    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0,0),
-                 size=(44,70), log=False, outFunction=None, integer=False,
+
+class ZB_ControlKnob(wx.Panel):
+    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0, 0),
+                 size=(44, 74), log=False, outFunction=None, integer=False,
                  backColour=None, label=''):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
                           style=wx.NO_BORDER | wx.WANTS_CHARS)
         self.parent = parent
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
         self.backColour = parent.GetBackgroundColour()
+        self.foreColour = parent.GetForegroundColour()
         self.SetBackgroundColour(self.backColour)
         self.SetMinSize(self.GetSize())
-        self.knobBitmap = KNOB.GetBitmap()
         self.outFunction = outFunction
         self.integer = integer
         self.log = log
         self.label = label
         self.SetRange(minvalue, maxvalue)
-        self.borderWidth = 1
+        self.borderWidth = 0
         self.selected = False
         self._enable = True
         self.midictl = None
         self.new = ''
         self.floatPrecision = '%.3f'
+        self.knobCenterPosX = int(size[0] / 2)
+        self.knobRadius = 14
+        self.knobCenterPosY = self.knobRadius + 18
+        self.knobStartAngle = 18 * p_math_pi / 180  # 18° := start angle
+        self.knobEndAngle = 2 * p_math_pi - self.knobStartAngle
+        self.knobRec = wx.Rect(self.knobCenterPosX - self.knobRadius - 5,
+                               self.knobCenterPosY - self.knobRadius - 5,
+                               2 * self.knobRadius + 10, 2 * self.knobRadius + 10)
 
-        if init != None: 
+        if init is not None:
             self.SetValue(init)
             self.init = init
-        else: 
+        else:
             self.SetValue(minvalue)
             self.init = minvalue
 
@@ -709,7 +560,7 @@ class ControlKnob(wx.Panel):
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_KEY_DOWN, self.keyDown)
         self.Bind(wx.EVT_KILL_FOCUS, self.LooseFocus)
-   
+
     def setMidiCtl(self, x, propagate=True):
         self.propagate = propagate
         self.midictl = x
@@ -721,10 +572,10 @@ class ControlKnob(wx.Panel):
     def setFloatPrecision(self, x):
         self.floatPrecision = '%.' + '%df' % x
         self.Refresh()
-    
+
     def getMinValue(self):
         return self.minvalue
-    
+
     def getMaxValue(self):
         return self.maxvalue
 
@@ -735,23 +586,23 @@ class ControlKnob(wx.Panel):
     def Disable(self):
         self._enable = False
         self.Refresh()
-   
+
     def getInit(self):
         return self.init
-    
+
     def getLabel(self):
         return self.label
-    
+
     def getLog(self):
         return self.log
-    
+
     def SetRange(self, minvalue, maxvalue):
         self.minvalue = minvalue
         self.maxvalue = maxvalue
-    
+
     def getRange(self):
         return [self.minvalue, self.maxvalue]
-    
+
     def SetValue(self, value):
         if self.HasCapture():
             self.ReleaseMouse()
@@ -766,7 +617,7 @@ class ControlKnob(wx.Panel):
             self.value = int(self.value)
         self.selected = False
         self.Refresh()
-    
+
     def GetValue(self):
         if self.log:
             t = tFromValue(self.value, self.minvalue, self.maxvalue)
@@ -776,136 +627,759 @@ class ControlKnob(wx.Panel):
         if self.integer:
             val = int(val)
         return val
-    
+
     def LooseFocus(self, event):
+        self.new = ""
         self.selected = False
         self.Refresh()
-    
+        event.Skip()
+
     def keyDown(self, event):
         if self.selected:
-            char = ''
-            if event.GetKeyCode() in range(324, 334):
-                char = str(event.GetKeyCode() - 324)
-            elif event.GetKeyCode() == 390:
-                char = '-'
-            elif event.GetKeyCode() == 391:
-                char = '.'
+            old_val = self.GetValue()
+            char = ""
+            if event.GetKeyCode() in range(wx.WXK_NUMPAD0, wx.WXK_NUMPAD9 + 1):
+                char = str(event.GetKeyCode() - wx.WXK_NUMPAD0)
+            elif event.GetKeyCode() in [wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT]:
+                char = "-"
+            elif event.GetKeyCode() in [wx.WXK_DECIMAL, wx.WXK_NUMPAD_DECIMAL]:
+                char = "."
             elif event.GetKeyCode() == wx.WXK_BACK:
-                if self.new != '':
+                if self.new != "":
                     self.new = self.new[0:-1]
             elif event.GetKeyCode() < 256:
                 char = chr(event.GetKeyCode())
-            if char in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
-                self.new += char
-            elif char == '.' and not '.' in self.new:
-                self.new += char
-            elif char == '-' and len(self.new) == 0:
+
+            if char in "0123456789.-":
                 self.new += char
             elif event.GetKeyCode() in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
-                if self.new != '':
-                    self.SetValue(eval(self.new))
-                    self.new = ''
-                self.selected = False
+                try:
+                    self.SetValue(float(self.new))
+                except Exception:
+                    self.SetValue(old_val)
+                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
+                wx.PostEvent(self.GetEventHandler(), evt)
+            elif event.GetKeyCode() == wx.WXK_ESCAPE:
+                self.SetValue(old_val)
+                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
+                wx.PostEvent(self.GetEventHandler(), evt)
             self.Refresh()
-        event.Skip()
+            event.StopPropagation()
 
     def MouseDown(self, evt):
-        if evt.ShiftDown():
+        if evt.ShiftDown() and not evt.Dragging():
             self.DoubleClick(evt)
             return
         if self._enable:
-            rec = wx.Rect(5, 13, 45, 45)
             pos = evt.GetPosition()
-            if rec.Contains(pos):
+            if self.knobRec.Contains(pos):
                 self.clickPos = wx.GetMousePosition()
                 self.oldValue = self.value
                 self.CaptureMouse()
                 self.selected = False
             self.Refresh()
         evt.Skip()
-    
+
     def MouseUp(self, evt):
         if self.HasCapture():
             self.ReleaseMouse()
-    
+
     def DoubleClick(self, event):
         if self._enable:
             w, h = self.GetSize()
             pos = event.GetPosition()
+
+            # check for number field is pressed
             reclab = wx.Rect(5, 55, w-10, 13)
-            recpt = wx.Rect(self.knobPointPos[0]-3, self.knobPointPos[1]-3, 9, 9)
             if reclab.Contains(pos):
                 self.selected = True
+
+            # check for knob area was pressed
+            if not self.selected and self.knobRec.Contains(pos):
+                try:
+                    _rad = None
+                    _x = self.knobCenterPosX - pos[0]
+                    _y = self.knobCenterPosY - pos[1]
+                    if _x == 0 and _y <= 0:
+                        pass
+                    elif _x == 0 and _y > 0:
+                        _rad = p_math_pi
+                    elif _y == 0:
+                        _rad = p_math_pi / 2
+                        if _x < 0:
+                            _rad *= 3
+                    else:
+                        _rad = math.atan(_x / _y)
+                        if _x > 0 and _y < 0:
+                            _rad = 0 - _rad
+                        elif _x < 0 and _y < 0:
+                            _rad = 2 * p_math_pi - _rad
+                        elif _x > 0 and _y > 0:
+                            _rad = p_math_pi - _rad
+                        elif _x < 0 and _y > 0:
+                            _rad = p_math_pi - _rad
+                    if _rad is not None:
+                        _v = (_rad - self.knobStartAngle) / (self.knobEndAngle - self.knobStartAngle) * \
+                             (self.maxvalue - self.minvalue) + self.minvalue
+                        if self.log:
+                            _v = toExp(tFromValue(_v, self.minvalue, self.maxvalue),
+                                       self.minvalue, self.maxvalue)
+                        self.SetValue(_v)
+                except Exception as e:
+                    pass
+
             self.Refresh()
         event.Skip()
-    
+
     def MouseMotion(self, evt):
         if self._enable:
             if evt.Dragging() and evt.LeftIsDown() and self.HasCapture():
                 pos = wx.GetMousePosition()
-                offY = self.clickPos[1] - pos[1]
-                off = offY
-                off *= 0.005 * (self.maxvalue - self.minvalue)
+                offY = self.clickPos[1] - pos[1]  # fast changes, up +, down -
+                offX = self.clickPos[0] - pos[0]  # slow changes, right +, left -
+                off = 0.005 * offY * (self.maxvalue - self.minvalue) - \
+                    0.001 * offX * (self.maxvalue - self.minvalue)
                 self.value = clamp(self.oldValue + off, self.minvalue, self.maxvalue)
                 self.selected = False
                 self.Refresh()
-    
+
     def setbackColour(self, colour):
         self.backColour = colour
         self.Refresh()
 
     def OnPaint(self, evt):
-        w,h = self.GetSize()
+        w, h = self.GetSize()
         dc = wx.AutoBufferedPaintDC(self)
-    
+
         dc.SetBrush(wx.Brush(self.backColour, wx.SOLID))
         dc.Clear()
-    
+
         # Draw background
         dc.SetPen(wx.Pen(self.backColour, width=self.borderWidth, style=wx.SOLID))
         dc.DrawRectangle(0, 0, w, h)
 
         dc.SetFont(self.font)
-    
+
         # Draw text label
         reclab = wx.Rect(0, 1, w, 9)
         dc.DrawLabel(self.label, reclab, wx.ALIGN_CENTER_HORIZONTAL)
-    
-        recval = wx.Rect(5, 55, w-10, 13)
-    
+
+        recval = wx.Rect(0, self.knobCenterPosY + self.knobRadius + 11, w, 9)
+
         if self.selected:
-            dc.SetBrush(wx.Brush('#FFFFFF', wx.SOLID))
-            dc.SetPen(wx.Pen('#FFFFFF', width=self.borderWidth, style=wx.SOLID))  
+            dc.SetPen(wx.Pen('#AAAAAA'))
+            dc.SetBrush(wx.Brush('#AAAAAA', wx.TRANSPARENT))
             dc.DrawRoundedRectangle(recval, 3)
-    
-        dc.DrawBitmap(self.knobBitmap, 2, 13, True)
-        r = 0.17320508075688773 # math.sqrt(.03)
-        val = tFromValue(self.value, self.minvalue, self.maxvalue) * 0.87
-        ph = val * math.pi * 2 - (3 * math.pi / 2.2)
-        X = int(round(r * math.cos(ph)*45))
-        Y = int(round(r * math.sin(ph)*45))
-        dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
-        dc.SetBrush(wx.Brush("#000000", wx.SOLID))
-        self.knobPointPos = (X+22, Y+33)
-        dc.DrawCircle(X+22, Y+33, 2)
+
+        # Draw knob
+        knobColour = wx.Colour(self.foreColour.red, self.foreColour.green, self.foreColour.blue)
+        dc.SetPen(wx.Pen(knobColour, width=3, style=wx.SOLID))
+
+        ph = interpFloat(tFromValue(self.value, self.minvalue, self.maxvalue),
+                         self.knobStartAngle, self.knobEndAngle)
+        lendx = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
+        lendy = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
+
+        dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
+        dc.SetPen(wx.Pen(self.foreColour, width=2, style=wx.SOLID))
+        dc.SetBrush(wx.Brush(knobColour, wx.TRANSPARENT))
+        dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius)
+        dc.SetPen(wx.Pen(self.backColour, width=4, style=wx.SOLID))
+        dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius + 3)
 
         # Draw text value
         if self.selected and self.new:
             val = self.new
         else:
             if self.integer:
-                val = '%d' % self.GetValue()
+                val = str(int(self.GetValue()))
             else:
                 val = self.floatPrecision % self.GetValue()
         if vars.constants["PLATFORM"].startswith('linux'):
             width = len(val) * (dc.GetCharWidth() - 3)
         else:
             width = len(val) * dc.GetCharWidth()
-        # dc.SetTextForeground('#000000')
+
         dc.DrawLabel(val, recval, wx.ALIGN_CENTER)
-    
+
         # Send value
         if self.outFunction:
             self.outFunction(self.GetValue())
-    
+
+        evt.Skip()
+
+
+class ZB_VuMeter(wx.Panel):
+    def __init__(self, parent, size=(200, 11), numSliders=2,
+                 orient=wx.HORIZONTAL, pos=wx.DefaultPosition, style=0):
+        if orient == wx.HORIZONTAL:
+            size = (size[0], numSliders * 5 + 1)
+        else:
+            size = (numSliders * 5 + 1, size[1])
+        wx.Panel.__init__(self, parent, -1, pos=pos, size=size, style=style)
+        self.parent = parent
+        self.orient = orient
+        self.SetBackgroundColour(wx.BLACK)
+        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
+        self.old_nchnls = numSliders
+        self.numSliders = numSliders
+        self.amplitude = [0] * self.numSliders
+        self.createBitmaps()
+
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnSize(self, evt):
+        self.createBitmaps()
+        wx.CallAfter(self.Refresh)
+
+    def createBitmaps(self):
+        w, h = self.GetSize()
+        if w == 0 or h == 0:
+            return
+
+        b = wx.EmptyBitmap(w, h)
+        f = wx.EmptyBitmap(w, h)
+        dcb = wx.MemoryDC(b)
+        dcf = wx.MemoryDC(f)
+        dcb.SetPen(wx.Pen(wx.BLACK, width=1))
+        dcf.SetPen(wx.Pen(wx.BLACK, width=1))
+        if self.orient == wx.HORIZONTAL:
+            height = 6
+            steps = int(w / 10.0 + 0.5)
+        else:
+            width = 6
+            steps = int(h / 10.0 + 0.5)
+        bounds = int(steps / 6.0)
+        for i in range(steps):
+            if i == (steps - 1):
+                dcb.SetBrush(wx.Brush("#770000"))
+                dcf.SetBrush(wx.Brush("#FF0000"))
+            elif i >= (steps - bounds):
+                dcb.SetBrush(wx.Brush("#440000"))
+                dcf.SetBrush(wx.Brush("#CC0000"))
+            elif i >= (steps - (bounds * 2)):
+                dcb.SetBrush(wx.Brush("#444400"))
+                dcf.SetBrush(wx.Brush("#CCCC00"))
+            else:
+                dcb.SetBrush(wx.Brush("#004400"))
+                dcf.SetBrush(wx.Brush("#00CC00"))
+            if self.orient == wx.HORIZONTAL:
+                dcb.DrawRectangle(i * 10, 0, 11, height)
+                dcf.DrawRectangle(i * 10, 0, 11, height)
+            else:
+                ii = steps - 1 - i
+                dcb.DrawRectangle(0, ii * 10, width, 11)
+                dcf.DrawRectangle(0, ii * 10, width, 11)
+        if self.orient == wx.HORIZONTAL:
+            dcb.DrawLine(w - 1, 0, w - 1, height)
+            dcf.DrawLine(w - 1, 0, w - 1, height)
+        else:
+            dcb.DrawLine(0, 0, width, 0)
+            dcf.DrawLine(0, 0, width, 0)
+        dcb.SelectObject(wx.NullBitmap)
+        dcf.SelectObject(wx.NullBitmap)
+        self.backBitmap = b
+        self.bitmap = f
+
+    def setNumSliders(self, numSliders):
+        w, h = self.GetSize()
+        oldChnls = self.old_nchnls
+        self.numSliders = numSliders
+        self.amplitude = [0] * self.numSliders
+        gap = (self.numSliders - oldChnls) * 5
+        parentSize = self.parent.GetSize()
+        if self.orient == wx.HORIZONTAL:
+            self.SetSize((w, self.numSliders * 5 + 1))
+            self.SetMinSize((w, 5 * self.numSliders + 1))
+            self.parent.SetSize((parentSize[0], parentSize[1] + gap))
+            self.parent.SetMinSize((parentSize[0], parentSize[1] + gap))
+        else:
+            self.SetSize((self.numSliders * 5 + 1, h))
+            self.SetMinSize((5 * self.numSliders + 1, h))
+            self.parent.SetSize((parentSize[0] + gap, parentSize[1]))
+            self.parent.SetMinSize((parentSize[0] + gap, parentSize[1]))
+        wx.CallAfter(self.Refresh)
+        wx.CallAfter(self.parent.Layout)
+        wx.CallAfter(self.parent.Refresh)
+
+    def setRms(self, *args):
+        if args[0] < 0:
+            return
+        if not args:
+            self.amplitude = [0] * self.numSliders
+        else:
+            self.amplitude = args
+        wx.CallAfter(self.Refresh)
+
+    def OnPaint(self, event):
+        w, h = self.GetSize()
+        dc = wx.AutoBufferedPaintDC(self)
+        dc.SetBrush(wx.Brush(wx.BLACK))
+        dc.Clear()
+        dc.DrawRectangle(0, 0, w, h)
+        if self.orient == wx.HORIZONTAL:
+            height = 6
+            for i in range(self.numSliders):
+                y = i * (height - 1)
+                if i < len(self.amplitude):
+                    db = p_mathlog10(self.amplitude[i] + 0.00001) * 0.2 + 1.0
+                    try:
+                        width = int(db * w)
+                    except OverflowError:
+                        width = w
+                else:
+                    width = 0
+                dc.DrawBitmap(self.backBitmap, 0, y)
+                if width > 0:
+                    dc.SetClippingRegion(0, y, width, height)
+                    dc.DrawBitmap(self.bitmap, 0, y)
+                    dc.DestroyClippingRegion()
+        else:
+            width = 6
+            for i in range(self.numSliders):
+                y = i * (width - 1)
+                if i < len(self.amplitude):
+                    db = p_mathlog10(self.amplitude[i] + 0.00001) * 0.2 + 1.0
+                    try:
+                        height = int(db * h)
+                    except OverflowError:
+                        height = h
+                else:
+                    height = 0
+                dc.DrawBitmap(self.backBitmap, y, 0)
+                if height > 0:
+                    dc.SetClippingRegion(y, h - height, width, height)
+                    dc.DrawBitmap(self.bitmap, y, 0)
+                    dc.DestroyClippingRegion()
+        event.Skip()
+
+    def OnClose(self, evt):
+        self.Destroy()
+
+
+class ZB_Keyboard(wx.Panel):
+    def __init__(
+        self,
+        parent,
+        id=wx.ID_ANY,
+        pos=wx.DefaultPosition,
+        size=wx.DefaultSize,
+        poly=64,
+        outFunction=None,
+        style=wx.TAB_TRAVERSAL,
+    ):
+        wx.Panel.__init__(self, parent, id, pos, size, style)
+        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
+        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.parent = parent
+        self.outFunction = outFunction
+
+        self.poly = poly
+        self.gap = 0
+        self.offset = 12
+        self.w1 = 15
+        self.w2 = int(self.w1 / 2) + 1
+        self.hold = 1
+        self.keyPressed = None
+
+        self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
+        self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
+
+        self.white = (0, 2, 4, 5, 7, 9, 11)
+        self.black = (1, 3, 6, 8, 10)
+        self.whiteSelected = []
+        self.blackSelected = []
+        self.whiteVelocities = {}
+        self.blackVelocities = {}
+        self.whiteKeys = []
+        self.blackKeys = []
+
+        self.offRec = wx.Rect(900 - 55, 0, 28, 150)
+        self.holdRec = wx.Rect(900 - 27, 0, 27, 150)
+
+        self.keydown = []
+        self.keymap = {
+            90: 36,
+            83: 37,
+            88: 38,
+            68: 39,
+            67: 40,
+            86: 41,
+            71: 42,
+            66: 43,
+            72: 44,
+            78: 45,
+            74: 46,
+            77: 47,
+            44: 48,
+            76: 49,
+            46: 50,
+            59: 51,
+            47: 52,
+            81: 60,
+            50: 61,
+            87: 62,
+            51: 63,
+            69: 64,
+            82: 65,
+            53: 66,
+            84: 67,
+            54: 68,
+            89: 69,
+            55: 70,
+            85: 71,
+            73: 72,
+            57: 73,
+            79: 74,
+            48: 75,
+            80: 76,
+        }
+
+        wx.CallAfter(self._setRects)
+
+    def getCurrentNotes(self):
+        "Returns a list of the current notes."
+        notes = []
+        for key in self.whiteSelected:
+            notes.append((self.white[key % 7] + int(key / 7) * 12 + self.offset,
+                          127 - self.whiteVelocities[key]))
+        for key in self.blackSelected:
+            notes.append((self.black[key % 5] + int(key / 5) * 12 + self.offset,
+                          127 - self.blackVelocities[key]))
+        notes.sort()
+        return notes
+
+    def reset(self):
+        "Resets the keyboard state."
+        for key in self.blackSelected:
+            pit = self.black[key % 5] + int(key / 5) * 12 + self.offset
+            note = (pit, 0)
+            if self.outFunction:
+                self.outFunction(note)
+        for key in self.whiteSelected:
+            pit = self.white[key % 7] + int(key / 7) * 12 + self.offset
+            note = (pit, 0)
+            if self.outFunction:
+                self.outFunction(note)
+        self.whiteSelected = []
+        self.blackSelected = []
+        self.whiteVelocities = {}
+        self.blackVelocities = {}
+        wx.CallAfter(self.Refresh)
+
+    def setPoly(self, poly):
+        "Sets the maximum number of notes that can be held at the same time."
+        self.poly = poly
+
+    def _setRects(self):
+        w, h = self.GetSize()
+        self.offRec = wx.Rect(w - 55, 0, 28, h)
+        self.holdRec = wx.Rect(w - 27, 0, 27, h)
+        num = int(w / self.w1)
+        self.gap = w - num * self.w1
+        self.whiteKeys = [wx.Rect(i * self.w1, 0, self.w1 - 1, h - 1) for i in range(num)]
+        self.blackKeys = []
+        height2 = int(h * 4 / 7)
+        for i in range(int(num / 7) + 1):
+            space2 = self.w1 * 7 * i
+            off = int(self.w1 / 2) + space2 + 3
+            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
+            off += self.w1
+            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
+            off += self.w1 * 2
+            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
+            off += self.w1
+            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
+            off += self.w1
+            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
+        wx.CallAfter(self.Refresh)
+
+    def OnSize(self, evt):
+        self._setRects()
+        wx.CallAfter(self.Refresh)
+        evt.Skip()
+
+    def OnKeyDown(self, evt):
+        if evt.HasAnyModifiers():
+            evt.Skip()
+            return
+
+        if evt.GetKeyCode() in self.keymap and evt.GetKeyCode() not in self.keydown:
+            self.keydown.append(evt.GetKeyCode())
+            pit = self.keymap[evt.GetKeyCode()]
+            deg = pit % 12
+
+            total = len(self.blackSelected) + len(self.whiteSelected)
+            note = None
+            if self.hold:
+                if deg in self.black:
+                    which = self.black.index(deg) + int((pit - self.offset) / 12) * 5
+                    if which in self.blackSelected:
+                        self.blackSelected.remove(which)
+                        del self.blackVelocities[which]
+                        total -= 1
+                        note = (pit, 0)
+                    else:
+                        if total < self.poly:
+                            self.blackSelected.append(which)
+                            self.blackVelocities[which] = 100
+                            note = (pit, 100)
+
+                elif deg in self.white:
+                    which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
+                    if which in self.whiteSelected:
+                        self.whiteSelected.remove(which)
+                        del self.whiteVelocities[which]
+                        total -= 1
+                        note = (pit, 0)
+                    else:
+                        if total < self.poly:
+                            self.whiteSelected.append(which)
+                            self.whiteVelocities[which] = 100
+                            note = (pit, 100)
+            else:
+                if deg in self.black:
+                    which = self.black.index(deg) + int((pit - self.offset) / 12) * 5
+                    if which not in self.blackSelected and total < self.poly:
+                        self.blackSelected.append(which)
+                        self.blackVelocities[which] = 100
+                        note = (pit, 100)
+                elif deg in self.white:
+                    which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
+                    if which not in self.whiteSelected and total < self.poly:
+                        self.whiteSelected.append(which)
+                        self.whiteVelocities[which] = 100
+                        note = (pit, 100)
+
+            if note and self.outFunction and total < self.poly:
+                self.outFunction(note)
+
+            wx.CallAfter(self.Refresh)
+        evt.StopPropagation()
+
+    def OnKeyUp(self, evt):
+        if evt.HasAnyModifiers():
+            evt.Skip()
+            return
+
+        if evt.GetKeyCode() in self.keydown:
+            del self.keydown[self.keydown.index(evt.GetKeyCode())]
+
+        if not self.hold and evt.GetKeyCode() in self.keymap:
+            pit = self.keymap[evt.GetKeyCode()]
+            deg = pit % 12
+
+            note = None
+            if deg in self.black:
+                which = self.black.index(deg) + int((pit - self.offset) / 12) * 5
+                if which in self.blackSelected:
+                    self.blackSelected.remove(which)
+                    del self.blackVelocities[which]
+                    note = (pit, 0)
+            elif deg in self.white:
+                which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
+                if which in self.whiteSelected:
+                    self.whiteSelected.remove(which)
+                    del self.whiteVelocities[which]
+                    note = (pit, 0)
+
+            if note and self.outFunction:
+                self.outFunction(note)
+
+            wx.CallAfter(self.Refresh)
+
+        evt.StopPropagation()
+
+    def MouseUp(self, evt):
+        if not self.hold and self.keyPressed is not None:
+            key = self.keyPressed[0]
+            pit = self.keyPressed[1]
+            if key in self.blackSelected:
+                self.blackSelected.remove(key)
+                del self.blackVelocities[key]
+            if key in self.whiteSelected:
+                self.whiteSelected.remove(key)
+                del self.whiteVelocities[key]
+            note = (pit, 0)
+            if self.outFunction:
+                self.outFunction(note)
+            self.keyPressed = None
+            wx.CallAfter(self.Refresh)
+        evt.Skip()
+
+    def MouseDown(self, evt):
+        w, h = self.GetSize()
+        pos = evt.GetPosition()
+        if self.holdRec.Contains(pos):
+            if self.hold:
+                self.hold = 0
+                self.reset()
+            else:
+                self.hold = 1
+            wx.CallAfter(self.Refresh)
+            return
+        if self.offUpRec.Contains(pos):
+            self.offset += 12
+            if self.offset > 60:
+                self.offset = 60
+            wx.CallAfter(self.Refresh)
+            return
+        if self.offDownRec.Contains(pos):
+            self.offset -= 12
+            if self.offset < 0:
+                self.offset = 0
+            wx.CallAfter(self.Refresh)
+            return
+
+        total = len(self.blackSelected) + len(self.whiteSelected)
+        scanWhite = True
+        note = None
+        if self.hold:
+            for i, rec in enumerate(self.blackKeys):
+                if rec.Contains(pos):
+                    pit = self.black[i % 5] + int(i / 5) * 12 + self.offset
+                    if i in self.blackSelected:
+                        self.blackSelected.remove(i)
+                        del self.blackVelocities[i]
+                        total -= 1
+                        vel = 0
+                    else:
+                        hb = int(h * 4 / 7)
+                        vel = int((hb - pos[1]) * 127 / hb)
+                        if total < self.poly:
+                            self.blackSelected.append(i)
+                            self.blackVelocities[i] = int(127 - vel)
+                    note = (pit, vel)
+                    scanWhite = False
+                    break
+            if scanWhite:
+                for i, rec in enumerate(self.whiteKeys):
+                    if rec.Contains(pos):
+                        pit = self.white[i % 7] + int(i / 7) * 12 + self.offset
+                        if i in self.whiteSelected:
+                            self.whiteSelected.remove(i)
+                            del self.whiteVelocities[i]
+                            total -= 1
+                            vel = 0
+                        else:
+                            vel = int((h - pos[1]) * 127 / h)
+                            if total < self.poly:
+                                self.whiteSelected.append(i)
+                                self.whiteVelocities[i] = int(127 - vel)
+                        note = (pit, vel)
+                        break
+            if note and self.outFunction and total < self.poly:
+                self.outFunction(note)
+        else:
+            self.keyPressed = None
+            for i, rec in enumerate(self.blackKeys):
+                if rec.Contains(pos):
+                    pit = self.black[i % 5] + int(i / 5) * 12 + self.offset
+                    vel = 0
+                    if i not in self.blackSelected:
+                        hb = int(h * 4 / 7)
+                        vel = int((hb - pos[1]) * 127 / hb)
+                        if total < self.poly:
+                            self.blackSelected.append(i)
+                            self.blackVelocities[i] = int(127 - vel)
+                    note = (pit, vel)
+                    self.keyPressed = (i, pit)
+                    scanWhite = False
+                    break
+            if scanWhite:
+                for i, rec in enumerate(self.whiteKeys):
+                    if rec.Contains(pos):
+                        pit = self.white[i % 7] + int(i / 7) * 12 + self.offset
+                        vel = 0
+                        if i not in self.whiteSelected:
+                            vel = int((h - pos[1]) * 127 / h)
+                            if total < self.poly:
+                                self.whiteSelected.append(i)
+                                self.whiteVelocities[i] = int(127 - vel)
+                        note = (pit, vel)
+                        self.keyPressed = (i, pit)
+                        break
+            if note and self.outFunction and total < self.poly:
+                self.outFunction(note)
+        wx.CallAfter(self.Refresh)
+        evt.Skip()
+
+    def OnPaint(self, evt):
+        w, h = self.GetSize()
+        dc = wx.AutoBufferedPaintDC(self)
+        dc.SetBrush(wx.Brush("#000000", wx.SOLID))
+        dc.Clear()
+        dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
+        dc.DrawRectangle(0, 0, w, h)
+
+        if sys.platform == "darwin":
+            dc.SetFont(wx.Font(12, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        else:
+            dc.SetFont(wx.Font(8, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+
+        for i, rec in enumerate(self.whiteKeys):
+            if i in self.whiteSelected:
+                amp = int(self.whiteVelocities[i] * 1.5)
+                dc.GradientFillLinear(rec, (250, 250, 250), (amp, amp, amp), wx.SOUTH)
+                dc.SetBrush(wx.Brush("#CCCCCC", wx.SOLID))
+                dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
+            else:
+                dc.SetBrush(wx.Brush("#FFFFFF", wx.SOLID))
+                dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
+                dc.DrawRectangle(rec)
+            if i == (35 - (7 * int(self.offset / 12))):
+                if i in self.whiteSelected:
+                    dc.SetTextForeground("#FFFFFF")
+                else:
+                    dc.SetTextForeground("#000000")
+                dc.DrawText("C", rec[0] + 3, rec[3] - 15)
+
+        dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
+        for i, rec in enumerate(self.blackKeys):
+            if i in self.blackSelected:
+                amp = int(self.blackVelocities[i] * 1.5)
+                dc.GradientFillLinear(rec, (250, 250, 250), (amp, amp, amp), wx.SOUTH)
+                dc.DrawLine(rec[0], 0, rec[0], rec[3])
+                dc.DrawLine(rec[0] + rec[2], 0, rec[0] + rec[2], rec[3])
+                dc.DrawLine(rec[0], rec[3], rec[0] + rec[2], rec[3])
+                dc.SetBrush(wx.Brush("#DDDDDD", wx.SOLID))
+            else:
+                dc.SetBrush(wx.Brush("#000000", wx.SOLID))
+                dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
+                dc.DrawRectangle(rec)
+
+        dc.SetBrush(wx.Brush(BACKGROUND_COLOUR, wx.SOLID))
+        dc.SetPen(wx.Pen("#AAAAAA", width=1, style=wx.SOLID))
+        dc.DrawRectangle(self.offRec)
+        dc.DrawRectangle(self.holdRec)
+
+        dc.SetTextForeground("#000000")
+        dc.DrawText("oct", self.offRec[0] + 3, 15)
+        x1, y1 = self.offRec[0], self.offRec[1]
+        dc.SetBrush(wx.Brush("#000000", wx.SOLID))
+        if sys.platform == "darwin":
+            dc.DrawPolygon([wx.Point(x1 + 3, 36), wx.Point(x1 + 10, 29), wx.Point(x1 + 17, 36)])
+            self.offUpRec = wx.Rect(x1, 28, x1 + 20, 10)
+            dc.DrawPolygon([wx.Point(x1 + 3, 55), wx.Point(x1 + 10, 62), wx.Point(x1 + 17, 55)])
+            self.offDownRec = wx.Rect(x1, 54, x1 + 20, 10)
+        else:
+            dc.DrawPolygon([wx.Point(x1 + 5, 38), wx.Point(x1 + 12, 31), wx.Point(x1 + 19, 38)])
+            self.offUpRec = wx.Rect(x1, 30, x1 + 20, 10)
+            dc.DrawPolygon([wx.Point(x1 + 5, 57), wx.Point(x1 + 12, 64), wx.Point(x1 + 19, 57)])
+            self.offDownRec = wx.Rect(x1, 56, x1 + 20, 10)
+
+        dc.DrawText("%d" % int(self.offset / 12), x1 + 9, 41)
+
+        if self.hold:
+            dc.SetTextForeground("#0000CC")
+        else:
+            dc.SetTextForeground("#000000")
+        for i, c in enumerate("HOLD"):
+            dc.DrawText(c, self.holdRec[0] + 8, int(self.holdRec[3] / 6) * i + 15)
         evt.Skip()
