@@ -266,7 +266,8 @@ class LFOButtons(GenStaticText):
         self.onStateBackColour = "#2F68D9"
         self.offStateBackColour = parent.GetBackgroundColour()
         self.defaultForegroundColour = parent.GetForegroundColour()
-        self.SetBackgroundColour(self.defaultForegroundColour)
+        self.SetBackgroundColour(self.offStateBackColour)
+        self.SetForegroundColour(self.defaultForegroundColour)
 
         self.font, psize = self.GetFont(), self.GetFont().GetPointSize()
 
@@ -942,7 +943,7 @@ class BasePanel(wx.Panel):
         self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
         if vars.constants["PLATFORM"] != "darwin":
             self.sizer.AddSpacer(3)
-    
+
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
         if vars.constants["PLATFORM"] == "darwin": height = 14
         else: height = 13
@@ -1038,7 +1039,8 @@ class GenericPanel(BasePanel):
         self.corner.Bind(wx.EVT_ENTER_WINDOW, self.hoverCorner)
         self.corner.Bind(wx.EVT_LEAVE_WINDOW, self.leaveCorner)
         self.titleSizer.AddMany([(self.close, 0, wx.LEFT|wx.TOP, 3), (self.info, 0, wx.LEFT|wx.TOP, 3), 
-                                (self.title, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.TOP, 3), (self.corner, 0, wx.RIGHT|wx.TOP, 3)])
+                                (self.title, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.TOP, 3),
+                                (self.corner, 0, wx.RIGHT|wx.TOP, 3)])
         self.headPanel.SetSizerAndFit(self.titleSizer)
         self.sizer.Add(self.headPanel, 0, wx.BOTTOM|wx.EXPAND, 3)
 
@@ -1071,8 +1073,9 @@ class GenericPanel(BasePanel):
         self.sliderPan = self.createSlider("Panning", .5, 0, 1, False, False, self.changePan, 4)
         if vars.constants["PLATFORM"] != "darwin":
             self.sizer.AddSpacer(2)
-        self.SetSizerAndFit(self.sizer)    
-    
+
+        self.SetSizerAndFit(self.sizer)
+
     def changeP1(self, x):
         self.synth.set(1, x)
     

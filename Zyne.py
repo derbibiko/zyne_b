@@ -140,8 +140,7 @@ class SamplingDialog(wx.Dialog):
 class ZyneFrame(wx.Frame):
     def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 660)):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
-        self.SetAcceleratorTable(wx.AcceleratorTable([(wx.ACCEL_NORMAL, ord("\t"), vars.constants["ID"]["Select"]),
-                                                     (wx.ACCEL_SHIFT, ord("\t"), vars.constants["ID"]["DeSelect"])]))
+
         self.menubar = wx.MenuBar()
         self.fileMenu = wx.Menu()
         self.fileMenu.Append(vars.constants["ID"]["New"], 'New...\tCtrl+N', kind=wx.ITEM_NORMAL)
@@ -219,43 +218,32 @@ class ZyneFrame(wx.Frame):
         self.menubar.Append(helpMenu, "&Help")
         self.SetMenuBar(self.menubar)
 
-        if vars.constants["PLATFORM"] == "win32":
-            self.SetMinSize((460, 554))
-        elif vars.constants["PLATFORM"] == "darwin":
-            self.SetMinSize((460, 522))
-        else:
-            self.SetMinSize((460, 520))
         self.Bind(wx.EVT_SIZE, self.OnSize)
-    
+
         self.openedFile = ""
         self.modules = []
         self.selected = None
 
         self.splitWindow = wx.SplitterWindow(self, -1, style = wx.SP_LIVE_UPDATE|wx.SP_PERMIT_UNSPLIT)
 
-        mainSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.panel = scrolled.ScrolledPanel(self.splitWindow, size=size, pos=(0,28), style=wx.SIMPLE_BORDER)
         self.panel.sizer = wx.WrapSizer()
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
-        self.panel.SetSizerAndFit(mainSizer)
-        # self.panel = wx.Panel(self.splitWindow)
-        self.serverPanel = ServerPanel(self.panel)
+        self.serverPanel = ServerPanel(self.splitWindow)
 
-        if vars.constants["PLATFORM"] == "darwin":
-            w, h = self.serverPanel.mainBox.GetSize()
-            self.SetMinSize((460, h + 30))
-
+        mainSizer = wx.BoxSizer(wx.HORIZONTAL)
         mainSizer.Add(self.serverPanel)
         mainSizer.Add(self.panel.sizer, 1, wx.EXPAND)
-    
+        self.panel.SetSizerAndFit(mainSizer)
+
         self.keyboard = ZB_Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
         self.serverPanel.keyboard = self.keyboard
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
-    
+
         self.splitWindow.SetMinimumPaneSize(0)
         self.splitWindow.SplitHorizontally(self.panel, self.keyboard, -80)
         self.splitWindow.Unsplit(None)
-    
+
         dropTarget = MyFileDropTarget(self.panel)
         self.panel.SetDropTarget(dropTarget)
         if vars.vars["AUTO_OPEN"] == 'Default':
