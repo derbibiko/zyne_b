@@ -9,6 +9,7 @@ import Resources.audio as audio
 import Resources.tutorial as tutorial
 import Resources.variables as vars
 import wx.richtext as rt
+import wx.lib.scrolledpanel as scrolled
 from Resources.audio import get_output_devices, get_midi_input_devices
 from Resources.panels import *
 from Resources.preferences import PreferencesDialog
@@ -190,9 +191,9 @@ class ZyneFrame(wx.Frame):
         self.genMenu.Append(vars.constants["ID"]["Jitter"], 'Jitterize current values\tCtrl+J', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onGenerateValues, id=vars.constants["ID"]["Uniform"], id2=vars.constants["ID"]["Jitter"])
         self.genMenu.AppendSeparator()
-        self.genMenu.Append(vars.constants["ID"]["Select"], 'Tabulate selection\tTab', kind=wx.ITEM_NORMAL)
+        self.genMenu.Append(vars.constants["ID"]["Select"], 'Select first module\tCtrl+B', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.tabulate, id=vars.constants["ID"]["Select"])
-        self.genMenu.Append(vars.constants["ID"]["DeSelect"], 'Clear selection\tShift+Tab', kind=wx.ITEM_NORMAL)
+        self.genMenu.Append(vars.constants["ID"]["DeSelect"], 'Clear module selection\tShift+Ctrl+B', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.clearSelection, id=vars.constants["ID"]["DeSelect"])
         self.genMenu.AppendSeparator()
         self.genMenu.Append(vars.constants["ID"]["Duplicate"], 'Duplicate selected module\tCtrl+D', kind=wx.ITEM_NORMAL)
@@ -233,8 +234,11 @@ class ZyneFrame(wx.Frame):
         self.splitWindow = wx.SplitterWindow(self, -1, style = wx.SP_LIVE_UPDATE|wx.SP_PERMIT_UNSPLIT)
 
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer = wx.WrapSizer()
-        self.panel = wx.Panel(self.splitWindow)
+        self.panel = scrolled.ScrolledPanel(self.splitWindow, size=size, pos=(0,28), style=wx.SIMPLE_BORDER)
+        self.panel.sizer = wx.WrapSizer()
+        self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
+        self.panel.SetSizerAndFit(mainSizer)
+        # self.panel = wx.Panel(self.splitWindow)
         self.serverPanel = ServerPanel(self.panel)
 
         if vars.constants["PLATFORM"] == "darwin":
@@ -242,8 +246,7 @@ class ZyneFrame(wx.Frame):
             self.SetMinSize((460, h + 30))
 
         mainSizer.Add(self.serverPanel)
-        mainSizer.Add(self.sizer, 1, wx.EXPAND)
-        self.panel.SetSizerAndFit(mainSizer)
+        mainSizer.Add(self.panel.sizer, 1, wx.EXPAND)
     
         self.keyboard = ZB_Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
         self.serverPanel.keyboard = self.keyboard
@@ -447,9 +450,12 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.retrigVirtualNotes()
 
     def OnSize(self, evt):
+        self.panel.SetVirtualSize(
+            (self.panel.GetSize()[0], self.panel.GetVirtualSize()[1]))
+        self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
         self.splitWindow.SetSashPosition(-80)
         evt.Skip()
-   
+
     def onMidiLearnModeFromLfoFrame(self):
         item = self.fileMenu.FindItemById(vars.constants["ID"]["MidiLearn"])
         if item.IsChecked():
@@ -746,10 +752,11 @@ class ZyneFrame(wx.Frame):
     
     def addModule(self, mod):
         self.refreshOutputSignal()
-        self.sizer.Add(mod, 0, wx.ALL, 1)
-        self.sizer.Layout()
+        self.panel.sizer.Add(mod, 0, wx.ALL, 1)
+        self.panel.sizer.Layout()
         wx.CallAfter(self.refresh)
-        
+        wx.CallAfter(self.OnSize, wx.CommandEvent())
+
     def deleteModule(self, module):
         if self.selected == self.modules.index(module):
             self.selected = None
@@ -761,6 +768,7 @@ class ZyneFrame(wx.Frame):
         module.Destroy()
         self.modules.remove(module)
         self.refreshOutputSignal()
+        self.OnSize(wx.CommandEvent())
         self.refresh()
 
     def deleteAllModules(self):
@@ -774,6 +782,7 @@ class ZyneFrame(wx.Frame):
         self.modules = []
         self.refreshOutputSignal()
         self.serverPanel.resetVirtualKeyboard()
+        self.OnSize(wx.CommandEvent())
         self.refresh()
     
     def refreshOutputSignal(self):
@@ -789,7 +798,7 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.fsserver._outSig.value = self.serverPanel.fsserver._modMix
 
     def refresh(self):
-        self.sizer.Layout()
+        self.panel.sizer.Layout()
         self.Refresh()   
     
     def showAbout(self, evt):
@@ -803,7 +812,7 @@ class ZyneFrame(wx.Frame):
 
         info.SetName(vars.constants["WIN_TITLE"])
         info.SetVersion(f'{vars.constants["VERSION"]}')
-        info.SetCopyright(f'© {vars.constants["YEAR"]} Olivier Bélanger\n(with modifications by Hans-Jörg Bibiko)')
+        info.SetCopyright(f'© {vars.constants["YEAR"]} Olivier Bélanger\nHans-Jörg Bibiko')
         AboutBox(info)
 
 class ZyneApp(wx.App):

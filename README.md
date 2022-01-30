@@ -1,8 +1,8 @@
-# Zyne (à la Bibiko) #
+# Zyne_B #
 
-Zyne (à la Bibiko) version 1.0.1 is a Python modular synthesizer using pyo as its audio engine.
+Zyne_B version 1.0.1 is a Python modular synthesizer using pyo as its audio engine.
 
-Zyne (à la Bibiko) is a git fork of the **extremely outstanding** work of **Olivier Bélanger**.
+Zyne_B is a git fork of the **extremely outstanding** work of **Olivier Bélanger**.
 The original Zyne code is hosted at [https://github.com/belangeo/zyne](https://github.com/belangeo/zyne) and
 pyo code at [https://github.com/belangeo/pyo](https://github.com/belangeo/pyo).
 
@@ -21,12 +21,12 @@ belangeo(at)gmail.com and it will be added to the download repository.
 
 ## Installation ##
 
-Zyne (à la Bibiko) should run on each OS with Python >=3.6 and wxpython installed. It uses Olivier Bélanger's
+Zyne_B should run on each OS with Python >= 3.6 and wxpython >= 4.1 installed. It uses Olivier Bélanger's
 pyo audio engine which has to be installed as well.
 
 One possibl installation scenario:
 
-- install wxpython (version 4) if not yet installed
+- install wxpython (version 4.1) if not yet installed
 
 `pip3 install wxpython`
 

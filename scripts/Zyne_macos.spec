@@ -47,8 +47,8 @@ app = BUNDLE(exe,
                         'NSHumanReadableCopyright': '(c) 2022 Olivier Bélanger\nHans-Jörg Bibiko',
                         'NSPrincipalClass': 'NSApplication',
                         'NSMainNibFile': 'MainMenu',
-                        'CFBundleDisplayName': 'Zyne (à la Bibiko)',
-                        'CFBundleName': 'Zyne (à la Bibiko)',
+                        'CFBundleDisplayName': 'Zyne_B',
+                        'CFBundleName': 'Zyne_B',
                         'CFBundleDevelopmentRegion': 'English',
                         'CFBundleDocumentTypes': [
                             {

@@ -8,7 +8,7 @@ constants["VERSION"] = "1.0.1"
 constants["YEAR"] = "2022"
 constants["PLATFORM"] = sys.platform
 constants["OSX_BUILD_WITH_JACK_SUPPORT"] = False
-constants["WIN_TITLE"] = "Zyne_B (à la Bibiko)"
+constants["WIN_TITLE"] = "Zyne_B"
 constants["PREF_FILE_NAME"] = ".Zyne_Brc"
 constants["DEFAULT_ZY_NAME"] = "default.zy"
 

@@ -118,25 +118,22 @@ class MyFileDropTarget(wx.FileDropTarget):
 
 class HelpFrame(wx.Frame):
     def __init__(self, parent, id, title, size, subtitle, lines, from_module=True):
-        if vars.constants["PLATFORM"] == "win32":
-            style = wx.DEFAULT_FRAME_STYLE | wx.FRAME_TOOL_WINDOW | wx.FRAME_FLOAT_ON_PARENT | wx.NO_BORDER
-        else:
-            style = wx.FRAME_TOOL_WINDOW | wx.FRAME_FLOAT_ON_PARENT | wx.NO_BORDER  
-        wx.Frame.__init__(self, parent=parent, id=id, title=title, size=size, 
-                        style=style)
+        wx.Frame.__init__(self, parent, id, title, size=(750, 530))
         self.SetBackgroundColour(parent.GetBackgroundColour())
-        if vars.constants["PLATFORM"] == "darwin":
-            close_accel = wx.ACCEL_CMD
-        else:
-            close_accel = wx.ACCEL_CTRL
-        self.SetAcceleratorTable(wx.AcceleratorTable([(close_accel, ord("W"), vars.constants["ID"]["CloseHelp"])]))
-        self.Bind(wx.EVT_MENU, self.onClose, id=vars.constants["ID"]["CloseHelp"])
 
-        self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL|wx.HSCROLL|wx.NO_BORDER)
-        self.rtc.Bind(wx.EVT_LEFT_DOWN, self.onClose)
+        self.menubar = wx.MenuBar()
+        self.fileMenu = wx.Menu()
+        self.fileMenu.Append(vars.constants["ID"]["CloseHelp"], 'Close...\tCtrl+W')
+        self.Bind(wx.EVT_MENU, self.onClose, id=vars.constants["ID"]["CloseHelp"])
+        if from_module:
+            self.menubar.Append(self.fileMenu, "&Module Info")
+        else:
+            self.menubar.Append(self.fileMenu, "&Help")
+        self.SetMenuBar(self.menubar)
+
+        self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL|wx.HSCROLL|wx.RAISED_BORDER)
         self.rtc.SetEditable(False)
-        wx.CallAfter(self.rtc.SetFocus)
-        self.rtc.SetBackgroundColour(parent.GetBackgroundColour())
+
         caret = self.rtc.GetCaret()
         caret.Hide()
 
@@ -167,7 +164,8 @@ class HelpFrame(wx.Frame):
         self.rtc.EndParagraphSpacing()
         self.rtc.EndSuppressUndo()
         self.rtc.Thaw()
-        
+        wx.CallAfter(self.rtc.SetFocus)
+
     def onClose(self, evt):
         self.Destroy()
 
@@ -259,16 +257,16 @@ class LFOFrame(wx.MiniFrame):
 
 class LFOButtons(GenStaticText):
     def __init__(self, parent, label="LFO", synth=None, which=0, callback=None):
-        GenStaticText.__init__(self, parent, -1, label=label, pos=(0, 40))
+        GenStaticText.__init__(self, parent, -1, label=label, pos=(0, 44), size=(31, 11), style=wx.ALIGN_CENTRE)
         self.parent = parent
         self.synth = synth
         self.which = which
         self.state = False
         self.callback = callback
-        self.SetBackgroundColour(parent.GetBackgroundColour())
-        self.onStateBackColour = "#006400"
+        self.onStateBackColour = "#2F68D9"
         self.offStateBackColour = parent.GetBackgroundColour()
         self.defaultForegroundColour = parent.GetForegroundColour()
+        self.SetBackgroundColour(self.defaultForegroundColour)
 
         self.font, psize = self.GetFont(), self.GetFont().GetPointSize()
 
@@ -285,6 +283,7 @@ class LFOButtons(GenStaticText):
         self.Bind(wx.EVT_ENTER_WINDOW, self.hover)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.leave)
         self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.DoubleClick)
         self.SetToolTip(wx.ToolTip("Click to enable, Shift+Click to open controls"))
 
     def setState(self, state):
@@ -299,23 +298,27 @@ class LFOButtons(GenStaticText):
         self.callback(self.which, self.state)
 
     def hover(self, evt):
-        font, ptsize = self.GetFont(), self.GetFont().GetPointSize()
-        font.SetPointSize(ptsize+1)
-        self.SetFont(font)
         if self.state:
-            self.SetForegroundColour(wx.WHITE)
+            self.SetForegroundColour(self.offStateBackColour)
             self.SetBackgroundColour(self.onStateBackColour)
         else:
-            self.SetForegroundColour("#555555")
+            self.SetForegroundColour(self.offStateBackColour)
+            self.SetBackgroundColour(self.onStateBackColour)
     
     def leave(self, evt):
-        self.SetFont(self.font)
         if self.state:
             self.SetForegroundColour(wx.WHITE)
             self.SetBackgroundColour(self.onStateBackColour)
         else:
             self.SetForegroundColour(self.defaultForegroundColour)
             self.SetBackgroundColour(self.offStateBackColour)
+
+    def DoubleClick(self, evt):
+        self.parent.lfo_frames[self.which].panel.synth = self.synth
+        pos = wx.GetMousePosition()
+        self.parent.lfo_frames[self.which].SetPosition((pos[0]+5, pos[1]+5))
+        self.parent.lfo_frames[self.which].Show()
+        evt.Skip()
 
     def MouseDown(self, evt):
         if evt.ShiftDown():

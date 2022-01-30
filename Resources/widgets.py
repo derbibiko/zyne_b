@@ -403,17 +403,17 @@ class ZB_ControlSlider(wx.Panel):
 
         # Draw inner part
         if self._enable:
-            sliderColour = "#99A7CC"
+            sliderColour = "#999999"
         else:
             sliderColour = "#BBBBBB"
         if self.orient == wx.VERTICAL:
             w2 = (w - self.sliderWidth) // 2
             rec = wx.Rect(w2, 0, self.sliderWidth, h)
-            brush = gc.CreateLinearGradientBrush(w2, 0, w2 + self.sliderWidth, 0, "#646986", sliderColour)
+            brush = gc.CreateLinearGradientBrush(w2, 0, w2 + self.sliderWidth, 0, "#666666", sliderColour)
         else:
             h2 = self.sliderHeight // 4
             rec = wx.Rect(0, h2, w, self.sliderHeight)
-            brush = gc.CreateLinearGradientBrush(0, h2, 0, h2 + self.sliderHeight, "#646986", sliderColour)
+            brush = gc.CreateLinearGradientBrush(0, h2, 0, h2 + self.sliderHeight, "#666666", sliderColour)
         gc.SetBrush(brush)
         gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 2)
 
@@ -440,7 +440,7 @@ class ZB_ControlSlider(wx.Panel):
             if self.selected:
                 brush = wx.Brush("#333333", wx.SOLID)
             else:
-                brush = gc.CreateLinearGradientBrush(0, 0, w, 0, "#323854", knobColour)
+                brush = gc.CreateLinearGradientBrush(0, 0, w, 0, "#323232", knobColour)
             gc.SetBrush(brush)
             gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 3)
         else:
@@ -449,7 +449,7 @@ class ZB_ControlSlider(wx.Panel):
                 brush = wx.Brush("#333333", wx.SOLID)
             else:
                 brush = gc.CreateLinearGradientBrush(
-                    self.pos - self.knobHalfSize, 0, self.pos + self.knobHalfSize, 0, "#323854", knobColour
+                    self.pos - self.knobHalfSize, 0, self.pos + self.knobHalfSize, 0, "#323232", knobColour
                 )
             gc.SetBrush(brush)
             gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 3)
@@ -540,6 +540,9 @@ class ZB_ControlKnob(wx.Panel):
         self.knobRec = wx.Rect(self.knobCenterPosX - self.knobRadius - 5,
                                self.knobCenterPosY - self.knobRadius - 5,
                                2 * self.knobRadius + 10, 2 * self.knobRadius + 10)
+
+        self.knobInnerColour = wx.Colour("#bebebe")
+        self.knobColour = wx.Colour(self.foreColour.red, self.foreColour.green, self.foreColour.blue)
 
         if init is not None:
             self.SetValue(init)
@@ -764,26 +767,33 @@ class ZB_ControlKnob(wx.Panel):
         reclab = wx.Rect(0, 1, w, 9)
         dc.DrawLabel(self.label, reclab, wx.ALIGN_CENTER_HORIZONTAL)
 
-        recval = wx.Rect(0, self.knobCenterPosY + self.knobRadius + 11, w, 9)
+        recval = wx.Rect(1, self.knobCenterPosY + self.knobRadius + 9, w - 1, 11)
 
         if self.selected:
             dc.SetPen(wx.Pen('#AAAAAA'))
-            dc.SetBrush(wx.Brush('#AAAAAA', wx.TRANSPARENT))
-            dc.DrawRoundedRectangle(recval, 3)
+            dc.SetBrush(wx.Brush(wx.WHITE, wx.TRANSPARENT))
+            dc.DrawRoundedRectangle(recval, 4)
 
         # Draw knob
-        knobColour = wx.Colour(self.foreColour.red, self.foreColour.green, self.foreColour.blue)
-        dc.SetPen(wx.Pen(knobColour, width=3, style=wx.SOLID))
-
         ph = interpFloat(tFromValue(self.value, self.minvalue, self.maxvalue),
                          self.knobStartAngle, self.knobEndAngle)
         lendx = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
         lendy = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
 
+        dc.SetPen(wx.Pen(self.knobColour, width=0, style=wx.SOLID))
+        dc.SetBrush(wx.Brush(self.knobInnerColour, wx.SOLID))
+        dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius - 3)
+
+        dc.SetPen(wx.Pen(self.knobColour, width=4, style=wx.SOLID))
         dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
+
+        dc.SetPen(wx.Pen(self.backColour, width=2, style=wx.SOLID))
+        dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
+
         dc.SetPen(wx.Pen(self.foreColour, width=2, style=wx.SOLID))
-        dc.SetBrush(wx.Brush(knobColour, wx.TRANSPARENT))
+        dc.SetBrush(wx.Brush(self.knobColour, wx.TRANSPARENT))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius)
+
         dc.SetPen(wx.Pen(self.backColour, width=4, style=wx.SOLID))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius + 3)
 
