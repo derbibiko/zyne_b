@@ -739,7 +739,6 @@ class ZyneFrame(wx.Frame):
         wx.CallAfter(self.SetFocus)
     
     def addModule(self, mod):
-        onOffState = self.serverPanel.onOff.GetValue()
         mod.cbChannel.Enable(not self.serverPanel.onOff.GetValue())
         self.refreshOutputSignal()
         self.panel.sizer.Add(mod, 0, wx.ALL, 1)
