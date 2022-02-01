@@ -318,7 +318,7 @@ class ZyneFrame(wx.Frame):
             evt.SetInt(1)
             self.serverPanel.onOff.SetValue(True)
         self.serverPanel.onOff.ProcessWindowEvent(evt)
-        
+
     def onGenerateValues(self, evt):
         id = evt.GetId() - 10000
         if self.selected == None:
@@ -739,6 +739,8 @@ class ZyneFrame(wx.Frame):
         wx.CallAfter(self.SetFocus)
     
     def addModule(self, mod):
+        onOffState = self.serverPanel.onOff.GetValue()
+        mod.cbChannel.Enable(not self.serverPanel.onOff.GetValue())
         self.refreshOutputSignal()
         self.panel.sizer.Add(mod, 0, wx.ALL, 1)
         self.panel.sizer.Layout()
