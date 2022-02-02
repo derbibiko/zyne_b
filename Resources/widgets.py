@@ -993,6 +993,7 @@ class ZB_Keyboard(wx.Panel):
         self.w2 = int(self.w1 / 2) + 1
         self.hold = 1
         self.keyPressed = None
+        self.channel = 0
 
         self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
@@ -1010,8 +1011,56 @@ class ZB_Keyboard(wx.Panel):
         self.whiteKeys = []
         self.blackKeys = []
 
-        self.offRec = wx.Rect(900 - 55, 0, 28, 150)
-        self.holdRec = wx.Rect(900 - 27, 0, 27, 150)
+        self.controlPanel = wx.Panel(self, -1)
+        self.controlPanel.SetBackgroundColour(parent.GetBackgroundColour())
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+
+        row1Box = wx.BoxSizer(wx.HORIZONTAL)
+
+        chBox = wx.BoxSizer(wx.VERTICAL)
+        self.channelText = wx.StaticText(self, id=-1, label="Channel")
+
+        font, psize = self.channelText.GetFont(), self.channelText.GetFont().GetPointSize()
+        font.SetPointSize(psize - 2)
+        w, h = font.GetPixelSize()
+        popsize = (-1, h + 12)
+        self.channelText.SetFont(font)
+
+        chBox.Add(self.channelText, 0, wx.LEFT, 4)
+        self.cbChannel = wx.ComboBox(self, value="0", size=popsize,
+                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL"],
+                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.cbChannel.SetFont(font)
+        self.cbChannel.Bind(wx.EVT_COMBOBOX, self.changeChannel)
+        chBox.Add(self.cbChannel, 0, wx.EXPAND | wx.ALL, 2)
+
+        scBox = wx.BoxSizer(wx.VERTICAL)
+        self.octaveText = wx.StaticText(self, id=-1, label="Octave")
+        self.octaveText.SetFont(font)
+        scBox.Add(self.octaveText, 0, wx.LEFT, 4)
+        self.cbOctave = wx.ComboBox(self, value="1", size=popsize,
+                                     choices=list(map(str, range(-2, 6))),
+                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.cbOctave.SetFont(font)
+        self.cbOctave.Bind(wx.EVT_COMBOBOX, self.changeOctave)
+        scBox.Add(self.cbOctave, 0, wx.EXPAND | wx.ALL, 2)
+
+        row1Box.Add(chBox, 1)
+        row1Box.Add(scBox, 1)
+        sizer.Add(row1Box, 0, wx.EXPAND | wx.TOP, 2)
+
+        self.modeText = wx.StaticText(self, id=-1, label="Key Mode")
+        self.modeText.SetFont(font)
+        sizer.Add(self.modeText, 0, wx.LEFT, 4)
+        self.cbKeymode = wx.ComboBox(self, value="Hold", size=popsize,
+                                     choices=["Normal", "Hold", "Single Key Hold"],
+                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.cbKeymode.Bind(wx.EVT_COMBOBOX, self.changeKeymode)
+        self.cbKeymode.SetFont(font)
+        sizer.Add(self.cbKeymode, 0, wx.EXPAND | wx.ALL, 2)
+
+        self.controlPanel.SetSizerAndFit(sizer)
 
         self.keydown = []
         self.keymap = {
@@ -1053,6 +1102,23 @@ class ZB_Keyboard(wx.Panel):
 
         wx.CallAfter(self._setRects)
 
+    def changeChannel(self, evt):
+        self.reset()
+        self.channel = int(self.cbChannel.GetValue())
+
+    def changeOctave(self, evt):
+        self.reset()
+        self.offset = clamp(int(self.cbOctave.GetValue()) * 12, -24, 60)
+        wx.CallAfter(self.Refresh)
+
+    def changeKeymode(self, evt):
+        self.reset()
+        mode = self.cbKeymode.GetSelection()
+        if mode == 0:
+            self.hold = 0
+        elif mode == 1:
+            self.hold = 1
+
     def getCurrentNotes(self):
         "Returns a list of the current notes."
         notes = []
@@ -1069,12 +1135,12 @@ class ZB_Keyboard(wx.Panel):
         "Resets the keyboard state."
         for key in self.blackSelected:
             pit = self.black[key % 5] + int(key / 5) * 12 + self.offset
-            note = (pit, 0)
+            note = (pit, 0, 0)
             if self.outFunction:
                 self.outFunction(note)
         for key in self.whiteSelected:
             pit = self.white[key % 7] + int(key / 7) * 12 + self.offset
-            note = (pit, 0)
+            note = (pit, 0, 0)
             if self.outFunction:
                 self.outFunction(note)
         self.whiteSelected = []
@@ -1089,8 +1155,10 @@ class ZB_Keyboard(wx.Panel):
 
     def _setRects(self):
         w, h = self.GetSize()
-        self.offRec = wx.Rect(w - 55, 0, 28, h)
-        self.holdRec = wx.Rect(w - 27, 0, 27, h)
+        if h < 100:
+            self.SetSize(-1, 100)
+            h = 100
+        self.controlPanel.SetSize(-1, h)
         num = int(w / self.w1)
         self.gap = w - num * self.w1
         self.whiteKeys = [wx.Rect(i * self.w1, 0, self.w1 - 1, h - 1) for i in range(num)]
@@ -1134,12 +1202,12 @@ class ZB_Keyboard(wx.Panel):
                         self.blackSelected.remove(which)
                         del self.blackVelocities[which]
                         total -= 1
-                        note = (pit, 0)
+                        note = (pit, 0, self.channel)
                     else:
                         if total < self.poly:
                             self.blackSelected.append(which)
                             self.blackVelocities[which] = 100
-                            note = (pit, 100)
+                            note = (pit, 100, self.channel)
 
                 elif deg in self.white:
                     which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
@@ -1147,25 +1215,25 @@ class ZB_Keyboard(wx.Panel):
                         self.whiteSelected.remove(which)
                         del self.whiteVelocities[which]
                         total -= 1
-                        note = (pit, 0)
+                        note = (pit, 0, self.channel)
                     else:
                         if total < self.poly:
                             self.whiteSelected.append(which)
                             self.whiteVelocities[which] = 100
-                            note = (pit, 100)
+                            note = (pit, 100, self.channel)
             else:
                 if deg in self.black:
                     which = self.black.index(deg) + int((pit - self.offset) / 12) * 5
                     if which not in self.blackSelected and total < self.poly:
                         self.blackSelected.append(which)
                         self.blackVelocities[which] = 100
-                        note = (pit, 100)
+                        note = (pit, 100, self.channel)
                 elif deg in self.white:
                     which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
                     if which not in self.whiteSelected and total < self.poly:
                         self.whiteSelected.append(which)
                         self.whiteVelocities[which] = 100
-                        note = (pit, 100)
+                        note = (pit, 100, self.channel)
 
             if note and self.outFunction and total < self.poly:
                 self.outFunction(note)
@@ -1191,13 +1259,13 @@ class ZB_Keyboard(wx.Panel):
                 if which in self.blackSelected:
                     self.blackSelected.remove(which)
                     del self.blackVelocities[which]
-                    note = (pit, 0)
+                    note = (pit, 0, self.channel)
             elif deg in self.white:
                 which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
                 if which in self.whiteSelected:
                     self.whiteSelected.remove(which)
                     del self.whiteVelocities[which]
-                    note = (pit, 0)
+                    note = (pit, 0, self.channel)
 
             if note and self.outFunction:
                 self.outFunction(note)
@@ -1216,7 +1284,7 @@ class ZB_Keyboard(wx.Panel):
             if key in self.whiteSelected:
                 self.whiteSelected.remove(key)
                 del self.whiteVelocities[key]
-            note = (pit, 0)
+            note = (pit, 0, self.channel)
             if self.outFunction:
                 self.outFunction(note)
             self.keyPressed = None
@@ -1226,26 +1294,6 @@ class ZB_Keyboard(wx.Panel):
     def MouseDown(self, evt):
         w, h = self.GetSize()
         pos = evt.GetPosition()
-        if self.holdRec.Contains(pos):
-            if self.hold:
-                self.hold = 0
-                self.reset()
-            else:
-                self.hold = 1
-            wx.CallAfter(self.Refresh)
-            return
-        if self.offUpRec.Contains(pos):
-            self.offset += 12
-            if self.offset > 60:
-                self.offset = 60
-            wx.CallAfter(self.Refresh)
-            return
-        if self.offDownRec.Contains(pos):
-            self.offset -= 12
-            if self.offset < 0:
-                self.offset = 0
-            wx.CallAfter(self.Refresh)
-            return
 
         total = len(self.blackSelected) + len(self.whiteSelected)
         scanWhite = True
@@ -1265,7 +1313,7 @@ class ZB_Keyboard(wx.Panel):
                         if total < self.poly:
                             self.blackSelected.append(i)
                             self.blackVelocities[i] = int(127 - vel)
-                    note = (pit, vel)
+                    note = (pit, vel, self.channel)
                     scanWhite = False
                     break
             if scanWhite:
@@ -1282,7 +1330,7 @@ class ZB_Keyboard(wx.Panel):
                             if total < self.poly:
                                 self.whiteSelected.append(i)
                                 self.whiteVelocities[i] = int(127 - vel)
-                        note = (pit, vel)
+                        note = (pit, vel, self.channel)
                         break
             if note and self.outFunction and total < self.poly:
                 self.outFunction(note)
@@ -1298,7 +1346,7 @@ class ZB_Keyboard(wx.Panel):
                         if total < self.poly:
                             self.blackSelected.append(i)
                             self.blackVelocities[i] = int(127 - vel)
-                    note = (pit, vel)
+                    note = (pit, vel, self.channel)
                     self.keyPressed = (i, pit)
                     scanWhite = False
                     break
@@ -1312,7 +1360,7 @@ class ZB_Keyboard(wx.Panel):
                             if total < self.poly:
                                 self.whiteSelected.append(i)
                                 self.whiteVelocities[i] = int(127 - vel)
-                        note = (pit, vel)
+                        note = (pit, vel, self.channel)
                         self.keyPressed = (i, pit)
                         break
             if note and self.outFunction and total < self.poly:
@@ -1348,7 +1396,7 @@ class ZB_Keyboard(wx.Panel):
                     dc.SetTextForeground("#FFFFFF")
                 else:
                     dc.SetTextForeground("#000000")
-                dc.DrawText("C", rec[0] + 3, rec[3] - 15)
+                dc.DrawText("C", rec[0] + 3, rec[3] - 25)
 
         dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
         for i, rec in enumerate(self.blackKeys):
@@ -1366,30 +1414,6 @@ class ZB_Keyboard(wx.Panel):
 
         dc.SetBrush(wx.Brush(BACKGROUND_COLOUR, wx.SOLID))
         dc.SetPen(wx.Pen("#AAAAAA", width=1, style=wx.SOLID))
-        dc.DrawRectangle(self.offRec)
-        dc.DrawRectangle(self.holdRec)
+        dc.DrawRectangle(wx.Rect(w - self.w1, 0, self.w1, h))
 
-        dc.SetTextForeground("#000000")
-        dc.DrawText("oct", self.offRec[0] + 3, 15)
-        x1, y1 = self.offRec[0], self.offRec[1]
-        dc.SetBrush(wx.Brush("#000000", wx.SOLID))
-        if sys.platform == "darwin":
-            dc.DrawPolygon([wx.Point(x1 + 3, 36), wx.Point(x1 + 10, 29), wx.Point(x1 + 17, 36)])
-            self.offUpRec = wx.Rect(x1, 28, x1 + 20, 10)
-            dc.DrawPolygon([wx.Point(x1 + 3, 55), wx.Point(x1 + 10, 62), wx.Point(x1 + 17, 55)])
-            self.offDownRec = wx.Rect(x1, 54, x1 + 20, 10)
-        else:
-            dc.DrawPolygon([wx.Point(x1 + 5, 38), wx.Point(x1 + 12, 31), wx.Point(x1 + 19, 38)])
-            self.offUpRec = wx.Rect(x1, 30, x1 + 20, 10)
-            dc.DrawPolygon([wx.Point(x1 + 5, 57), wx.Point(x1 + 12, 64), wx.Point(x1 + 19, 57)])
-            self.offDownRec = wx.Rect(x1, 56, x1 + 20, 10)
-
-        dc.DrawText("%d" % int(self.offset / 12), x1 + 9, 41)
-
-        if self.hold:
-            dc.SetTextForeground("#0000CC")
-        else:
-            dc.SetTextForeground("#000000")
-        for i, c in enumerate("HOLD"):
-            dc.DrawText(c, self.holdRec[0] + 8, int(self.holdRec[3] / 6) * i + 15)
         evt.Skip()

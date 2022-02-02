@@ -471,19 +471,23 @@ class BaseSynth:
     def __init__(self, config,  mode=1):
         self.module_path = vars.vars["CUSTOM_MODULES_PATH"]
         self.export_path = vars.vars["EXPORT_PATH"]
-        scaling = {1: 1, 2: 2, 3: 0}[mode]
-        with_transpo = False
+        self.scaling = {1: 1, 2: 2, 3: 0}[mode]
+        self.with_transpo = False
+        self.channel = 0
+        self.first = 0
+        self.last = 127
+        self.centralKey = 60
         for conf in config:
             if conf[0] == "Transposition":
-                with_transpo = True
+                self.with_transpo = True
                 break
         self._midi_metro = Metro(.1).play()
         self._rawamp = SigTo(1, vars.vars["SLIDERPORT"], 1)
         if vars.vars["MIDIPITCH"] != None:
-            if with_transpo:
+            if self.with_transpo:
                 self._note = Sig(vars.vars["MIDIPITCH"])
                 self._transpo = Sig(value=0)
-                self.pitch = Snap(self._note+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=scaling)
+                self.pitch = Snap(self._note+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
             elif mode == 1:
                 if type(vars.vars["MIDIPITCH"]) is list:
                     _tmp_hz = [midiToHz(x) for x in vars.vars["MIDIPITCH"]]
@@ -508,29 +512,29 @@ class BaseSynth:
         elif vars.vars["VIRTUAL"]:
             self._virtualpit = Sig([0.0]*vars.vars["POLY"])
             self._trigamp = Sig([0.0]*vars.vars["POLY"])
-            if with_transpo:
+            if self.with_transpo:
                 self._transpo = Sig(value=0)
-                self.pitch = Snap(self._virtualpit+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=scaling)
+                self.pitch = Snap(self._virtualpit+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
             else:
-                self.pitch = Snap(self._virtualpit, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=scaling)
+                self.pitch = Snap(self._virtualpit, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1, 
                                    mul=self._rawamp, add=self._lfo_amp.sig())
             self.trig = Thresh(self._trigamp)
         else:
-            if with_transpo:
-                self._note = Notein(poly=vars.vars["POLY"], scale=0)
+            if self.with_transpo:
+                self._note = Notein(poly=vars.vars["POLY"], scale=0, channel=self.channel, first=self.first, last=self.last)
                 self._transpo = Sig(value=0)
-                self.pitch = Snap(self._note["pitch"]+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=scaling)
+                self.pitch = Snap(self._note["pitch"]+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
             else:
-                self._note = Notein(poly=vars.vars["POLY"], scale=scaling)
+                self._note = Notein(poly=vars.vars["POLY"], scale=self.scaling, channel=self.channel, first=self.first, last=self.last)
                 self.pitch = self._note["pitch"]
             self._trigamp = self._note["velocity"]
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1, 
                                    mul=self._rawamp, add=self._lfo_amp.sig())
             self.trig = Thresh(self._trigamp)
-        
+
         self._panner = Panner(self, self._trigamp, self._midi_metro)
         self.panL = self._panner.amp_L
         self.panR = self._panner.amp_R
@@ -545,7 +549,10 @@ class BaseSynth:
 
     def set(self, which, x):
         self._params[which].set(x)
-    
+
+    def SetChannel(self, ch):
+        self.channel = ch
+
     def __del__(self):
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]

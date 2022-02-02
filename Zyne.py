@@ -225,6 +225,8 @@ class ZyneFrame(wx.Frame):
         self.selected = None
 
         self.splitWindow = wx.SplitterWindow(self, -1, style = wx.SP_LIVE_UPDATE|wx.SP_PERMIT_UNSPLIT)
+        self.splitWindow.SetMinimumPaneSize(0)
+        self.splitWindow.Unsplit(None)
 
         self.panel = scrolled.ScrolledPanel(self.splitWindow, size=size, pos=(0,28), style=wx.SIMPLE_BORDER)
         self.panel.sizer = wx.WrapSizer()
@@ -237,11 +239,11 @@ class ZyneFrame(wx.Frame):
         self.panel.SetSizerAndFit(mainSizer)
 
         self.keyboard = ZB_Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
+        self.keyboard.SetMinSize((-1, 86))
         self.serverPanel.keyboard = self.keyboard
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
 
-        self.splitWindow.SetMinimumPaneSize(0)
-        self.splitWindow.SplitHorizontally(self.panel, self.keyboard, -80)
+        self.splitWindow.SplitHorizontally(self.panel, self.keyboard, 0)
         self.splitWindow.Unsplit(None)
 
         dropTarget = MyFileDropTarget(self.panel)

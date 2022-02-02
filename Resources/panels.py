@@ -17,7 +17,7 @@ MODULES =   {
             "FM": { "title": "Frequency Modulation", "synth": FmSynth, 
                     "p1": ["FM Ratio", 2, 1, 12, False, False],
                     "p2": ["FM Index", 5, 0, 40, False, False],
-                    "p3": ["Lowpass Cutoff", 2000, 100, 18000, False, True]
+                    "p3": ["Lowpass Cutoff", 2000, 100, 18000, False, True],
                     },
             "Additive": { "title": "Additive Synthesis", "synth": AddSynth, 
                     "p1": ["Transposition", 0, -36, 36, True, False],
@@ -654,10 +654,12 @@ class ServerPanel(wx.Panel):
             voice = self.virtualNotePressed[pit]
             del self.virtualNotePressed[pit]
         modules = self.GetTopLevelParent().modules
+        ch = note[2]
         for module in modules:
             synth = module.synth
-            synth._virtualpit[voice].setValue(pit)
-            synth._trigamp[voice].setValue(vel)
+            if synth.channel == 0 or synth.channel == ch:
+                synth._virtualpit[voice].setValue(pit)
+                synth._trigamp[voice].setValue(vel)
 
     def handleAudio(self, evt):
         popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
@@ -665,6 +667,7 @@ class ServerPanel(wx.Panel):
                    vars.constants["ID"]["Export"], vars.constants["ID"]["ExportChord"], vars.constants["ID"]["ExportTracks"], 
                    vars.constants["ID"]["ExportChordTracks"], vars.constants["ID"]["Quit"], vars.constants["ID"]["UpdateModules"], 
                    vars.constants["ID"]["CheckoutModules"]]
+        modules = self.GetTopLevelParent().modules
         if evt.GetInt() == 1:
             for popup in popups:
                 popup.Disable()
@@ -672,6 +675,8 @@ class ServerPanel(wx.Panel):
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
                 if menuItem != None:
                     menuItem.Enable(False)
+            for module in modules:
+                synth = module.cbChannel.Enable(False)
             self.fsserver.start()
         else:
             self.fsserver.stop()
@@ -682,6 +687,8 @@ class ServerPanel(wx.Panel):
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
                 if menuItem != None:
                     menuItem.Enable(True)
+            for module in modules:
+                synth = module.cbChannel.Enable(True)
             self.meter.setRms(*[0 for i in range(self.meter.numSliders)])
 
     def handleRec(self, evt):
@@ -919,7 +926,7 @@ class ServerPanel(wx.Panel):
 class BasePanel(wx.Panel):
     def __init__(self, parent, name, title, synth, p1, p2, p3, from_lfo=False):
         wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
-        self.SetMaxSize((230,265))
+        self.SetMaxSize((230,310))
         self.colour = parent.GetBackgroundColour()
         self.SetBackgroundColour(self.colour)
         self.from_lfo = from_lfo
@@ -943,6 +950,24 @@ class BasePanel(wx.Panel):
         self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
         if vars.constants["PLATFORM"] != "darwin":
             self.sizer.AddSpacer(3)
+
+    def createTriggerSettings(self):
+
+        self.triggerSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.cbChannel = wx.ComboBox(self, value="0", size=(40, -1),
+                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL"],
+                                     style=wx.CB_DROPDOWN | wx.CB_READONLY, name="channel")
+        self.cbChannel.Bind(wx.EVT_COMBOBOX, self.changeChannel)
+        self.triggerSizer.Add(self.cbChannel, 0, wx.LEFT | wx.RIGHT, 5)
+
+
+        font, psize = self.cbChannel.GetFont(), self.cbChannel.GetFont().GetPointSize()
+        font.SetPointSize(psize-2)
+        if vars.constants["PLATFORM"] != "win32":
+            self.cbChannel.SetFont(font)
+
+        self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT, 1)
 
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
         if vars.constants["PLATFORM"] == "darwin": height = 14
@@ -1015,6 +1040,7 @@ class GenericPanel(BasePanel):
         self.lfo_sliders = [get_lfo_init(), get_lfo_init(), get_lfo_init(), get_lfo_init(), get_lfo_init()]
         self.buttons = [None, None, None, None, None]
         self.lfo_frames = [None, None, None, None, None]
+        self.channel = 0
 
         self.headPanel = wx.Panel(self)
         self.headPanel.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
@@ -1072,9 +1098,19 @@ class GenericPanel(BasePanel):
             self.sliderP3 = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeP3, 3)
         self.sliderPan = self.createSlider("Panning", .5, 0, 1, False, False, self.changePan, 4)
         if vars.constants["PLATFORM"] != "darwin":
+            self.sizer.AddSpacer(4)
+
+        self.createTriggerSettings()
+
+        if vars.constants["PLATFORM"] != "darwin":
             self.sizer.AddSpacer(2)
 
         self.SetSizerAndFit(self.sizer)
+
+    def changeChannel(self, evt):
+        ch = int(self.cbChannel.GetValue())
+        self.synth.SetChannel(ch)
+        self.channel = ch
 
     def changeP1(self, x):
         self.synth.set(1, x)
