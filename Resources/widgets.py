@@ -189,7 +189,7 @@ class ZB_ControlSlider(wx.Panel):
             self.font = wx.Font(10, wx.FONTFAMILY_TELETYPE,
                                 wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
 
-    def getCtrlLabel(self):
+    def getLabel(self):
         return self.ctrllabel
 
     def setMidiCtl(self, x, propagate=True):
@@ -427,8 +427,8 @@ class ZB_ControlSlider(wx.Panel):
                 dc.DrawLabel(str(self.midictl), wx.Rect(w2, 2, self.sliderWidth, 12), wx.ALIGN_CENTER)
                 dc.DrawLabel(str(self.midictl), wx.Rect(w2, h - 12, self.sliderWidth, 12), wx.ALIGN_CENTER)
             else:
-                dc.DrawLabel(str(self.midictl), wx.Rect(2, 0, h, h), wx.ALIGN_CENTER)
-                dc.DrawLabel(str(self.midictl), wx.Rect(w - h, 0, h, h), wx.ALIGN_CENTER)
+                dc.DrawLabel(str(self.midictl), wx.Rect(2, 1, h, h), wx.ALIGN_CENTER)
+                dc.DrawLabel(str(self.midictl), wx.Rect(w - h, 1, h, h), wx.ALIGN_CENTER)
 
         # Draw knob
         if self._enable:
@@ -811,6 +811,14 @@ class ZB_ControlKnob(wx.Panel):
             width = len(val) * dc.GetCharWidth()
 
         dc.DrawLabel(val, recval, wx.ALIGN_CENTER)
+
+        if self.midictl is not None:
+            if sys.platform == "win32" or sys.platform.startswith("linux"):
+                dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+            else:
+                dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+            dc.SetTextForeground(self.foreColour)
+            dc.DrawLabel(str(self.midictl), wx.Rect(4, recval[1] - 11, recval[2], 15), wx.ALIGN_LEFT)
 
         # Send value
         if self.outFunction:
