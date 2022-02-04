@@ -1,6 +1,13 @@
-# encoding: utf-8
-import random, os, time, math, codecs
+"""
+Copyright 2009-2015 Olivier Belanger - modifications by Hans-Jörg Bibiko 2022
+"""
+import codecs
+import math
+import os
+import random
+import time
 import Resources.variables as vars
+from Resources.utils import *
 
 if vars.vars["PYO_PRECISION"] == "single":
     from pyo import *
@@ -8,6 +15,7 @@ else:
     from pyo64 import *
 
 from .pyotools import PWM, VCO
+
 
 def get_output_devices():
     return pa_get_output_devices()
@@ -17,6 +25,7 @@ def get_midi_input_devices():
     return pm_get_input_devices()
 def get_midi_default_input():
     return pm_get_default_input()
+
 
 class FSServer:
     def __init__(self):
@@ -29,7 +38,7 @@ class FSServer:
     
     def scanning(self, ctlnum, midichnl):
         if vars.vars["LEARNINGSLIDER"] != None:
-            vars.vars["LEARNINGSLIDER"].setMidiCtl(ctlnum)
+            vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(ctlnum)
             vars.vars["LEARNINGSLIDER"].Enable()
             vars.vars["LEARNINGSLIDER"] = None
     
@@ -181,9 +190,7 @@ class CtlBind:
         if val != self.last_midi_val:
             self.last_midi_val = val
             if self.widget.log:
-                val **= 10.0
-                val *= (self.widget.getMaxValue() - self.widget.getMinValue()) 
-                val += self.widget.getMinValue()
+                val = toExp(val, self.widget.getMinValue(), self.widget.getMaxValue())
             self.widget.setValue(val)
     
     def valToWidget0(self):
@@ -192,9 +199,7 @@ class CtlBind:
         if val != self.lfo_last_midi_vals[0]:
             self.lfo_last_midi_vals[0] = val
             if is_log:
-                val **= 10.0
-                val *= (self.lfo_widget_0.getMaxValue() - self.lfo_widget_0.getMinValue())
-                val += self.lfo_widget_0.getMinValue()
+                val = toExp(val, self.lfo_widget_0.getMinValue(), self.lfo_widget_0.getMaxValue())
             self.lfo_widget_0.setValue(val)
             self.lfo_widget_0.outFunction(val)
     
@@ -204,9 +209,7 @@ class CtlBind:
         if val != self.lfo_last_midi_vals[1]:
             self.lfo_last_midi_vals[1] = val
             if is_log:
-                val **= 10.0
-                val *= (self.lfo_widget_1.getMaxValue() - self.lfo_widget_1.getMinValue())
-                val += self.lfo_widget_1.getMinValue()
+                val = toExp(val, self.lfo_widget_1.getMinValue(), self.lfo_widget_1.getMaxValue())
             self.lfo_widget_1.setValue(val)
             self.lfo_widget_1.outFunction(val)
     
@@ -216,9 +219,7 @@ class CtlBind:
         if val != self.lfo_last_midi_vals[2]:
             self.lfo_last_midi_vals[2] = val
             if is_log:
-                val **= 10.0
-                val *= (self.lfo_widget_2.getMaxValue() - self.lfo_widget_2.getMinValue())
-                val += self.lfo_widget_2.getMinValue()
+                val = toExp(val, self.lfo_widget_2.getMinValue(), self.lfo_widget_2.getMaxValue())
             self.lfo_widget_2.setValue(val)
             self.lfo_widget_2.outFunction(val)
     
@@ -228,9 +229,7 @@ class CtlBind:
         if val != self.lfo_last_midi_vals[3]:
             self.lfo_last_midi_vals[3] = val
             if is_log:
-                val **= 10.0
-                val *= (self.lfo_widget_3.getMaxValue() - self.lfo_widget_3.getMinValue())
-                val += self.lfo_widget_3.getMinValue()
+                val = toExp(val, self.lfo_widget_3.getMinValue(), self.lfo_widget_3.getMaxValue())
             self.lfo_widget_3.setValue(val)
             self.lfo_widget_3.outFunction(val)
     
@@ -240,15 +239,11 @@ class CtlBind:
         mini = widget.getMinValue()
         maxi = widget.getMaxValue()
         value = widget.GetValue()
-        is_log = widget.log
         self.widget = widget
-        if is_log:
-            norm_init = pow(float(value - mini) / (maxi - mini), .1)
-            self.midictl = Midictl(ctl, 0, 1.0, norm_init)
-            # self.midictl.setInterpolation(False)
+        if widget.log:
+            self.midictl = Midictl(ctl, 0, 1.0, toLog(value, mini, maxi))
         else:
             self.midictl = Midictl(ctl, mini, maxi, value)
-            # self.midictl.setInterpolation(False)
         self.trigFunc = TrigFunc(self._midi_metro, self.valToWidget)
     
     def assignLfoMidiCtl(self, ctl, widget, i):
@@ -261,42 +256,30 @@ class CtlBind:
         if i == 0:
             self.lfo_widget_0 = widget
             if is_log:
-                norm_init = pow(float(value - mini) / (maxi - mini), .1)
-                self.lfo_midictl_0 = Midictl(ctl, 0, 1.0, norm_init)
-                # self.lfo_midictl_0.setInterpolation(False)
+                self.lfo_midictl_0 = Midictl(ctl, 0, 1.0, toLog(value, mini, maxi))
             else:
                 self.lfo_midictl_0 = Midictl(ctl, mini, maxi, value)
-                # self.lfo_midictl_0.setInterpolation(False)
             self.lfo_trigFunc_0 = TrigFunc(self._midi_metro, self.valToWidget0)
         elif i == 1:
             self.lfo_widget_1 = widget
             if is_log:
-                norm_init = pow(float(value - mini) / (maxi - mini), .1)
-                self.lfo_midictl_1 = Midictl(ctl, 0, 1.0, norm_init)
-                # self.lfo_midictl_1.setInterpolation(False)
+                self.lfo_midictl_1 = Midictl(ctl, 0, 1.0, toLog(value, mini, maxi))
             else:
                 self.lfo_midictl_1 = Midictl(ctl, mini, maxi, value)
-                # self.lfo_midictl_1.setInterpolation(False)
             self.lfo_trigFunc_1 = TrigFunc(self._midi_metro, self.valToWidget1)
         elif i == 2:
             self.lfo_widget_2 = widget
             if is_log:
-                norm_init = pow(float(value - mini) / (maxi - mini), .1)
-                self.lfo_midictl_2 = Midictl(ctl, 0, 1.0, norm_init)
-                # self.lfo_midictl_2.setInterpolation(False)
+                self.lfo_midictl_2 = Midictl(ctl, 0, 1.0, toLog(value, mini, maxi))
             else:
                 self.lfo_midictl_2 = Midictl(ctl, mini, maxi, value)
-                # self.lfo_midictl_2.setInterpolation(False)
             self.lfo_trigFunc_2 = TrigFunc(self._midi_metro, self.valToWidget2)
         elif i == 3:
             self.lfo_widget_3 = widget
             if is_log:
-                norm_init = pow(float(value - mini) / (maxi - mini), .1)
-                self.lfo_midictl_3 = Midictl(ctl, 0, 1.0, norm_init)
-                # self.lfo_midictl_3.setInterpolation(False)
+                self.lfo_midictl_3 = Midictl(ctl, 0, 1.0, toLog(value, mini, maxi))
             else:
                 self.lfo_midictl_3 = Midictl(ctl, mini, maxi, value)
-                # self.lfo_midictl_3.setInterpolation(False)
             self.lfo_trigFunc_3 = TrigFunc(self._midi_metro, self.valToWidget3)
 
     def __del__(self):
@@ -375,6 +358,7 @@ class LFOSynth(CtlBind):
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]
 
+
 class Param(CtlBind):
     def __init__(self, parent, i, conf, lfo_trigger, midi_metro):
         CtlBind.__init__(self)
@@ -404,6 +388,7 @@ class Param(CtlBind):
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]
 
+
 class Panner(CtlBind):
     def __init__(self, parent, lfo_trigger, midi_metro):
         CtlBind.__init__(self)
@@ -412,7 +397,7 @@ class Panner(CtlBind):
         self._midi_metro = midi_metro
         self.lfo = LFOSynth(0.5, self.lfo_trigger, midi_metro)
         self.slider = SigTo(0.5, vars.vars["SLIDERPORT"], 0.5, add=self.lfo.sig())
-        self.clip = Clip(self.slider, 0., 1., mul=math.pi/2)
+        self.clip = Clip(self.slider, 0., 1., mul=p_math_pi_2)
         self.amp_L = Cos(self.clip)
         self.amp_R = Sin(self.clip)
 
@@ -429,6 +414,7 @@ class Panner(CtlBind):
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]
 
+
 class ParamTranspo:
     def __init__(self, parent, midi_metro):
         self.parent = parent
@@ -444,12 +430,12 @@ class ParamTranspo:
     def assignMidiCtl(self, ctl, widget):
         self.widget = widget
         self.midictl = Midictl(ctl, -36, 36, widget.GetValue())
-        # self.midictl.setInterpolation(False)
         self.trigFunc = TrigFunc(self._midi_metro, self.valToWidget)
     
     def __del__(self):
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]
+
 
 class Stereofy:
     def __init__(self, sig):
@@ -466,7 +452,8 @@ class Stereofy:
     def unsplit(self):
         self.outL.delay = 0
         self.outR.delay = 0
-        
+
+
 class BaseSynth:
     def __init__(self, config,  mode=1):
         self.module_path = vars.vars["CUSTOM_MODULES_PATH"]
@@ -557,6 +544,7 @@ class BaseSynth:
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]
 
+
 class CustomFM:
     def __init__(self, pitch, ratio, index, mul):
         self.fcar = pitch * ratio
@@ -564,7 +552,8 @@ class CustomFM:
         self.amod = self.fmod*index
         self.mod = Sine(self.fmod, mul=self.amod)
         self.out = Sine(self.fcar+self.mod, mul=mul)
-    
+
+
 class FmSynth(BaseSynth):
     """
     Simple frequency modulation synthesis.
@@ -604,6 +593,7 @@ class FmSynth(BaseSynth):
         self.filt2 = Biquadx(self.fm2.out+self.fm4.out, freq=self.p3, q=1, type=0, stages=2).mix()
         self.out = Mix([self.filt1, self.filt2], voices=2)
 
+
 class AddSynth(BaseSynth):
     """
     Additive synthesis.
@@ -632,6 +622,7 @@ class AddSynth(BaseSynth):
         self.sine3 = SineLoop(freq=self.pitch*self.fac[2], feedback=self.p3*self.feedrnd[2], mul=self.leftamp).mix()
         self.sine4 = SineLoop(freq=self.pitch*self.fac[3], feedback=self.p3*self.feedrnd[3], mul=self.rightamp).mix()
         self.out = Mix([self.sine1, self.sine2, self.sine3, self.sine4], voices=2)
+
 
 class WindSynth(BaseSynth):
     """
@@ -663,6 +654,7 @@ class WindSynth(BaseSynth):
         self.filt3 = Biquadx(self.noise, freq=self.clpit*self.dev[2], q=self.p3, type=2, stages=2, mul=self.leftamp).mix()
         self.filt4 = Biquadx(self.noise, freq=self.clpit*self.dev[3], q=self.p3, type=2, stages=2, mul=self.rightamp).mix()
         self.out = Mix([self.filt1, self.filt2, self.filt3, self.filt4], voices=2)
+
 
 class SquareMod(BaseSynth):
     """
@@ -700,6 +692,7 @@ class SquareMod(BaseSynth):
         order = int(self.p1.get())
         self.table.order = order
 
+
 class SawMod(BaseSynth):
     """
     Sawtooth waveform modulation.
@@ -735,6 +728,7 @@ class SawMod(BaseSynth):
     def changeOrder(self):
         order = int(self.p1.get())
         self.table.order = order
+
 
 class PulsarSynth(BaseSynth):
     """
@@ -774,6 +768,7 @@ class PulsarSynth(BaseSynth):
         order = int(self.p1.get())
         self.table.order = order
 
+
 class Ross(BaseSynth):
     """
     Rossler attractor.
@@ -806,6 +801,7 @@ class Ross(BaseSynth):
         self.filt1 = Biquad(self.eq1, freq=self.p3).mix()
         self.filt2 = Biquad(self.eq2, freq=self.p3).mix()
         self.out = Mix([self.filt1, self.filt2], voices=2)
+
 
 class Wave(BaseSynth):
     """
@@ -847,6 +843,7 @@ class Wave(BaseSynth):
         self.wav3.type = typ
         self.wav4.type = typ
 
+
 class PluckedString(BaseSynth):
     """
     Simple plucked string synthesis model.
@@ -876,6 +873,7 @@ class PluckedString(BaseSynth):
         self.wave2 = Waveguide(self.noise, freq=self.pitch*self.deviation[1], dur=self.p2, minfreq=.5, mul=self.rightamp).mix()
         self.out = Mix([self.wave1, self.wave2], voices=2)
 
+
 class Reson(BaseSynth):
     """
     Stereo resonators.
@@ -903,6 +901,7 @@ class Reson(BaseSynth):
         self.filt1 = Biquad(self.wave1, freq=self.p3).mix()
         self.filt2 = Biquad(self.wave2, freq=self.p3).mix()
         self.out = Mix([self.filt1, self.filt2], voices=2)
+
 
 class CrossFmSynth(BaseSynth):
     """
@@ -945,6 +944,7 @@ class CrossFmSynth(BaseSynth):
         self.filt2 = Biquad(self.fm2+self.fm4, freq=5000, q=1, type=0)
         self.out = Mix([self.filt1, self.filt2], voices=2)
 
+
 class OTReson(BaseSynth):
     """
     Out of tune waveguide model with a recursive allpass network.
@@ -972,6 +972,7 @@ class OTReson(BaseSynth):
         self.filt1 = Biquad(self.wave1, freq=self.p3).mix()
         self.filt2 = Biquad(self.wave2, freq=self.p3).mix()
         self.out = Mix([self.filt1, self.filt2], voices=2)
+
 
 class InfiniteRev(BaseSynth):
     """
@@ -1007,6 +1008,7 @@ class InfiniteRev(BaseSynth):
         self.filt2 = Biquad(self.rev2, freq=self.p3).mix()
         self.out = Mix([self.filt1, self.filt2], voices=2)
 
+
 class Degradation(BaseSynth):
     """
     Signal quality reducer.
@@ -1039,6 +1041,7 @@ class Degradation(BaseSynth):
         self.filt2 = Biquad(self.deg2, freq=self.p3).mix()
         self.mix = Mix([self.filt1, self.filt2], voices=2)
         self.out = DCBlock(self.mix)
+
 
 class PulseWidthModulation(BaseSynth):
     """
@@ -1081,6 +1084,7 @@ class PulseWidthModulation(BaseSynth):
             self.stereo.unsplit()
             #self.fac.value = 1.
 
+
 class VoltageControlledOsc(BaseSynth):
     """
     Signal quality reducer.
@@ -1106,6 +1110,7 @@ class VoltageControlledOsc(BaseSynth):
         self.filt2 = Biquad(self.src, freq=self.p3, mul=self.rightamp).mix()
         self.mix = Mix([self.filt1, self.filt2], voices=2)
         self.out = DCBlock(self.mix)
+
 
 def checkForCustomModules():
     vars.readPreferencesFile()

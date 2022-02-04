@@ -15,6 +15,7 @@ from Resources.panels import *
 from Resources.preferences import PreferencesDialog
 from Resources.splash import ZyneSplashScreen
 from Resources.widgets import ZB_Keyboard
+from Resources.utils import toLog
 
 
 try:
@@ -642,7 +643,7 @@ class ZyneFrame(wx.Frame):
         modules = [(module.name, module.mute) for module in self.modules]
         params = [[slider.GetValue() for slider in module.sliders] for module in self.modules]
         lfo_params = [module.getLFOParams() for module in self.modules]
-        ctl_params = [[slider.midictl for slider in module.sliders] for module in self.modules]
+        ctl_params = [[slider.midictlnumber for slider in module.sliders] for module in self.modules]
         return modules, params, lfo_params, ctl_params
     
     def setModulesAndParams(self, modules, params, lfo_params, ctl_params, from_export=False):
@@ -657,14 +658,26 @@ class ZyneFrame(wx.Frame):
                 slider.SetValue(param)
                 slider.outFunction(param)
 
+        slider_idx = 0
         for i, ctl_paramset in enumerate(ctl_params):
             for j, ctl_param in enumerate(ctl_paramset):
                 slider = self.modules[i].sliders[j]
-                slider.setMidiCtl(ctl_param, False)
-                if j in [5,6,7,8] and ctl_param != None and not from_export:
-                    j4 = j - 5
-                    if self.modules[i].synth._params[j4] != None:
-                        self.modules[i].synth._params[j4].assignMidiCtl(ctl_param, slider)
+                slider.setMidiCtlNumber(ctl_param, False)
+                if ctl_param is not None and not from_export and vars.vars["MIDI_ACTIVE"]:
+                    if 'knobRadius' in slider.__dict__:
+                        mini = slider.getMinValue()
+                        maxi = slider.getMaxValue()
+                        value = slider.GetValue()
+                        if slider.log:
+                            norm_init = toLog(value, mini, maxi)
+                            slider.midictl = Midictl(ctl_param, 0, 1.0, norm_init)
+                        else:
+                            slider.midictl = Midictl(ctl_param, mini, maxi, value)
+                        slider.trigFunc = TrigFunc(self.modules[i].synth._midi_metro, slider.valToWidget)
+                    else:
+                        if self.modules[i].synth._params[slider_idx] is not None:
+                            self.modules[i].synth._params[slider_idx].assignMidiCtl(ctl_param, slider)
+                        slider_idx += 1
         for i, lfo_param in enumerate(lfo_params):
             self.modules[i].reinitLFOS(lfo_param)
         self.refresh()

@@ -1,3 +1,6 @@
+"""
+Copyright 2009-2015 Olivier Belanger - modifications by Hans-Jörg Bibiko 2022
+"""
 import copy
 import math
 import os
@@ -7,6 +10,7 @@ import wx
 import Resources.variables as vars
 from Resources.audio import *
 from Resources.widgets import *
+from Resources.utils import toLog
 from wx.lib.stattext import GenStaticText
 import wx.richtext as rt
 
@@ -213,6 +217,7 @@ class LFOFrame(wx.MiniFrame):
         self.panel.title.Bind(wx.EVT_LEFT_UP, self.onMouseUp)
         self.panel.title.Bind(wx.EVT_MOTION, self.onMotion)
         self.SetFocus()
+        self.synth = synth
     
     def onClose(self, evt):
         self.Hide()
@@ -239,7 +244,7 @@ class LFOFrame(wx.MiniFrame):
 
     def get(self):
         params = [slider.GetValue() for slider in self.panel.sliders]
-        ctl_params = [slider.midictl for slider in self.panel.sliders]
+        ctl_params = [slider.midictlnumber for slider in self.panel.sliders]
         return params, ctl_params
     
     def set(self, params, ctl_params):
@@ -247,13 +252,25 @@ class LFOFrame(wx.MiniFrame):
             slider = self.panel.sliders[i]
             slider.SetValue(p)
             slider.outFunction(p)
-        for i, p in enumerate(ctl_params):
+        slider_idx = 0
+        for i, ctl_param in enumerate(ctl_params):
             slider = self.panel.sliders[i]
-            slider.setMidiCtl(p, False)
-            if i in [5,6,7,8] and p != None:
-                i4 = i - 5
-                if self.panel.synth._params[self.which] != None:
-                    self.panel.synth._params[self.which].assignLfoMidiCtl(p, slider, i4)
+            slider.setMidiCtlNumber(ctl_param, False)
+            if ctl_param is not None and vars.vars["MIDI_ACTIVE"]:
+                if 'knobRadius' in slider.__dict__:
+                    mini = slider.getMinValue()
+                    maxi = slider.getMaxValue()
+                    value = slider.GetValue()
+                    if slider.log:
+                        norm_init = toLog(value, mini, maxi)
+                        slider.midictl = Midictl(ctl_param, 0, 1.0, norm_init)
+                    else:
+                        slider.midictl = Midictl(ctl_param, mini, maxi, value)
+                    slider.trigFunc = TrigFunc(self.synth._midi_metro, slider.valToWidget)
+                else:
+                    if self.panel.synth._params[self.which] is not None:
+                        self.panel.synth._params[self.which].assignLfoMidiCtl(ctl_param, slider, slider_idx)
+                    slider_idx += 1
 
 class LFOButtons(GenStaticText):
     def __init__(self, parent, label="LFO", synth=None, which=0, callback=None):
@@ -936,15 +953,15 @@ class BasePanel(wx.Panel):
     
     def createAdsrKnobs(self):
         self.knobSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobDel = ZB_ControlKnob(self, 0, 60.0, 0, log=False, label='Delay', outFunction=self.changeDelay)
+        self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, log=False, label='Delay', outFunction=self.changeDelay)
         self.knobSizer.Add(self.knobDel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobAtt = ZB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
+        self.knobAtt = ZyneB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
         self.knobSizer.Add(self.knobAtt, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobDec = ZB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
+        self.knobDec = ZyneB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
         self.knobSizer.Add(self.knobDec, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobSus = ZB_ControlKnob(self, 0.001, 1.0, 0.7, label='Sustain', outFunction=self.changeSustain)
+        self.knobSus = ZyneB_ControlKnob(self, 0.001, 1.0, 0.7, label='Sustain', outFunction=self.changeSustain)
         self.knobSizer.Add(self.knobSus, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.knobRel = ZB_ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
+        self.knobRel = ZyneB_ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
         self.knobSizer.Add(self.knobRel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
         self.sizer.Add(self.knobSizer, 0, wx.BOTTOM|wx.LEFT, 1)
         self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
@@ -1250,7 +1267,7 @@ class GenericPanel(BasePanel):
     def reinitLFOS(self, lfo_param, ctl_binding=True):
         self.lfo_sliders = lfo_param
         for i, lfo_conf in enumerate(self.lfo_sliders):
-            if self.buttons[i] != None:
+            if self.buttons[i] is not None:
                 self.lfo_frames[i].panel.synth = self.buttons[i].synth
                 state = lfo_conf["state"]
                 self.startLFO(i, state)
@@ -1260,12 +1277,11 @@ class GenericPanel(BasePanel):
                     pos = (lfo_conf["shown"][0] + offset[0], lfo_conf["shown"][1] + offset[1])
                     self.lfo_frames[i].SetPosition(pos)
                     self.lfo_frames[i].Show()
-                params = lfo_conf["params"]
                 if ctl_binding:
                     ctl_params = lfo_conf["ctl_params"]
                 else:
                     ctl_params = [None] * len(self.lfo_frames[i].panel.sliders)
-                self.lfo_frames[i].set(params, ctl_params)
+                self.lfo_frames[i].set(lfo_conf["params"], ctl_params)
 
     def generateUniform(self):
         for i, slider in enumerate(self.sliders):

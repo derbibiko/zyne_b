@@ -6,18 +6,10 @@ a python module to help digital signal processing script creation.
 """
 
 import copy
-import math
 import sys
 import wx
 import Resources.variables as vars
-from wx.lib.embeddedimage import PyEmbeddedImage
-
-
-p_mathlog10 = math.log10
-p_mathpow = math.pow
-p_mathsin = math.sin
-p_mathcos = math.cos
-p_math_pi = math.pi
+from Resources.utils import *
 
 
 if "phoenix" in wx.version():
@@ -27,60 +19,6 @@ if "phoenix" in wx.version():
     wx.BitmapFromImage = wx.Bitmap
     wx.Image_HSVValue = wx.Image.HSVValue
     wx.Image_HSVtoRGB = wx.Image.HSVtoRGB
-
-
-def interpFloat(t, v1, v2):
-    "interpolator for a single value; interprets t in [0-1] between v1 and v2"
-    return (v2 - v1) * t + v1
-
-
-def tFromValue(value, v1, v2):
-    "returns a t (in range 0-1) given a value in the range v1 to v2"
-    return (value - v1) / (v2 - v1)
-
-
-def clamp(v, vmin, vmax):
-    "clamps a value within a range"
-    return vmin if v < vmin else vmax if v > vmax else v
-
-
-def toLog(t, v1, v2):
-    return p_mathlog10(t/v1) / p_mathlog10(v2/v1)
-
-
-def toExp(t, v1, v2):
-    v1log = p_mathlog10(v1)
-    return p_mathpow(10, t * (p_mathlog10(v2) - v1log) + v1log)
-
-
-POWOFTWO = {
-    2: 1,
-    4: 2,
-    8: 3,
-    16: 4,
-    32: 5,
-    64: 6,
-    128: 7,
-    256: 8,
-    512: 9,
-    1024: 10,
-    2048: 11,
-    4096: 12,
-    8192: 13,
-    16384: 14,
-    32768: 15,
-    65536: 16,
-}
-
-
-def powOfTwo(x):
-    "Return 2 raised to the power of x."
-    return 2 ** x
-
-
-def powOfTwoToInt(x):
-    "Return the exponent of 2 correponding to the value x."
-    return POWOFTWO[x]
 
 
 HEADTITLE_BACK_COLOUR = "#9999A0"
@@ -163,6 +101,7 @@ class ZB_ControlSlider(wx.Panel):
         self._enable = True
         self.propagate = True
         self.midictl = None
+        self.midictlnumber = None
         self.new = ""
         if init is not None:
             self.SetValue(init)
@@ -192,13 +131,13 @@ class ZB_ControlSlider(wx.Panel):
     def getLabel(self):
         return self.ctrllabel
 
-    def setMidiCtl(self, x, propagate=True):
+    def setMidiCtlNumber(self, x, propagate=True):
         self.propagate = propagate
-        self.midictl = x
+        self.midictlnumber = x
         self.Refresh()
 
-    def getMidiCtl(self):
-        return self.midictl
+    def getMidiCtlNumber(self):
+        return self.midictlnumber
 
     def getMinValue(self):
         return self.minvalue
@@ -417,18 +356,19 @@ class ZB_ControlSlider(wx.Panel):
         gc.SetBrush(brush)
         gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 2)
 
-        if self.midictl is not None:
+        if self.midictlnumber is not None:
             if sys.platform == "win32" or sys.platform.startswith("linux"):
                 dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             else:
                 dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             dc.SetTextForeground("#FFFFFF")
+            ctl = str(self.midictlnumber)
             if self.orient == wx.VERTICAL:
-                dc.DrawLabel(str(self.midictl), wx.Rect(w2, 2, self.sliderWidth, 12), wx.ALIGN_CENTER)
-                dc.DrawLabel(str(self.midictl), wx.Rect(w2, h - 12, self.sliderWidth, 12), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(w2, 2, self.sliderWidth, 12), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(w2, h - 12, self.sliderWidth, 12), wx.ALIGN_CENTER)
             else:
-                dc.DrawLabel(str(self.midictl), wx.Rect(2, 1, h, h), wx.ALIGN_CENTER)
-                dc.DrawLabel(str(self.midictl), wx.Rect(w - h, 1, h, h), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(2, 1, h, h), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(w - h, 1, h, h), wx.ALIGN_CENTER)
 
         # Draw knob
         if self._enable:
@@ -491,6 +431,7 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
                  powoftwo=False, backColour=None):
         ZB_ControlSlider.__init__(self, parent, minvalue, maxvalue, init, pos, size,
                                   log, outFunction, integer, powoftwo, backColour)
+        self.last_midi_val = 0
 
     def setValue(self, x):
         wx.CallAfter(self.SetValue, x)
@@ -501,7 +442,7 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
                 vars.vars["LEARNINGSLIDER"] = self
                 self.Disable()
             elif vars.vars["LEARNINGSLIDER"] == self:
-                vars.vars["LEARNINGSLIDER"].setMidiCtl(None)
+                vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
                 vars.vars["LEARNINGSLIDER"] is None
                 self.Enable()
             evt.StopPropagation()
@@ -530,7 +471,10 @@ class ZB_ControlKnob(wx.Panel):
         self.selected = False
         self._enable = True
         self.midictl = None
+        self.midictlnumber = None
+        self.last_midi_val = 0
         self.new = ''
+        self.propagate = True
         self.floatPrecision = '%.3f'
         self.knobCenterPosX = int(size[0] / 2)
         self.knobRadius = 14
@@ -564,13 +508,21 @@ class ZB_ControlKnob(wx.Panel):
         self.Bind(wx.EVT_KEY_DOWN, self.keyDown)
         self.Bind(wx.EVT_KILL_FOCUS, self.LooseFocus)
 
-    def setMidiCtl(self, x, propagate=True):
+    def valToWidget(self):
+        val = self.midictl.get()
+        if val != self.last_midi_val:
+            self.last_midi_val = val
+            if self.log:
+                val = toExp(val, self.minvalue, self.maxvalue)
+            self.SetValue(val)
+
+    def setMidiCtlNumber(self, x, propagate=True):
         self.propagate = propagate
-        self.midictl = x
+        self.midictlnumber = x
         self.Refresh()
 
-    def getMidiCtl(self):
-        return self.midictl
+    def getMidiCtlNumber(self):
+        return self.midictlnumber
 
     def setFloatPrecision(self, x):
         self.floatPrecision = '%.' + '%df' % x
@@ -606,7 +558,8 @@ class ZB_ControlKnob(wx.Panel):
     def getRange(self):
         return [self.minvalue, self.maxvalue]
 
-    def SetValue(self, value):
+    def SetValue(self, value, propagate=True):
+        self.propagate = propagate
         if self.HasCapture():
             self.ReleaseMouse()
         value = clamp(value, self.minvalue, self.maxvalue)
@@ -619,7 +572,7 @@ class ZB_ControlKnob(wx.Panel):
         if self.integer:
             self.value = int(self.value)
         self.selected = False
-        self.Refresh()
+        wx.CallAfter(self.Refresh)
 
     def GetValue(self):
         if self.log:
@@ -712,7 +665,7 @@ class ZB_ControlKnob(wx.Panel):
                         if _x < 0:
                             _rad *= 3
                     else:
-                        _rad = math.atan(_x / _y)
+                        _rad = p_mathatan(_x / _y)
                         if _x > 0 and _y < 0:
                             _rad = 0 - _rad
                         elif _x < 0 and _y < 0:
@@ -812,19 +765,44 @@ class ZB_ControlKnob(wx.Panel):
 
         dc.DrawLabel(val, recval, wx.ALIGN_CENTER)
 
-        if self.midictl is not None:
+        if self.midictlnumber is not None:
             if sys.platform == "win32" or sys.platform.startswith("linux"):
                 dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             else:
                 dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             dc.SetTextForeground(self.foreColour)
-            dc.DrawLabel(str(self.midictl), wx.Rect(4, recval[1] - 11, recval[2], 15), wx.ALIGN_LEFT)
+            dc.DrawLabel(str(self.midictlnumber), wx.Rect(4, recval[1] - 11, recval[2], 15), wx.ALIGN_LEFT)
 
         # Send value
         if self.outFunction:
             self.outFunction(self.GetValue())
 
         evt.Skip()
+
+
+class ZyneB_ControlKnob(ZB_ControlKnob):
+    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0, 0),
+                 size=(44, 74), log=False, outFunction=None, integer=False,
+                 backColour=None, label=''):
+        ZB_ControlKnob.__init__(self, parent, minvalue, maxvalue, init, pos,
+                 size, log, outFunction, integer,
+                 backColour, label)
+
+    def setValue(self, x):
+        wx.CallAfter(self.SetValue, x)
+
+    def MouseDown(self, evt):
+        if vars.vars["MIDILEARN"]:
+            if vars.vars["LEARNINGSLIDER"] is None:
+                vars.vars["LEARNINGSLIDER"] = self
+                self.Disable()
+            elif vars.vars["LEARNINGSLIDER"] == self:
+                vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
+                vars.vars["LEARNINGSLIDER"] is None
+                self.Enable()
+            evt.StopPropagation()
+        else:
+            ZB_ControlKnob.MouseDown(self, evt)
 
 
 class ZB_VuMeter(wx.Panel):
