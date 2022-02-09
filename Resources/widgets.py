@@ -6,7 +6,6 @@ a python module to help digital signal processing script creation.
 """
 
 import copy
-import sys
 import wx
 import Resources.variables as vars
 from Resources.utils import *
@@ -33,11 +32,11 @@ class ZB_HeadTitle(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         if togcall is not None:
             self.toggle = wx.CheckBox(self, id=-1)
-            mainsizer.Add(self.toggle, 0, wx.LEFT | wx.RIGHT | wx.CENTER, 2)
+            mainsizer.Add(self.toggle, 0, wx.LEFT, 2)
             self.toggle.Bind(wx.EVT_CHECKBOX, togcall)
         self.label = wx.StaticText(self, -1, title)
         if font is not None:
-            label.SetFont(font)
+            self.label.SetFont(font)
         self.label.SetForegroundColour(wx.WHITE)
         sizer.Add(self.label, 0, wx.CENTER | wx.ALL, 2)
         mainsizer.Add(sizer, 1)
@@ -47,46 +46,23 @@ class ZB_HeadTitle(wx.Panel):
         self.label.SetLabel(s)
 
 
-class ZB_ControlSlider(wx.Panel):
-    def __init__(
-        self,
-        parent,
-        minvalue,
-        maxvalue,
-        init=None,
-        pos=(0, 0),
-        size=(200, 16),
-        log=False,
-        outFunction=None,
-        integer=False,
-        powoftwo=False,
-        backColour=None,
-        orient=wx.HORIZONTAL,
-        ctrllabel="",
-    ):
-        if size == (200, 16) and orient == wx.VERTICAL:
-            size = (40, 200)
-        wx.Panel.__init__(
-            self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
-            style=wx.NO_BORDER | wx.WANTS_CHARS | wx.EXPAND
-        )
+class ZB_Base_Control(wx.Panel):
+    def __init__(self, parent, minvalue, maxvalue, init=None,
+                 pos=(0, 0), size=(200, 16),
+                 log=False, powoftwo=False, integer=False,
+                 outFunction=None,
+                 backColour=None, foreColour=None, label=""):
+        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
+                          style=wx.NO_BORDER | wx.WANTS_CHARS | wx.EXPAND)
         self.parent = parent
-        if backColour:
-            self.backgroundColour = backColour
-        else:
-            self.backgroundColour = BACKGROUND_COLOUR
+        self.pos = pos
+        self.size = size
+        self.minvalue = minvalue
+        self.maxvalue = maxvalue
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
+        self.backgroundColour = parent.GetBackgroundColour() if backColour is None else backColour
+        self.foregroundColour = parent.GetForegroundColour() if foreColour is None else foreColour
         self.SetBackgroundColour(self.backgroundColour)
-        self.orient = orient
-        # self.SetMinSize(self.GetSize())
-        if self.orient == wx.VERTICAL:
-            self.knobSize = 17
-            self.knobHalfSize = 8
-            self.sliderWidth = size[0] - 29
-        else:
-            self.knobSize = 40
-            self.knobHalfSize = 20
-            self.sliderHeight = size[1] - 5
         self.outFunction = outFunction
         self.integer = integer
         self.log = log
@@ -94,22 +70,32 @@ class ZB_ControlSlider(wx.Panel):
         if self.powoftwo:
             self.integer = True
             self.log = False
-        self.ctrllabel = ctrllabel
-        self.SetRange(minvalue, maxvalue)
         self.borderWidth = 1
         self.selected = False
         self._enable = True
         self.propagate = True
         self.midictl = None
         self.midictlnumber = None
+        self.last_midi_val = 0
+        self.label = label
         self.new = ""
+        self.value = 0
+        self.display_value = 0
+        self.SetRange(minvalue, maxvalue)
+
+        if log:
+            self.toexp_c0 = p_mathlog10(minvalue)
+            self.toexp_c1 = p_mathlog10(maxvalue) - self.toexp_c0
+
         if init is not None:
             self.SetValue(init)
             self.init = init
         else:
             self.SetValue(minvalue)
             self.init = minvalue
+
         self.clampPos()
+
         self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
         self.Bind(wx.EVT_LEFT_DCLICK, self.DoubleClick)
@@ -117,19 +103,11 @@ class ZB_ControlSlider(wx.Panel):
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnResize)
         self.Bind(wx.EVT_CHAR, self.onChar)
+        self.Bind(wx.EVT_KEY_DOWN, self.keyDown)
         self.Bind(wx.EVT_KILL_FOCUS, self.LooseFocus)
 
-        if sys.platform == "win32" or sys.platform.startswith("linux"):
-            self.dcref = wx.BufferedPaintDC
-            self.font = wx.Font(7, wx.FONTFAMILY_TELETYPE,
-                                wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
-        else:
-            self.dcref = wx.PaintDC
-            self.font = wx.Font(10, wx.FONTFAMILY_TELETYPE,
-                                wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
-
     def getLabel(self):
-        return self.ctrllabel
+        return self.label
 
     def setMidiCtlNumber(self, x, propagate=True):
         self.propagate = propagate
@@ -153,13 +131,6 @@ class ZB_ControlSlider(wx.Panel):
         self._enable = False
         wx.CallAfter(self.Refresh)
 
-    def setSliderHeight(self, height):
-        self.sliderHeight = height
-        self.Refresh()
-
-    def setSliderWidth(self, width):
-        self.sliderWidth = width
-
     def getInit(self):
         return self.init
 
@@ -170,20 +141,20 @@ class ZB_ControlSlider(wx.Panel):
     def getRange(self):
         return [self.minvalue, self.maxvalue]
 
-    def scale(self):
-        if self.orient == wx.VERTICAL:
-            h = self.GetSize()[1]
-            inter = tFromValue(
-                h - self.pos, self.knobHalfSize, self.GetSize()[1] - self.knobHalfSize)
+    def formatDisplayValue(self):
+        if self.integer:
+            self.display_value = str(self.GetValue())
         else:
-            inter = tFromValue(
-                self.pos, self.knobHalfSize, self.GetSize()[0] - self.knobHalfSize)
-        if not self.integer:
-            return interpFloat(inter, self.minvalue, self.maxvalue)
-        elif self.powoftwo:
-            return powOfTwo(int(interpFloat(inter, self.minvalue, self.maxvalue)))
-        else:
-            return int(interpFloat(inter, self.minvalue, self.maxvalue))
+            val = self.GetValue()
+            absval = abs(val)
+            if absval >= 1000:
+                self.display_value = "%.0f" % val
+            elif absval >= 100:
+                self.display_value = "%.1f" % val
+            elif absval >= 10:
+                self.display_value = "%.2f" % val
+            elif absval < 10:
+                self.display_value = "%.3f" % val
 
     def SetValue(self, value, propagate=True):
         self.propagate = propagate
@@ -202,6 +173,7 @@ class ZB_ControlSlider(wx.Panel):
             self.value = int(self.value)
         if self.powoftwo:
             self.value = powOfTwo(self.value)
+        self.formatDisplayValue()
         self.clampPos()
         self.selected = False
         wx.CallAfter(self.Refresh)
@@ -209,18 +181,106 @@ class ZB_ControlSlider(wx.Panel):
     def GetValue(self):
         if self.log:
             t = tFromValue(self.value, self.minvalue, self.maxvalue)
-            val = toExp(t, self.minvalue, self.maxvalue)
+            # := val = toExp(t, self.minvalue, self.maxvalue)
+            val = 10**(t * self.toexp_c1 + self.toexp_c0)
         else:
             val = self.value
         if self.integer:
             val = int(val)
         return val
 
+    def valToWidget(self):
+        if self.midictl is not None:
+            val = self.midictl.get()
+            if val != self.last_midi_val:
+                self.last_midi_val = val
+                if self.log:
+                    # := val = toExp(val, self.minvalue, self.maxvalue)
+                    val = 10**(val * self.toexp_c1 + self.toexp_c0)
+                self.SetValue(val)
+
+    def clampPos(self):
+        pass
+
     def LooseFocus(self, event):
         self.new = ""
         self.selected = False
         self.Refresh()
         event.Skip()
+
+    def getLabel(self):
+        return self.label
+
+    def getLog(self):
+        return self.log
+
+    def setBackgroundColour(self, colour):
+        self.backgroundColour = colour
+        self.SetBackgroundColour(colour)
+        self.Refresh()
+
+    def OnResize(self, evt):
+        self.clampPos()
+        self.Refresh()
+
+    def onChar(self, evt):
+        evt.Skip()
+
+    def keyDown(self, evt):
+        evt.Skip()
+
+
+class ZB_ControlSlider(ZB_Base_Control):
+    def __init__(self, parent, minvalue, maxvalue, init=None,
+                 pos=(0, 0), size=(200, 16),
+                 log=False, integer=False, powoftwo=False,
+                 outFunction=None,
+                 backColour=None, foreColour=None, label="", orient=wx.HORIZONTAL):
+
+        self.orient = orient
+
+        if size == (200, 16) and self.orient == wx.VERTICAL:
+            size = (40, 200)
+        if self.orient == wx.VERTICAL:
+            self.knobSize = 17
+            self.knobHalfSize = 8
+            self.sliderWidth = size[0] - 29
+        else:
+            self.knobSize = 40
+            self.knobHalfSize = 20
+            self.sliderHeight = size[1] - 5
+
+        super().__init__(parent, minvalue, maxvalue, init,
+                         pos=pos, size=size,
+                         log=log, integer=integer, powoftwo=powoftwo,
+                         outFunction=outFunction,
+                         backColour=backColour, foreColour=foreColour, label=label)
+
+        self.clampPos()
+
+        if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
+            self.dcref = wx.BufferedPaintDC
+            self.font = wx.Font(7, wx.FONTFAMILY_TELETYPE,
+                                wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        else:
+            self.dcref = wx.PaintDC
+            self.font = wx.Font(10, wx.FONTFAMILY_TELETYPE,
+                                wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+
+    def scale(self):
+        if self.orient == wx.VERTICAL:
+            h = self.GetSize()[1]
+            inter = tFromValue(
+                h - self.pos, self.knobHalfSize, self.GetSize()[1] - self.knobHalfSize)
+        else:
+            inter = tFromValue(
+                self.pos, self.knobHalfSize, self.GetSize()[0] - self.knobHalfSize)
+        if not self.integer:
+            return interpFloat(inter, self.minvalue, self.maxvalue)
+        elif self.powoftwo:
+            return powOfTwo(int(interpFloat(inter, self.minvalue, self.maxvalue)))
+        else:
+            return int(interpFloat(inter, self.minvalue, self.maxvalue))
 
     def onChar(self, event):
         if self.selected:
@@ -265,6 +325,7 @@ class ZB_ControlSlider(wx.Panel):
             else:
                 self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, size[0] - self.knobHalfSize)
             self.value = self.scale()
+            self.formatDisplayValue()
             self.CaptureMouse()
             self.selected = False
             self.Refresh()
@@ -296,6 +357,7 @@ class ZB_ControlSlider(wx.Panel):
                 else:
                     self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, size[0] - self.knobHalfSize)
                 self.value = self.scale()
+                self.formatDisplayValue()
                 self.selected = False
                 self.Refresh()
 
@@ -317,11 +379,6 @@ class ZB_ControlSlider(wx.Panel):
             self.pos = tFromValue(
                 val, self.minvalue, self.maxvalue) * (size[0] - self.knobSize) + self.knobHalfSize
             self.pos = clamp(self.pos, self.knobHalfSize, size[0] - self.knobHalfSize)
-
-    def setBackgroundColour(self, colour):
-        self.backgroundColour = colour
-        self.SetBackgroundColour(self.backgroundColour)
-        self.Refresh()
 
     def OnPaint(self, evt):
         w, h = self.GetSize()
@@ -357,7 +414,7 @@ class ZB_ControlSlider(wx.Panel):
         gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 2)
 
         if self.midictlnumber is not None:
-            if sys.platform == "win32" or sys.platform.startswith("linux"):
+            if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
                 dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             else:
                 dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
@@ -400,17 +457,8 @@ class ZB_ControlSlider(wx.Panel):
         if self.selected and self.new:
             val = self.new
         else:
-            if self.integer:
-                val = "%d" % self.GetValue()
-            elif abs(self.GetValue()) >= 1000:
-                val = "%.0f" % self.GetValue()
-            elif abs(self.GetValue()) >= 100:
-                val = "%.1f" % self.GetValue()
-            elif abs(self.GetValue()) >= 10:
-                val = "%.2f" % self.GetValue()
-            elif abs(self.GetValue()) < 10:
-                val = "%.3f" % self.GetValue()
-        if sys.platform.startswith("linux"):
+            val = self.display_value
+        if vars.constants["IS_LINUX"]:
             width = len(val) * (dc.GetCharWidth() - 3)
         else:
             width = len(val) * dc.GetCharWidth()
@@ -426,12 +474,16 @@ class ZB_ControlSlider(wx.Panel):
 
 
 class ZyneB_ControlSlider(ZB_ControlSlider):
-    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0, 0),
-                 size=(200, 16), log=False, outFunction=None, integer=False,
-                 powoftwo=False, backColour=None):
-        ZB_ControlSlider.__init__(self, parent, minvalue, maxvalue, init, pos, size,
-                                  log, outFunction, integer, powoftwo, backColour)
-        self.last_midi_val = 0
+    def __init__(self, parent, minvalue, maxvalue, init=None,
+                 pos=(0, 0), size=(200, 16),
+                 log=False, integer=False, powoftwo=False,
+                 outFunction=None,
+                 backColour=None, foreColour=None, label=""):
+        super().__init__(parent, minvalue, maxvalue, init,
+                         pos, size,
+                         log, integer, powoftwo,
+                         outFunction,
+                         backColour=backColour, foreColour=foreColour, label=label)
 
     def setValue(self, x):
         wx.CallAfter(self.SetValue, x)
@@ -440,6 +492,7 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
         if vars.vars["MIDILEARN"]:
             if vars.vars["LEARNINGSLIDER"] is None:
                 vars.vars["LEARNINGSLIDER"] = self
+                print(self.label, self.value)
                 self.Disable()
             elif vars.vars["LEARNINGSLIDER"] == self:
                 vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
@@ -450,32 +503,13 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
             ZB_ControlSlider.MouseDown(self, evt)
 
 
-class ZB_ControlKnob(wx.Panel):
-    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0, 0),
-                 size=(44, 74), log=False, outFunction=None, integer=False,
-                 backColour=None, label=''):
-        wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
-                          style=wx.NO_BORDER | wx.WANTS_CHARS)
-        self.parent = parent
-        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
-        self.backColour = parent.GetBackgroundColour()
-        self.foreColour = parent.GetForegroundColour()
-        self.SetBackgroundColour(self.backColour)
-        self.SetMinSize(self.GetSize())
-        self.outFunction = outFunction
-        self.integer = integer
-        self.log = log
-        self.label = label
-        self.SetRange(minvalue, maxvalue)
-        self.borderWidth = 0
-        self.selected = False
-        self._enable = True
-        self.midictl = None
-        self.midictlnumber = None
-        self.last_midi_val = 0
-        self.new = ''
-        self.propagate = True
-        self.floatPrecision = '%.3f'
+class ZB_ControlKnob(ZB_Base_Control):
+    def __init__(self, parent, minvalue, maxvalue, init=None,
+                 pos=(0, 0), size=(44, 74),
+                 log=False, integer=False,
+                 outFunction=None,
+                 backColour=None, foreColour=None, label=''):
+
         self.knobCenterPosX = int(size[0] / 2)
         self.knobRadius = 14
         self.knobCenterPosY = self.knobRadius + 18
@@ -485,110 +519,19 @@ class ZB_ControlKnob(wx.Panel):
                                self.knobCenterPosY - self.knobRadius - 5,
                                2 * self.knobRadius + 10, 2 * self.knobRadius + 10)
 
-        self.knobInnerColour = wx.Colour("#bebebe")
-        self.knobColour = wx.Colour(self.foreColour.red, self.foreColour.green, self.foreColour.blue)
-
-        if init is not None:
-            self.SetValue(init)
-            self.init = init
-        else:
-            self.SetValue(minvalue)
-            self.init = minvalue
-
-        if vars.constants["PLATFORM"] == "darwin":
+        if vars.constants["IS_MAC"]:
             self.font = wx.Font(9, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
         else:
             self.font = wx.Font(7, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
 
-        self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
-        self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
-        self.Bind(wx.EVT_LEFT_DCLICK, self.DoubleClick)
-        self.Bind(wx.EVT_MOTION, self.MouseMotion)
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.Bind(wx.EVT_KEY_DOWN, self.keyDown)
-        self.Bind(wx.EVT_KILL_FOCUS, self.LooseFocus)
+        super().__init__(parent, minvalue, maxvalue, init,
+                         pos=pos, size=size,
+                         log=log, integer=integer,
+                         outFunction=outFunction,
+                         backColour=backColour, foreColour=foreColour, label=label)
 
-    def valToWidget(self):
-        val = self.midictl.get()
-        if val != self.last_midi_val:
-            self.last_midi_val = val
-            if self.log:
-                val = toExp(val, self.minvalue, self.maxvalue)
-            self.SetValue(val)
-
-    def setMidiCtlNumber(self, x, propagate=True):
-        self.propagate = propagate
-        self.midictlnumber = x
-        self.Refresh()
-
-    def getMidiCtlNumber(self):
-        return self.midictlnumber
-
-    def setFloatPrecision(self, x):
-        self.floatPrecision = '%.' + '%df' % x
-        self.Refresh()
-
-    def getMinValue(self):
-        return self.minvalue
-
-    def getMaxValue(self):
-        return self.maxvalue
-
-    def Enable(self):
-        self._enable = True
-        self.Refresh()
-
-    def Disable(self):
-        self._enable = False
-        self.Refresh()
-
-    def getInit(self):
-        return self.init
-
-    def getLabel(self):
-        return self.label
-
-    def getLog(self):
-        return self.log
-
-    def SetRange(self, minvalue, maxvalue):
-        self.minvalue = minvalue
-        self.maxvalue = maxvalue
-
-    def getRange(self):
-        return [self.minvalue, self.maxvalue]
-
-    def SetValue(self, value, propagate=True):
-        self.propagate = propagate
-        if self.HasCapture():
-            self.ReleaseMouse()
-        value = clamp(value, self.minvalue, self.maxvalue)
-        if self.log:
-            t = toLog(value, self.minvalue, self.maxvalue)
-            self.value = interpFloat(t, self.minvalue, self.maxvalue)
-        else:
-            t = tFromValue(value, self.minvalue, self.maxvalue)
-            self.value = interpFloat(t, self.minvalue, self.maxvalue)
-        if self.integer:
-            self.value = int(self.value)
-        self.selected = False
-        wx.CallAfter(self.Refresh)
-
-    def GetValue(self):
-        if self.log:
-            t = tFromValue(self.value, self.minvalue, self.maxvalue)
-            val = toExp(t, self.minvalue, self.maxvalue)
-        else:
-            val = self.value
-        if self.integer:
-            val = int(val)
-        return val
-
-    def LooseFocus(self, event):
-        self.new = ""
-        self.selected = False
-        self.Refresh()
-        event.Skip()
+        self.knobInnerColour = wx.Colour("#bebebe")
+        self.knobColour = wx.Colour(self.foregroundColour.red, self.foregroundColour.green, self.foregroundColour.blue)
 
     def keyDown(self, event):
         if self.selected:
@@ -696,22 +639,19 @@ class ZB_ControlKnob(wx.Panel):
                 off = 0.005 * offY * (self.maxvalue - self.minvalue) - \
                     0.001 * offX * (self.maxvalue - self.minvalue)
                 self.value = clamp(self.oldValue + off, self.minvalue, self.maxvalue)
+                self.formatDisplayValue()
                 self.selected = False
                 self.Refresh()
-
-    def setbackColour(self, colour):
-        self.backColour = colour
-        self.Refresh()
 
     def OnPaint(self, evt):
         w, h = self.GetSize()
         dc = wx.AutoBufferedPaintDC(self)
 
-        dc.SetBrush(wx.Brush(self.backColour, wx.SOLID))
+        dc.SetBrush(wx.Brush(self.backgroundColour, wx.SOLID))
         dc.Clear()
 
         # Draw background
-        dc.SetPen(wx.Pen(self.backColour, width=self.borderWidth, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.backgroundColour, width=self.borderWidth, style=wx.SOLID))
         dc.DrawRectangle(0, 0, w, h)
 
         dc.SetFont(self.font)
@@ -740,25 +680,22 @@ class ZB_ControlKnob(wx.Panel):
         dc.SetPen(wx.Pen(self.knobColour, width=4, style=wx.SOLID))
         dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
 
-        dc.SetPen(wx.Pen(self.backColour, width=2, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.backgroundColour, width=2, style=wx.SOLID))
         dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
 
-        dc.SetPen(wx.Pen(self.foreColour, width=2, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.foregroundColour, width=2, style=wx.SOLID))
         dc.SetBrush(wx.Brush(self.knobColour, wx.TRANSPARENT))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius)
 
-        dc.SetPen(wx.Pen(self.backColour, width=4, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.backgroundColour, width=4, style=wx.SOLID))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius + 3)
 
         # Draw text value
         if self.selected and self.new:
             val = self.new
         else:
-            if self.integer:
-                val = str(int(self.GetValue()))
-            else:
-                val = self.floatPrecision % self.GetValue()
-        if vars.constants["PLATFORM"].startswith('linux'):
+            val = self.display_value
+        if vars.constants["IS_LINUX"]:
             width = len(val) * (dc.GetCharWidth() - 3)
         else:
             width = len(val) * dc.GetCharWidth()
@@ -766,11 +703,11 @@ class ZB_ControlKnob(wx.Panel):
         dc.DrawLabel(val, recval, wx.ALIGN_CENTER)
 
         if self.midictlnumber is not None:
-            if sys.platform == "win32" or sys.platform.startswith("linux"):
+            if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
                 dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             else:
                 dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-            dc.SetTextForeground(self.foreColour)
+            dc.SetTextForeground(self.foregroundColour)
             dc.DrawLabel(str(self.midictlnumber), wx.Rect(4, recval[1] - 11, recval[2], 15), wx.ALIGN_LEFT)
 
         # Send value
@@ -781,12 +718,16 @@ class ZB_ControlKnob(wx.Panel):
 
 
 class ZyneB_ControlKnob(ZB_ControlKnob):
-    def __init__(self, parent, minvalue, maxvalue, init=None, pos=(0, 0),
-                 size=(44, 74), log=False, outFunction=None, integer=False,
-                 backColour=None, label=''):
-        ZB_ControlKnob.__init__(self, parent, minvalue, maxvalue, init, pos,
-                 size, log, outFunction, integer,
-                 backColour, label)
+    def __init__(self, parent, minvalue, maxvalue, init=None,
+                 pos=(0, 0), size=(44, 74),
+                 log=False, integer=False,
+                 outFunction=None,
+                 backColour=None, foreColour=None, label=''):
+        super().__init__(parent, minvalue, maxvalue, init,
+                         pos=pos, size=size,
+                         log=log, integer=integer,
+                         outFunction=outFunction,
+                         backColour=backColour, foreColour=foreColour, label=label)
 
     def setValue(self, x):
         wx.CallAfter(self.SetValue, x)
@@ -1362,7 +1303,7 @@ class ZB_Keyboard(wx.Panel):
         dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
         dc.DrawRectangle(0, 0, w, h)
 
-        if sys.platform == "darwin":
+        if vars.constants["IS_MAC"]:
             dc.SetFont(wx.Font(12, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         else:
             dc.SetFont(wx.Font(8, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))

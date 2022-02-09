@@ -150,7 +150,7 @@ class HelpFrame(wx.Frame):
         self.rtc.BeginSuppressUndo()
         self.rtc.BeginParagraphSpacing(0, 20)
         self.rtc.BeginBold()
-        if vars.constants["PLATFORM"] == "win32" or vars.constants["PLATFORM"].startswith("linux"):
+        if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
             self.rtc.BeginFontSize(12)
         else:
             self.rtc.BeginFontSize(16)
@@ -180,7 +180,7 @@ class LFOFrame(wx.MiniFrame):
         self.SetMaxSize((230,270))
         self.SetSize((230,270))
         self.SetBackgroundColour(parent.GetBackgroundColour())
-        if vars.constants["PLATFORM"] == "darwin":
+        if vars.constants["IS_MAC"]:
             close_accel = wx.ACCEL_CMD
         else:
             close_accel = wx.ACCEL_CTRL
@@ -289,10 +289,10 @@ class LFOButtons(GenStaticText):
         self.font, psize = self.GetFont(), self.GetFont().GetPointSize()
 
         self.font.SetFamily(wx.FONTFAMILY_TELETYPE)
-        if vars.constants["PLATFORM"] != "win32":
+        if not vars.constants["IS_WIN"]:
             self.font.SetWeight(wx.FONTWEIGHT_BOLD)
             
-        if vars.constants["PLATFORM"] != "darwin":
+        if not vars.constants["IS_MAC"]:
             self.font.SetPointSize(psize-3)
         else:
             self.font.SetPointSize(psize-3)
@@ -357,9 +357,12 @@ class LFOButtons(GenStaticText):
         self.callback(self.which, self.state)
 
 class ServerPanel(wx.Panel):
-    def __init__(self, parent, colour=wx.WHITE):
+    def __init__(self, parent, backColour=None):
         wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
-        self.colour = parent.GetBackgroundColour()
+        if backColour is None:
+            self.colour = parent.GetBackgroundColour()
+        else:
+            self.colour = backColour
         self.SetSize((230,500))
         self.fileformat = vars.vars["FORMAT"]
         self.sampletype = vars.vars["BITS"]
@@ -373,7 +376,7 @@ class ServerPanel(wx.Panel):
         self.mainBox = wx.BoxSizer(wx.VERTICAL)
 
         self.font, psize = self.GetFont(), self.GetFont().GetPointSize()
-        if vars.constants["PLATFORM"] != "win32":
+        if not vars.constants["IS_WIN"]:
             self.font.SetPointSize(psize-1)
 
         self.fsserver = FSServer()
@@ -393,8 +396,9 @@ class ServerPanel(wx.Panel):
         popsize = (-1, h+12)
         butsize = (125, h+12)
 
-        if vars.constants["PLATFORM"] == "darwin":
+        if vars.constants["IS_MAC"]:
             self.driverText.SetFont(font)
+
         if vars.vars["AUDIO_HOST"] != "Jack":
             preferedDriver = vars.vars["OUTPUT_DRIVER"]
             self.driverList, self.driverIndexes = get_output_devices()
@@ -419,11 +423,11 @@ class ServerPanel(wx.Panel):
 
         preferedInterface = vars.vars["MIDI_INTERFACE"]
         self.interfaceText = wx.StaticText(self, id=-1, label="Midi interface")
-        if vars.constants["PLATFORM"] == "darwin":
+        if vars.constants["IS_MAC"]:
             self.interfaceText.SetFont(font)
         self.mainBox.Add(self.interfaceText, 0, wx.TOP | wx.LEFT, 4)
         self.interfaceList, self.interfaceIndexes = get_midi_input_devices()
-        if self.interfaceList != []:
+        if len(self.interfaceList) > 0:
             self.interfaceList.append("Virtual Keyboard")
             self.defaultInterface = get_midi_default_input()
             self.popupInterface = wx.Choice(self, id=-1, choices=self.interfaceList, size=popsize)
@@ -471,7 +475,7 @@ class ServerPanel(wx.Panel):
         self.popupPoly.Bind(wx.EVT_CHOICE, self.changePoly)
 
         row1Box.Add(srBox, 1)
-        row1Box.Add(polyBox, 1)        
+        row1Box.Add(polyBox, 1)
         self.mainBox.Add(row1Box, 0, wx.EXPAND | wx.TOP, 2)
 
         row2Box = wx.BoxSizer(wx.HORIZONTAL)
@@ -494,7 +498,7 @@ class ServerPanel(wx.Panel):
         self.popupFormat.Bind(wx.EVT_CHOICE, self.changeFormat)
 
         row2Box.Add(bitBox, 1)
-        row2Box.Add(formatBox, 1)        
+        row2Box.Add(formatBox, 1)
         self.mainBox.Add(row2Box, 0, wx.EXPAND | wx.TOP, 2)
 
         row3Box = wx.BoxSizer(wx.HORIZONTAL)
@@ -513,12 +517,12 @@ class ServerPanel(wx.Panel):
         self.rec.Bind(wx.EVT_TOGGLEBUTTON, self.handleRec)
 
         row3Box.Add(onBox, 1)
-        row3Box.Add(recBox, 1)        
+        row3Box.Add(recBox, 1)
         self.mainBox.Add(row3Box, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 2)
     
         self.textAmp = wx.StaticText(self, id=-1, label="Global Amplitude (dB)")
         self.mainBox.Add(self.textAmp, 0, wx.TOP | wx.LEFT, 4)
-        self.sliderAmp = ZyneB_ControlSlider(self, -60, 18, 0, outFunction=self.changeAmp, backColour=self.colour)
+        self.sliderAmp = ZyneB_ControlSlider(self, -60, 18, 0, outFunction=self.changeAmp)
         self.mainBox.Add(self.sliderAmp, 0, wx.EXPAND | wx.ALL, 2)
         self.serverSettings.append(1.0)
         self.meter = ZB_VuMeter(self)
@@ -530,26 +534,23 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(self.ppEqTitle, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 4)
 
         eqFreqBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobEqF1 = ZB_ControlKnob(self, 40, 250, 100, label=' Freq 1', backColour=self.colour, outFunction=self.changeEqF1)
+        self.knobEqF1 = ZB_ControlKnob(self, 40, 250, 100, label=' Freq 1', outFunction=self.changeEqF1)
         eqFreqBox.Add(self.knobEqF1, 0, wx.LEFT | wx.RIGHT, 20)
-        self.knobEqF1.setFloatPrecision(2)
-        self.knobEqF2 = ZB_ControlKnob(self, 300, 1000, 500, label=' Freq 2', backColour=self.colour, outFunction=self.changeEqF2)
+        self.knobEqF2 = ZB_ControlKnob(self, 300, 1000, 500, label=' Freq 2', outFunction=self.changeEqF2)
         eqFreqBox.Add(self.knobEqF2, 0, wx.LEFT | wx.RIGHT, 20)
-        self.knobEqF2.setFloatPrecision(2)
-        self.knobEqF3 = ZB_ControlKnob(self, 1200, 5000, 2000, label=' Freq 3', backColour=self.colour, outFunction=self.changeEqF3)
+        self.knobEqF3 = ZB_ControlKnob(self, 1200, 5000, 2000, label=' Freq 3', outFunction=self.changeEqF3)
         eqFreqBox.Add(self.knobEqF3, 0, wx.LEFT | wx.RIGHT, 20)
-        self.knobEqF3.setFloatPrecision(2)
 
         self.mainBox.Add(eqFreqBox, 0, wx.CENTER)
 
         eqGainBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobEqA1 = ZB_ControlKnob(self, -40, 18, 0, label='B1 gain', backColour=self.colour, outFunction=self.changeEqA1)
+        self.knobEqA1 = ZB_ControlKnob(self, -40, 18, 0, label='B1 gain', outFunction=self.changeEqA1)
         eqGainBox.Add(self.knobEqA1, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA2 = ZB_ControlKnob(self, -40, 18, 0, label='B2 gain', backColour=self.colour, outFunction=self.changeEqA2)
+        self.knobEqA2 = ZB_ControlKnob(self, -40, 18, 0, label='B2 gain', outFunction=self.changeEqA2)
         eqGainBox.Add(self.knobEqA2, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA3 = ZB_ControlKnob(self, -40, 18, 0, label='B3 gain', backColour=self.colour, outFunction=self.changeEqA3)
+        self.knobEqA3 = ZB_ControlKnob(self, -40, 18, 0, label='B3 gain', outFunction=self.changeEqA3)
         eqGainBox.Add(self.knobEqA3, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobEqA4 = ZB_ControlKnob(self, -40, 18, 0, label='B4 gain', backColour=self.colour, outFunction=self.changeEqA4)
+        self.knobEqA4 = ZB_ControlKnob(self, -40, 18, 0, label='B4 gain', outFunction=self.changeEqA4)
         eqGainBox.Add(self.knobEqA4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(eqGainBox, 0, wx.CENTER)
@@ -559,23 +560,23 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND|wx.BOTTOM, 4)
     
         cpKnobBox = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobComp1 = ZB_ControlKnob(self, -60, 0, -3, label=' Thresh', backColour=self.colour, outFunction=self.changeComp1)
+        self.knobComp1 = ZB_ControlKnob(self, -60, 0, -3, label=' Thresh', outFunction=self.changeComp1)
         cpKnobBox.Add(self.knobComp1, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp2 = ZB_ControlKnob(self, 1, 10, 2, label=' Ratio', backColour=self.colour, outFunction=self.changeComp2)
+        self.knobComp2 = ZB_ControlKnob(self, 1, 10, 2, label=' Ratio', outFunction=self.changeComp2)
         cpKnobBox.Add(self.knobComp2, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp3 = ZB_ControlKnob(self, 0.001, 0.5, 0.01, label='Risetime', backColour=self.colour, outFunction=self.changeComp3)
+        self.knobComp3 = ZB_ControlKnob(self, 0.001, 0.5, 0.01, label='Risetime', outFunction=self.changeComp3)
         cpKnobBox.Add(self.knobComp3, 0, wx.LEFT | wx.RIGHT, 10)
-        self.knobComp4 = ZB_ControlKnob(self, 0.01, 1, .1, label='Falltime', backColour=self.colour, outFunction=self.changeComp4)
+        self.knobComp4 = ZB_ControlKnob(self, 0.01, 1, .1, label='Falltime', outFunction=self.changeComp4)
         cpKnobBox.Add(self.knobComp4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(cpKnobBox, 0, wx.CENTER)
     
-        if vars.constants["PLATFORM"] != "win32":
+        if not vars.constants["IS_WIN"]:
             # reduce font for OSX and linux display
             objs = [self.srText, self.popupSr, self.polyText, self.popupPoly, self.bitText,
                     self.popupBit, self.formatText, self.popupFormat,
                     self.onOffText, self.onOff, self.recText, self.rec, self.textAmp]
-            if vars.constants["PLATFORM"] != "darwin":
+            if not vars.constants["IS_MAC"]:
                 objs += [self.driverText, self.popupDriver, self.interfaceText, self.popupInterface]
             font, psize = self.popupPoly.GetFont(), self.popupPoly.GetFont().GetPointSize()
             font.SetPointSize(psize-2)
@@ -658,25 +659,28 @@ class ServerPanel(wx.Panel):
             wx.CallLater(50, self.onKeyboard, note)
 
     def onKeyboard(self, note):
-        pit = note[0]
-        vel = note[1] / 127.
-        voice = None
-        if vel > 0 and pit not in self.virtualNotePressed.keys():
-            vals = self.virtualNotePressed.values()
-            for i in range(vars.vars["POLY"]):
-                if i not in vals:
-                    break
-            voice = self.virtualNotePressed[pit] = self.virtualvoice = i
-        elif vel == 0 and pit in self.virtualNotePressed.keys():
-            voice = self.virtualNotePressed[pit]
-            del self.virtualNotePressed[pit]
-        modules = self.GetTopLevelParent().modules
-        ch = note[2]
-        for module in modules:
-            synth = module.synth
-            if synth.channel == 0 or synth.channel == ch:
-                synth._virtualpit[voice].setValue(pit)
-                synth._trigamp[voice].setValue(vel)
+        try:
+            pit = note[0]
+            vel = note[1] / 127.
+            voice = None
+            if vel > 0 and pit not in self.virtualNotePressed.keys():
+                vals = self.virtualNotePressed.values()
+                for i in range(vars.vars["POLY"]):
+                    if i not in vals:
+                        break
+                voice = self.virtualNotePressed[pit] = self.virtualvoice = i
+            elif vel == 0 and pit in self.virtualNotePressed.keys():
+                voice = self.virtualNotePressed[pit]
+                del self.virtualNotePressed[pit]
+            modules = self.GetTopLevelParent().modules
+            ch = note[2]
+            for module in modules:
+                synth = module.synth
+                if synth.channel == 0 or synth.channel == ch:
+                    synth._virtualpit[voice].setValue(pit)
+                    synth._trigamp[voice].setValue(vel)
+        except Exception as e:
+            self.resetVirtualKeyboard()
 
     def handleAudio(self, evt):
         popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
@@ -920,7 +924,7 @@ class ServerPanel(wx.Panel):
             self.sliderAmp.setBackgroundColour(learnColour)
             self.sliderAmp.Refresh()
             for widget in widgets:
-                widget.setbackColour(learnColour)
+                widget.setBackgroundColour(learnColour)
                 widget.Refresh()
             for widget in popups:
                 widget.Disable()
@@ -932,7 +936,7 @@ class ServerPanel(wx.Panel):
             self.sliderAmp.setBackgroundColour(self.colour)
             self.sliderAmp.Refresh()
             for widget in widgets:
-                widget.setbackColour(self.colour)
+                widget.setBackgroundColour(self.colour)
                 widget.Refresh()
             for widget in popups:
                 widget.Enable()
@@ -953,7 +957,7 @@ class BasePanel(wx.Panel):
     
     def createAdsrKnobs(self):
         self.knobSizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, log=False, label='Delay', outFunction=self.changeDelay)
+        self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
         self.knobSizer.Add(self.knobDel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
         self.knobAtt = ZyneB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
         self.knobSizer.Add(self.knobAtt, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
@@ -965,7 +969,7 @@ class BasePanel(wx.Panel):
         self.knobSizer.Add(self.knobRel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
         self.sizer.Add(self.knobSizer, 0, wx.BOTTOM|wx.LEFT, 1)
         self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
-        if vars.constants["PLATFORM"] != "darwin":
+        if not vars.constants["IS_MAC"]:
             self.sizer.AddSpacer(3)
 
     def createTriggerSettings(self):
@@ -981,17 +985,16 @@ class BasePanel(wx.Panel):
 
         font, psize = self.cbChannel.GetFont(), self.cbChannel.GetFont().GetPointSize()
         font.SetPointSize(psize-2)
-        if vars.constants["PLATFORM"] != "win32":
+        if not vars.constants["IS_WIN"]:
             self.cbChannel.SetFont(font)
 
         self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT, 1)
 
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
-        if vars.constants["PLATFORM"] == "darwin": height = 14
-        else: height = 13
+        height = 14 if vars.constants["IS_MAC"] else 13
         text = wx.StaticText(self, id=-1, label=label, size=(200,height))
         self.labels.append(text)
-        if vars.constants["PLATFORM"] != "win32":
+        if not vars.constants["IS_WIN"]:
             font, psize = text.GetFont(), text.GetFont().GetPointSize()
             font.SetPointSize(psize-2)
             text.SetFont(font)
@@ -999,12 +1002,12 @@ class BasePanel(wx.Panel):
         self.sizer.AddSpacer(1)
         if self.from_lfo or integer:
             slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(212,16), log=log,
-                                         integer=integer, outFunction=callback, backColour=self.colour)
+                                         integer=integer, outFunction=callback, label=label)
             self.sizer.Add(slider, 0, wx.LEFT|wx.RIGHT, 5)
         else:
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
             slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(195,16), log=log,
-                                         integer=integer, outFunction=callback, backColour=self.colour)
+                                         integer=integer, outFunction=callback, label=label)
             button = LFOButtons(self, synth=self.synth, which=i, callback=self.startLFO)
             lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i)
             self.buttons[i] = button
@@ -1040,10 +1043,7 @@ class BasePanel(wx.Panel):
     def setBackgroundColour(self, col):
         self.SetBackgroundColour(col)
         for slider in self.sliders:
-            try:
-                slider.setBackgroundColour(col)
-            except:
-                slider.setbackColour(col)
+            slider.setBackgroundColour(col)
         for but in self.buttons:
             if but != None:
                 but.SetBackgroundColour(col)
@@ -1088,12 +1088,12 @@ class GenericPanel(BasePanel):
         self.sizer.Add(self.headPanel, 0, wx.BOTTOM|wx.EXPAND, 3)
 
         self.font = self.close.GetFont()
-        if vars.constants["PLATFORM"] != "win32":
+        if not vars.constants["IS_WIN"]:
             ptsize = self.font.GetPointSize()
             self.font.SetPointSize(ptsize - 2)
         for obj in [self.close, self.info, self.title, self.corner]:
             obj.SetFont(self.font)
-            obj.SetForegroundColour("white")
+            obj.SetForegroundColour(wx.WHITE)
 
         self.createAdsrKnobs()
 
@@ -1114,12 +1114,12 @@ class GenericPanel(BasePanel):
         else:
             self.sliderP3 = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeP3, 3)
         self.sliderPan = self.createSlider("Panning", .5, 0, 1, False, False, self.changePan, 4)
-        if vars.constants["PLATFORM"] != "darwin":
+        if not vars.constants["IS_MAC"]:
             self.sizer.AddSpacer(4)
 
         self.createTriggerSettings()
 
-        if vars.constants["PLATFORM"] != "darwin":
+        if not vars.constants["IS_MAC"]:
             self.sizer.AddSpacer(2)
 
         self.SetSizerAndFit(self.sizer)
@@ -1202,7 +1202,7 @@ class GenericPanel(BasePanel):
 
     def MouseDownInfo(self, evt):
         if self.synth.__doc__ != None:
-            if vars.constants["PLATFORM"].startswith("linux"):
+            if vars.constants["IS_LINUX"]:
                 size = (850, 600)
             else:
                 size = (850, 600)
@@ -1475,12 +1475,12 @@ class LFOPanel(BasePanel):
 
         self.font = self.close.GetFont()
 
-        if vars.constants["PLATFORM"] != "win32":
+        if not vars.constants["IS_WIN"]:
             ptsize = self.font.GetPointSize()
             self.font.SetPointSize(ptsize - 2)
         for obj in [self.close, self.title]:
             obj.SetFont(self.font)
-            obj.SetForegroundColour("white")
+            obj.SetForegroundColour(wx.WHITE)
 
         self.createAdsrKnobs()
 

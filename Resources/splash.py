@@ -1,19 +1,25 @@
 import wx
-import sys
 import os
 import Resources.variables as vars
 
 
-def GetRoundBitmap(w, h, r=10):
-    maskColour = wx.Colour(0, 0, 0)
-    shownColour = wx.Colour(5, 5, 5)
-    b = wx.EmptyBitmap(w, h)
+def GetRoundBitmap(w, h, r=None):
+    x = int(w/2)
+    y = int(h/2)
+    if r is None:
+        if vars.constants["IS_WIN"]:
+            r = int(h/2)
+        else:
+            r = int(h/2) - 5
+    maskColour = wx.BLACK
+    shownColour = wx.RED
+    b = wx.Bitmap(w, h)
     dc = wx.MemoryDC(b)
     dc.SetBrush(wx.Brush(maskColour))
     dc.DrawRectangle(0, 0, w, h)
     dc.SetBrush(wx.Brush(shownColour))
-    dc.SetPen(wx.Pen(shownColour))
-    dc.DrawCircle(w/2, h/2, w/2 - 5)
+    dc.SetPen(wx.Pen(shownColour, 0))
+    dc.DrawCircle(x, y, r)
     dc.SelectObject(wx.NullBitmap)
     b.SetMaskColour(maskColour)
     return b
@@ -25,58 +31,59 @@ class ZyneSplashScreen(wx.Frame):
         size = display.GetGeometry()[2:]
         wx.Frame.__init__(
             self, parent, -1, "", pos=(-1, size[1]/6),
-            style=wx.FRAME_SHAPED | wx.SIMPLE_BORDER | wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP)
+            style=wx.FRAME_SHAPED | wx.BORDER_NONE | wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP)
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
 
+        self.bmp = wx.Bitmap(os.path.join(img), wx.BITMAP_TYPE_PNG)
+
         wx.CallAfter(mainframe.Show)
 
-        self.bmp = wx.Bitmap(os.path.join(img), wx.BITMAP_TYPE_PNG)
-        self.w, self.h = self.bmp.GetWidth(), self.bmp.GetHeight()
+        self.w, self.h = self.bmp.GetSize()
         self.SetClientSize((self.w, self.h))
 
         if wx.Platform == "__WXGTK__":
             self.Bind(wx.EVT_WINDOW_CREATE, self.SetWindowShape)
+        elif vars.constants["IS_WIN"]:
+            # win draws a border around shaped bmp, that's why fake shaped frame
+            self.hasShape = False
         else:
             self.SetWindowShape()
 
-        dc = wx.ClientDC(self)
-        dc.DrawBitmap(self.bmp, 0, 0, True)
-
-        self.fc = wx.CallLater(3500, self.OnClose)
+        wx.CallLater(3500, self.OnClose)
 
         self.Center(wx.HORIZONTAL)
-        if sys.platform == 'win32':
-            self.Center(wx.VERTICAL)
+        if vars.constants["IS_WIN"]:
+            # win draws a border around shaped bmp, that's why fake shaped frame
+            self.SetPosition((570, 200))
 
         wx.CallAfter(self.Show)
 
-    def SetWindowShape(self, *evt):
+    def SetWindowShape(self, evt=None):
         r = wx.Region(GetRoundBitmap(self.w, self.h))
         self.hasShape = self.SetShape(r)
 
     def OnPaint(self, evt):
-        w, h = self.GetSize()
         dc = wx.PaintDC(self)
-        dc.SetPen(wx.Pen("#000000"))
-        dc.SetBrush(wx.Brush("#000000"))
-        dc.DrawRectangle(0, 0, w, h)
+        if vars.constants["IS_WIN"]:
+            # win draws a border around shaped bmp, that's why fake shaped frame
+            dc.SetBackground(wx.Brush(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU)))
+        else:
+            dc.SetBackground(wx.Brush(wx.BLACK))
+        dc.Clear()
         dc.DrawBitmap(self.bmp, 0, 0, True)
-        dc.SetTextForeground("#000000")
+        dc.SetTextForeground(wx.BLACK)
         font = dc.GetFont()
         ptsize = font.GetPointSize()
-        if vars.constants["PLATFORM"] == "win32":
-            pass
+        font.SetPointSize(ptsize + 4)
+        if vars.constants["IS_WIN"]:
+            font.SetFaceName("Consolas")
         else:
             font.SetFaceName("Monaco")
-            font.SetPointSize(ptsize + 3)
         dc.SetFont(font)
         dc.DrawLabel("Zyne_B", wx.Rect(50, 230, 400, 18), wx.ALIGN_LEFT)
         dc.DrawLabel("Modular Soft Synthesizer", wx.Rect(70, 250, 400, 18), wx.ALIGN_LEFT)
-        if vars.constants["PLATFORM"] == "win32":
-            pass
-        else:
-            font.SetPointSize(ptsize+1)
+        font.SetPointSize(ptsize + 1)
         dc.SetFont(font)
         dc.DrawLabel("Olivier Bélanger (ajaxsoundstudio)",
                      wx.Rect(0, 305, 400, 15), wx.ALIGN_CENTER)

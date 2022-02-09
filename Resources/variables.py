@@ -7,6 +7,9 @@ constants = dict()
 constants["VERSION"] = "1.0.1"
 constants["YEAR"] = "2022"
 constants["PLATFORM"] = sys.platform
+constants["IS_WIN"] = bool(constants["PLATFORM"] == "win32")
+constants["IS_MAC"] = bool(constants["PLATFORM"] == "darwin")
+constants["IS_LINUX"] = bool(constants["PLATFORM"].startswith("linux"))
 constants["OSX_BUILD_WITH_JACK_SUPPORT"] = False
 constants["WIN_TITLE"] = "Zyne_B"
 constants["PREF_FILE_NAME"] = ".Zyne_Brc"
@@ -24,7 +27,7 @@ if '/Zyne_B.app' in os.getcwd():
 else:
     constants["RESOURCES_PATH"] = os.path.join(os.getcwd(), 'Resources')
 
-if not os.path.isdir(constants["RESOURCES_PATH"]) and constants["PLATFORM"] == "win32":
+if not os.path.isdir(constants["RESOURCES_PATH"]) and constants["IS_WIN"]:
     constants["RESOURCES_PATH"] = os.path.join(os.getenv("ProgramFiles"), "Zyne_B", "Resources")
 
 constants["ID"] = {
@@ -104,7 +107,7 @@ def readPreferencesFile():
                     for line in lines[1:]:
                         if line:
                             key, val = map(str.strip, line.split("="))
-                            if key == "AUDIO_HOST" and constants["PLATFORM"] == "darwin" \
+                            if key == "AUDIO_HOST" and constants["IS_MAC"] \
                                     and not constants["OSX_BUILD_WITH_JACK_SUPPORT"] \
                                     and val in ["Jack", "Coreaudio"]:
                                 vars[key] = "Portaudio"
@@ -115,7 +118,7 @@ def readPreferencesFile():
                             elif key in ["SLIDERPORT"]:
                                 vars[key] = float(val)
                                 vars["PREF_FILE_SETTINGS"][key] = vars[key]
-                            elif key == "AUDIO_HOST" and constants["PLATFORM"] == "darwin" \
+                            elif key == "AUDIO_HOST" and constants["IS_MAC"] \
                                     and not constants["OSX_BUILD_WITH_JACK_SUPPORT"] \
                                     and val in ["Jack", "Coreaudio"]:
                                 vars[key] = "Portaudio"

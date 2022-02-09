@@ -49,7 +49,7 @@ class TutorialFrame(wx.Frame):
         self.rtc.BeginSuppressUndo()
         self.rtc.BeginParagraphSpacing(0, 20)
         self.rtc.BeginBold()
-        if vars.constants["PLATFORM"] == "win32" or vars.constants["PLATFORM"].startswith("linux"):
+        if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
             self.rtc.BeginFontSize(12)
         else:
             self.rtc.BeginFontSize(16)
@@ -62,7 +62,7 @@ class TutorialFrame(wx.Frame):
         for line in lines:
             if line.count("----") == 2:
                 self.rtc.BeginBold()
-                if vars.constants["PLATFORM"] == "win32" or vars.constants["PLATFORM"].startswith("linux"):
+                if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
                     self.rtc.BeginFontSize(12)
                 else:
                     self.rtc.BeginFontSize(16)
@@ -72,7 +72,7 @@ class TutorialFrame(wx.Frame):
                 section_count += 1
             elif not self.code and line.startswith("~~~"):
                 self.code = True
-                if vars.constants["PLATFORM"] == "win32":
+                if vars.constants["IS_WIN"]:
                     self.rtc.BeginFontSize(10)
                 else:
                     self.rtc.BeginFontSize(12)
@@ -82,7 +82,7 @@ class TutorialFrame(wx.Frame):
                 self.rtc.EndItalic()
                 self.rtc.EndFontSize()
             else:
-                self.rtc.WriteText(line)                
+                self.rtc.WriteText(line)
         self.rtc.Newline()
         self.rtc.EndParagraphSpacing()
         self.rtc.EndSuppressUndo()
@@ -225,8 +225,8 @@ class ZyneFrame(wx.Frame):
         self.modules = []
         self.selected = None
 
-        self.splitWindow = wx.SplitterWindow(self, -1, style = wx.SP_LIVE_UPDATE|wx.SP_PERMIT_UNSPLIT)
-        self.splitWindow.SetMinimumPaneSize(0)
+        self.splitWindow = wx.SplitterWindow(self, -1, style = wx.SP_LIVE_UPDATE)
+        self.splitWindow.SetMinimumPaneSize(1)
         self.splitWindow.Unsplit(None)
 
         self.panel = scrolled.ScrolledPanel(self.splitWindow, size=size, pos=(0,28), style=wx.SIMPLE_BORDER)
@@ -382,7 +382,7 @@ class ZyneFrame(wx.Frame):
             self.Bind(wx.EVT_MENU, self.updateAddModuleMenu, id=vars.constants["ID"]["UpdateModules"])
 
     def openMidiLearnHelp(self, evt):
-        if vars.constants["PLATFORM"].startswith("linux"):
+        if vars.constants["IS_LINUX"]:
             size = (750, 500)
         else:
             size = (750, 500)
@@ -398,7 +398,7 @@ class ZyneFrame(wx.Frame):
         win.Show(True)
 
     def openExportHelp(self, evt):
-        if vars.constants["PLATFORM"].startswith("linux"):
+        if vars.constants["IS_LINUX"]:
             size = (750, 500)
         else:
             size = (750, 500)
@@ -423,10 +423,10 @@ class ZyneFrame(wx.Frame):
             self.SetSize((-1, 755))
         else:
             self.splitWindow.Unsplit()
-            if vars.constants["PLATFORM"] == "win32":
+            if vars.constants["IS_WIN"]:
                 self.SetMinSize((460, 542))
                 self.SetSize((-1, 554))
-            elif vars.constants["PLATFORM"] == "darwin":
+            elif vars.constants["IS_MAC"]:
                 w, h = self.serverPanel.mainBox.GetSize()
                 self.SetMinSize((460, h + 30))
                 self.SetSize((-1, h + 30))
@@ -587,7 +587,7 @@ class ZyneFrame(wx.Frame):
             self.serverPanel.reinitServer(0.001, "offline", serverSettings, postProcSettings)
             dlg2 = wx.ProgressDialog(title2, "", maximum = num_iter, parent=self,
                                    style = wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
-            if vars.constants["PLATFORM"] == "win32":
+            if vars.constants["IS_WIN"]:
                 dlg2.SetSize((500, 125))
             else:
                 dlg2.SetSize((500,100))

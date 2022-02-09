@@ -17,7 +17,7 @@ class PreferencesDialog(wx.Dialog):
         for key in vars.constants["VAR_PREF_LABELS"].keys():
             val = str(vars.vars["PREF_FILE_SETTINGS"].get(key, vars.vars[key]))
             if key == "AUDIO_HOST" and \
-                    vars.constants["PLATFORM"] == "darwin" \
+                    vars.constants["IS_MAC"] \
                     and not vars.constants["OSX_BUILD_WITH_JACK_SUPPORT"] \
                     and val in ["Jack", "Coreaudio"]:
                 self.prefs[key] = "Portaudio"
@@ -41,15 +41,15 @@ class PreferencesDialog(wx.Dialog):
         font, entryfont = message.GetFont(), message.GetFont()
         pointsize = font.GetPointSize()
         font.SetWeight(wx.BOLD)
-        if vars.constants["PLATFORM"] == "win32" or vars.constants["PLATFORM"].startswith("linux"):
+        if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
             entryfont.SetPointSize(pointsize-1)
         else:
             font.SetPointSize(pointsize-1)
             entryfont.SetPointSize(pointsize-2)
 
-        if vars.constants["PLATFORM"].startswith("linux"):
+        if vars.constants["IS_LINUX"]:
             host_choices = ["Portaudio", "Jack"]
-        elif vars.constants["PLATFORM"] == "darwin":
+        elif vars.constants["IS_MAC"]:
             if vars.constants["OSX_BUILD_WITH_JACK_SUPPORT"]:
                 host_choices = ["Portaudio", "Jack"]
             else:

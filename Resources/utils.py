@@ -5,7 +5,6 @@ import math
 
 
 p_mathlog10 = math.log10
-p_mathpow = math.pow
 p_mathsin = math.sin
 p_mathcos = math.cos
 p_mathatan = math.atan
@@ -34,7 +33,7 @@ def toLog(t, v1, v2):
 
 def toExp(t, v1, v2):
     v1log = p_mathlog10(v1)
-    return p_mathpow(10, t * (p_mathlog10(v2) - v1log) + v1log)
+    return 10**(t * (p_mathlog10(v2) - v1log) + v1log)
 
 
 POWOFTWO = {
