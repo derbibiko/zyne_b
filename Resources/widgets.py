@@ -32,7 +32,7 @@ class ZB_HeadTitle(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         if togcall is not None:
             self.toggle = wx.CheckBox(self, id=-1)
-            mainsizer.Add(self.toggle, 0, wx.LEFT, 2)
+            mainsizer.Add(self.toggle, 0, wx.LEFT | wx.ALL, 2)
             self.toggle.Bind(wx.EVT_CHECKBOX, togcall)
         self.label = wx.StaticText(self, -1, title)
         if font is not None:
@@ -645,7 +645,12 @@ class ZB_ControlKnob(ZB_Base_Control):
 
     def OnPaint(self, evt):
         w, h = self.GetSize()
-        dc = wx.AutoBufferedPaintDC(self)
+
+        if vars.constants["IS_WIN"]:
+            dc = wx.GCDC(wx.BufferedPaintDC(self))
+            dc.GetGraphicsContext().SetAntialiasMode(True)
+        else:
+            dc = wx.AutoBufferedPaintDC(self)
 
         dc.SetBrush(wx.Brush(self.backgroundColour, wx.SOLID))
         dc.Clear()
@@ -683,11 +688,11 @@ class ZB_ControlKnob(ZB_Base_Control):
         dc.SetPen(wx.Pen(self.backgroundColour, width=2, style=wx.SOLID))
         dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
 
-        dc.SetPen(wx.Pen(self.foregroundColour, width=2, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.foregroundColour, width=1, style=wx.SOLID))
         dc.SetBrush(wx.Brush(self.knobColour, wx.TRANSPARENT))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius)
 
-        dc.SetPen(wx.Pen(self.backgroundColour, width=4, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.backgroundColour, width=5, style=wx.SOLID))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius + 3)
 
         # Draw text value
@@ -1051,10 +1056,10 @@ class ZB_Keyboard(wx.Panel):
         notes = []
         for key in self.whiteSelected:
             notes.append((self.white[key % 7] + int(key / 7) * 12 + self.offset,
-                          127 - self.whiteVelocities[key]))
+                          127 - self.whiteVelocities[key], self.channel))
         for key in self.blackSelected:
             notes.append((self.black[key % 5] + int(key / 5) * 12 + self.offset,
-                          127 - self.blackVelocities[key]))
+                          127 - self.blackVelocities[key], self.channel))
         notes.sort()
         return notes
 

@@ -227,24 +227,30 @@ class ZyneFrame(wx.Frame):
 
         self.splitWindow = wx.SplitterWindow(self, -1, style = wx.SP_LIVE_UPDATE)
         self.splitWindow.SetMinimumPaneSize(1)
-        self.splitWindow.Unsplit(None)
 
-        self.panel = scrolled.ScrolledPanel(self.splitWindow, size=size, pos=(0,28), style=wx.SIMPLE_BORDER)
+        self.upperSplitWindow = wx.SplitterWindow(self.splitWindow, -1, style = wx.SP_LIVE_UPDATE)
+        self.upperSplitWindow.SetMinimumPaneSize(1)
+        self.upperSplitWindow.SetSashInvisible()
+
+        self.panel = scrolled.ScrolledPanel(self.upperSplitWindow, size=size, pos=(0,28), style=wx.BORDER_NONE)
         self.panel.sizer = wx.WrapSizer()
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
-        self.serverPanel = ServerPanel(self.splitWindow)
+
+        self.serverPanel = ServerPanel(self.upperSplitWindow)
 
         mainSizer = wx.BoxSizer(wx.HORIZONTAL)
-        mainSizer.Add(self.serverPanel)
         mainSizer.Add(self.panel.sizer, 1, wx.EXPAND)
         self.panel.SetSizerAndFit(mainSizer)
+
+        self.upperSplitWindow.SplitVertically(self.serverPanel, self.panel, 80)
 
         self.keyboard = ZB_Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
         self.keyboard.SetMinSize((-1, 86))
         self.serverPanel.keyboard = self.keyboard
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
 
-        self.splitWindow.SplitHorizontally(self.panel, self.keyboard, 0)
+        self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, 80)
+        self.splitWindow.SetSashInvisible()
         self.splitWindow.Unsplit(None)
 
         dropTarget = MyFileDropTarget(self.panel)
@@ -418,7 +424,7 @@ class ZyneFrame(wx.Frame):
 
     def showKeyboard(self, state=True):
         if state:
-            self.splitWindow.SplitHorizontally(self.panel, self.keyboard, -80)
+            self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, -80)
             self.SetMinSize((460, 660))
             self.SetSize((-1, 755))
         else:

@@ -358,7 +358,7 @@ class LFOButtons(GenStaticText):
 
 class ServerPanel(wx.Panel):
     def __init__(self, parent, backColour=None):
-        wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
+        wx.Panel.__init__(self, parent, style=wx.BORDER_NONE)
         if backColour is None:
             self.colour = parent.GetBackgroundColour()
         else:
@@ -489,7 +489,7 @@ class ServerPanel(wx.Panel):
         self.serverSettings.append(self.popupBit.GetSelection())
         self.popupBit.Bind(wx.EVT_CHOICE, self.changeBit)
         formatBox = wx.BoxSizer(wx.VERTICAL)
-        self.formatText = wx.StaticText(self, id=-1, label="Format")
+        self.formatText = wx.StaticText(self, id=-1, label="Audio File Format")
         formatBox.Add(self.formatText, 0, wx.TOP | wx.LEFT, 4)
         self.popupFormat = wx.Choice(self, id=-1, choices=["wav","aif"], size=popsize)
         formatBox.Add(self.popupFormat, 0, wx.EXPAND | wx.ALL, 2)
@@ -680,7 +680,7 @@ class ServerPanel(wx.Panel):
                     synth._virtualpit[voice].setValue(pit)
                     synth._trigamp[voice].setValue(vel)
         except Exception as e:
-            self.resetVirtualKeyboard()
+            self.keyboard.reset()
 
     def handleAudio(self, evt):
         popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
@@ -954,7 +954,7 @@ class BasePanel(wx.Panel):
         self.sliders = []
         self.labels = []
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-    
+
     def createAdsrKnobs(self):
         self.knobSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
@@ -1048,6 +1048,7 @@ class BasePanel(wx.Panel):
             if but != None:
                 but.SetBackgroundColour(col)
         self.Refresh()
+
 
 class GenericPanel(BasePanel):
     def __init__(self, parent, name, title, synth, p1, p2, p3):
