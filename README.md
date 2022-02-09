@@ -24,7 +24,7 @@ belangeo(at)gmail.com and it will be added to the download repository.
 Zyne_B should run on each OS with Python >= 3.6 and wxpython >= 4.1 installed. It uses Olivier Bélanger's
 pyo audio engine which has to be installed as well.
 
-One possibl installation scenario:
+One possible installation scenario:
 
 - install wxpython (version 4.1) if not yet installed
 
@@ -83,7 +83,7 @@ The main reason is that I would like to add more functions that can be useful fo
 By myself I am using macos computers (but I'm also trying to keep the other OS in mind).
 Modern MIDI equipment allow to use different MIDI channels. Some ideas which should be implemented are:
 
-- each module or set of modules listen to a specific MIDI channel
+- each module or set of modules listen to a specific MIDI channel, key range, velocity range
 
 a good example if you to split your keyboard(s) or if you run more instances of Zyne
 

@@ -822,7 +822,7 @@ class ZyneFrame(wx.Frame):
 
         info.SetName(vars.constants["WIN_TITLE"])
         info.SetVersion(f'{vars.constants["VERSION"]}')
-        info.SetCopyright(f'© {vars.constants["YEAR"]} Olivier Bélanger\nHans-Jörg Bibiko')
+        info.SetCopyright(f'© {vars.constants["YEAR"]} Olivier Bélanger – Hans-Jörg Bibiko')
         AboutBox(info)
 
 class ZyneApp(wx.App):
