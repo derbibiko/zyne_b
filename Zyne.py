@@ -242,15 +242,22 @@ class ZyneFrame(wx.Frame):
         mainSizer.Add(self.panel.sizer, 1, wx.EXPAND)
         self.panel.SetSizerAndFit(mainSizer)
 
-        self.keyboard = ZB_Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
+        self.lowerSplitWindow = wx.SplitterWindow(self.splitWindow, -1, style = wx.SP_LIVE_UPDATE)
+        self.lowerSplitWindow.SetMinimumPaneSize(1)
+        self.lowerSplitWindow.SetSashInvisible()
+
+        self.keyboard = ZB_Keyboard(self.lowerSplitWindow, outFunction=self.serverPanel.onKeyboard)
         self.keyboard_height = self.keyboard.GetSize()[1]
         self.keyboard.SetMinSize((-1, self.keyboard_height))
         self.serverPanel.keyboard = self.keyboard
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
 
-        self.upperSplitWindow.SplitVertically(self.serverPanel, self.panel, self.keyboard_height)
+        self.control_keyboard = ZB_Keyboard_Control(self.lowerSplitWindow, self.keyboard)
 
-        self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, self.keyboard_height)
+        self.lowerSplitWindow.SplitVertically(self.control_keyboard, self.keyboard, self.keyboard_height)
+        self.upperSplitWindow.SplitVertically(self.serverPanel, self.panel, -1)
+
+        self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.lowerSplitWindow, self.keyboard_height)
         self.splitWindow.SetSashInvisible()
         self.splitWindow.Unsplit(None)
 
@@ -431,7 +438,7 @@ class ZyneFrame(wx.Frame):
     def showKeyboard(self, state=True):
         display_h = wx.Display(0).GetGeometry()[2:][1]
         if state:
-            self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, self.keyboard_height * -1)
+            self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.lowerSplitWindow, self.keyboard_height * -1)
             h = self.GetSize()[1]
             if h >= display_h:
                 self.SetSize((-1, display_h - 20))

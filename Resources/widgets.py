@@ -901,50 +901,13 @@ class ZB_VuMeter(wx.Panel):
         self.Destroy()
 
 
-class ZB_Keyboard(wx.Panel):
-    def __init__(
-        self,
-        parent,
-        id=wx.ID_ANY,
-        pos=wx.DefaultPosition,
-        size=(-1, 100),
-        poly=64,
-        outFunction=None,
-        style=wx.TAB_TRAVERSAL,
-    ):
-        wx.Panel.__init__(self, parent, id, pos, size, style)
-        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
-        self.SetBackgroundColour(BACKGROUND_COLOUR)
-        self.parent = parent
-        self.outFunction = outFunction
+class ZB_Keyboard_Control(wx.Panel):
+    def __init__(self, parent, keyboard, id=-1):
+        wx.Panel.__init__(self, parent, id=id, style=wx.SIMPLE_BORDER)
 
-        self.poly = poly
-        self.gap = 0
-        self.offset = 12
-        self.w1 = 15
-        self.w2 = int(self.w1 / 2) + 1
-        self.hold = 1
-        self.keyPressed = None
-        self.channel = 0
+        self.keyboard = keyboard
 
-        self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
-        self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
-        self.Bind(wx.EVT_SIZE, self.OnSize)
-        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
-        self.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
-
-        self.white = (0, 2, 4, 5, 7, 9, 11)
-        self.black = (1, 3, 6, 8, 10)
-        self.whiteSelected = []
-        self.blackSelected = []
-        self.whiteVelocities = {}
-        self.blackVelocities = {}
-        self.whiteKeys = []
-        self.blackKeys = []
-
-        self.controlPanel = wx.Panel(self, -1)
-        self.controlPanel.SetBackgroundColour(parent.GetBackgroundColour())
+        self.SetBackgroundColour(parent.GetBackgroundColour())
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -992,7 +955,67 @@ class ZB_Keyboard(wx.Panel):
         self.cbKeymode.SetFont(font)
         sizer.Add(self.cbKeymode, 0, wx.EXPAND | wx.ALL, 2)
 
-        self.controlPanel.SetSizerAndFit(sizer)
+        self.SetSizerAndFit(sizer)
+
+    def changeChannel(self, evt):
+        self.keyboard.reset()
+        self.keyboard.channel = int(self.cbChannel.GetValue())
+
+    def changeOctave(self, evt):
+        self.keyboard.reset()
+        self.keyboard.offset = clamp(int(self.cbOctave.GetValue()) * 12, -24, 60)
+        wx.CallAfter(self.keyboard.Refresh)
+
+    def changeKeymode(self, evt):
+        self.keyboard.reset()
+        mode = self.cbKeymode.GetSelection()
+        if mode == 0:
+            self.keyboard.hold = 0
+        elif mode == 1:
+            self.keyboard.hold = 1
+
+
+class ZB_Keyboard(wx.Panel):
+    def __init__(
+        self,
+        parent,
+        id=wx.ID_ANY,
+        pos=wx.DefaultPosition,
+        size=(-1, 100),
+        poly=64,
+        outFunction=None,
+        style=wx.TAB_TRAVERSAL,
+    ):
+        wx.Panel.__init__(self, parent, id, pos, size, style)
+        self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
+        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.parent = parent
+        self.outFunction = outFunction
+
+        self.poly = poly
+        self.gap = 0
+        self.offset = 12
+        self.w1 = 15
+        self.w2 = int(self.w1 / 2) + 1
+        self.hold = 1
+        self.keyPressed = None
+        self.channel = 0
+
+        self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
+        self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind(wx.EVT_KEY_UP, self.OnKeyUp)
+
+        self.white = (0, 2, 4, 5, 7, 9, 11)
+        self.black = (1, 3, 6, 8, 10)
+        self.whiteSelected = []
+        self.blackSelected = []
+        self.whiteVelocities = {}
+        self.blackVelocities = {}
+        self.whiteKeys = []
+        self.blackKeys = []
 
         self.keydown = []
         self.keymap = {
@@ -1034,23 +1057,6 @@ class ZB_Keyboard(wx.Panel):
 
         wx.CallAfter(self._setRects)
 
-    def changeChannel(self, evt):
-        self.reset()
-        self.channel = int(self.cbChannel.GetValue())
-
-    def changeOctave(self, evt):
-        self.reset()
-        self.offset = clamp(int(self.cbOctave.GetValue()) * 12, -24, 60)
-        wx.CallAfter(self.Refresh)
-
-    def changeKeymode(self, evt):
-        self.reset()
-        mode = self.cbKeymode.GetSelection()
-        if mode == 0:
-            self.hold = 0
-        elif mode == 1:
-            self.hold = 1
-
     def getCurrentNotes(self):
         "Returns a list of the current notes."
         notes = []
@@ -1090,7 +1096,7 @@ class ZB_Keyboard(wx.Panel):
         if h < 100:
             self.SetSize(-1, 100)
             h = 100
-        self.controlPanel.SetSize(-1, h)
+        # self.controlPanel.SetSize(-1, h)
         num = int(w / self.w1)
         self.gap = w - num * self.w1
         self.whiteKeys = [wx.Rect(i * self.w1, 0, self.w1 - 1, h - 1) for i in range(num)]
