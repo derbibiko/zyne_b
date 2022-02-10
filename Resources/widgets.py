@@ -492,7 +492,6 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
         if vars.vars["MIDILEARN"]:
             if vars.vars["LEARNINGSLIDER"] is None:
                 vars.vars["LEARNINGSLIDER"] = self
-                print(self.label, self.value)
                 self.Disable()
             elif vars.vars["LEARNINGSLIDER"] == self:
                 vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
