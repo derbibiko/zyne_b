@@ -242,16 +242,22 @@ class ZyneFrame(wx.Frame):
         mainSizer.Add(self.panel.sizer, 1, wx.EXPAND)
         self.panel.SetSizerAndFit(mainSizer)
 
-        self.upperSplitWindow.SplitVertically(self.serverPanel, self.panel, 80)
-
         self.keyboard = ZB_Keyboard(self.splitWindow, outFunction=self.serverPanel.onKeyboard)
-        self.keyboard.SetMinSize((-1, 86))
+        self.keyboard_height = self.keyboard.GetSize()[1]
+        self.keyboard.SetMinSize((-1, self.keyboard_height))
         self.serverPanel.keyboard = self.keyboard
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
 
-        self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, 80)
+        self.upperSplitWindow.SplitVertically(self.serverPanel, self.panel, self.keyboard_height)
+
+        self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, self.keyboard_height)
         self.splitWindow.SetSashInvisible()
         self.splitWindow.Unsplit(None)
+
+        if vars.constants["IS_WIN"]:
+            self.SetMinSize((520, self.keyboard_height + 50))
+        else:
+            self.SetMinSize((500, self.keyboard_height + 10))
 
         dropTarget = MyFileDropTarget(self.panel)
         self.panel.SetDropTarget(dropTarget)
@@ -423,15 +429,14 @@ class ZyneFrame(wx.Frame):
         win.Show(True)
 
     def showKeyboard(self, state=True):
+        display_h = wx.Display(0).GetGeometry()[2:][1]
         if state:
-            self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, -80)
-            self.SetMinSize((460, 660))
-            self.SetSize((-1, 755))
+            self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.keyboard, self.keyboard_height * -1)
+            h = self.GetSize()[1]
+            if h >= display_h:
+                self.SetSize((-1, display_h - 20))
         else:
             self.splitWindow.Unsplit()
-            w, h = self.serverPanel.mainBox.GetSize()
-            self.SetMinSize((460, h + 30))
-            self.SetSize((-1, h + 30))
 
     def onResetKeyboard(self, evt):
         self.serverPanel.resetVirtualKeyboard()
@@ -443,7 +448,7 @@ class ZyneFrame(wx.Frame):
         self.panel.SetVirtualSize(
             (self.panel.GetSize()[0], self.panel.GetVirtualSize()[1]))
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
-        self.splitWindow.SetSashPosition(-80)
+        self.splitWindow.SetSashPosition(self.keyboard_height * -1)
         evt.Skip()
 
     def onMidiLearnModeFromLfoFrame(self):

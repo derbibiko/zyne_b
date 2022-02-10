@@ -907,7 +907,7 @@ class ZB_Keyboard(wx.Panel):
         parent,
         id=wx.ID_ANY,
         pos=wx.DefaultPosition,
-        size=wx.DefaultSize,
+        size=(-1, 100),
         poly=64,
         outFunction=None,
         style=wx.TAB_TRAVERSAL,
