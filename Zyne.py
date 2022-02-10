@@ -429,17 +429,10 @@ class ZyneFrame(wx.Frame):
             self.SetSize((-1, 755))
         else:
             self.splitWindow.Unsplit()
-            if vars.constants["IS_WIN"]:
-                self.SetMinSize((460, 542))
-                self.SetSize((-1, 554))
-            elif vars.constants["IS_MAC"]:
-                w, h = self.serverPanel.mainBox.GetSize()
-                self.SetMinSize((460, h + 30))
-                self.SetSize((-1, h + 30))
-            else:
-                self.SetMinSize((460, 520))
-                self.SetSize((-1, 660))
-   
+            w, h = self.serverPanel.mainBox.GetSize()
+            self.SetMinSize((460, h + 30))
+            self.SetSize((-1, h + 30))
+
     def onResetKeyboard(self, evt):
         self.serverPanel.resetVirtualKeyboard()
 
