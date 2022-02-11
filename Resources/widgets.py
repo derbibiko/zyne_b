@@ -27,6 +27,7 @@ BACKGROUND_COLOUR = "#EBEBEB"
 class ZB_HeadTitle(wx.Panel):
     def __init__(self, parent, title, font=None, togcall=None):
         wx.Panel.__init__(self, parent, -1)
+        self.parent = parent
         self.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
         mainsizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -54,15 +55,18 @@ class ZB_Base_Control(wx.Panel):
                  backColour=None, foreColour=None, label=""):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
                           style=wx.NO_BORDER | wx.WANTS_CHARS | wx.EXPAND)
+
         self.parent = parent
-        self.pos = pos
-        self.size = size
+        self.pos = self.FromDIP(wx.Point(pos))
+        self.size = self.FromDIP(wx.Size(size))
+        self.SetSize(self.size)
+        self.SetPosition(self.pos)
         self.minvalue = minvalue
         self.maxvalue = maxvalue
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
         self.backgroundColour = parent.GetBackgroundColour() if backColour is None else backColour
         self.foregroundColour = parent.GetForegroundColour() if foreColour is None else foreColour
-        self.SetBackgroundColour(self.backgroundColour)
+        # self.SetBackgroundColour(self.backgroundColour)
         self.outFunction = outFunction
         self.integer = integer
         self.log = log
@@ -256,7 +260,20 @@ class ZB_ControlSlider(ZB_Base_Control):
                          outFunction=outFunction,
                          backColour=backColour, foreColour=foreColour, label=label)
 
+        self.parent = parent
+        self.SetMinSize(self.GetSize())
+        self.fromdip1 = self.FromDIP(1)
+        self.fromdip2 = self.FromDIP(2)
+        self.fromdip3 = self.FromDIP(3)
+        self.fromdip12 = self.FromDIP(12)
         self.clampPos()
+
+        self.knobSize = self.FromDIP(self.knobSize)
+        self.knobHalfSize = self.FromDIP(self.knobHalfSize)
+        if self.orient == wx.VERTICAL:
+            self.sliderWidth = self.FromDIP(self.sliderWidth)
+        else:
+            self.sliderHeight = self.FromDIP(self.sliderHeight)
 
         if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
             self.dcref = wx.BufferedPaintDC
@@ -411,7 +428,7 @@ class ZB_ControlSlider(ZB_Base_Control):
             rec = wx.Rect(0, h2, w, self.sliderHeight)
             brush = gc.CreateLinearGradientBrush(0, h2, 0, h2 + self.sliderHeight, "#666666", sliderColour)
         gc.SetBrush(brush)
-        gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 2)
+        gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], self.fromdip2)
 
         if self.midictlnumber is not None:
             if vars.constants["IS_WIN"] or vars.constants["IS_LINUX"]:
@@ -421,11 +438,11 @@ class ZB_ControlSlider(ZB_Base_Control):
             dc.SetTextForeground("#FFFFFF")
             ctl = str(self.midictlnumber)
             if self.orient == wx.VERTICAL:
-                dc.DrawLabel(ctl, wx.Rect(w2, 2, self.sliderWidth, 12), wx.ALIGN_CENTER)
-                dc.DrawLabel(ctl, wx.Rect(w2, h - 12, self.sliderWidth, 12), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(w2, self.fromdip2, self.sliderWidth, self.fromdip12), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(w2, h - self.fromdip12, self.sliderWidth, self.fromdip12), wx.ALIGN_CENTER)
             else:
-                dc.DrawLabel(ctl, wx.Rect(2, 1, h, h), wx.ALIGN_CENTER)
-                dc.DrawLabel(ctl, wx.Rect(w - h, 1, h, h), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(self.fromdip2, self.fromdip1, h, h), wx.ALIGN_CENTER)
+                dc.DrawLabel(ctl, wx.Rect(w - h, self.fromdip1, h, h), wx.ALIGN_CENTER)
 
         # Draw knob
         if self._enable:
@@ -433,15 +450,15 @@ class ZB_ControlSlider(ZB_Base_Control):
         else:
             knobColour = "#DDDDDD"
         if self.orient == wx.VERTICAL:
-            rec = wx.Rect(0, self.pos - self.knobHalfSize, w, self.knobSize - 1)
+            rec = wx.Rect(0, self.pos - self.knobHalfSize, w, self.knobSize - self.FromDIP(1))
             if self.selected:
                 brush = wx.Brush("#333333", wx.SOLID)
             else:
                 brush = gc.CreateLinearGradientBrush(0, 0, w, 0, "#323232", knobColour)
             gc.SetBrush(brush)
-            gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 3)
+            gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], self.FromDIP(3))
         else:
-            rec = wx.Rect(int(self.pos) - self.knobHalfSize, 0, self.knobSize - 1, h)
+            rec = wx.Rect(int(self.pos) - self.knobHalfSize, 0, self.knobSize - self.FromDIP(1), h)
             if self.selected:
                 brush = wx.Brush("#333333", wx.SOLID)
             else:
@@ -449,7 +466,7 @@ class ZB_ControlSlider(ZB_Base_Control):
                     self.pos - self.knobHalfSize, 0, self.pos + self.knobHalfSize, 0, "#323232", knobColour
                 )
             gc.SetBrush(brush)
-            gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], 3)
+            gc.DrawRoundedRectangle(rec[0], rec[1], rec[2], rec[3], self.fromdip3)
 
         dc.SetFont(self.font)
 
@@ -462,7 +479,7 @@ class ZB_ControlSlider(ZB_Base_Control):
             width = len(val) * (dc.GetCharWidth() - 3)
         else:
             width = len(val) * dc.GetCharWidth()
-        dc.SetTextForeground("#FFFFFF")
+        dc.SetTextForeground(wx.WHITE)
         dc.DrawLabel(val, rec, wx.ALIGN_CENTER)
 
         # Send value
@@ -484,6 +501,7 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
                          log, integer, powoftwo,
                          outFunction,
                          backColour=backColour, foreColour=foreColour, label=label)
+        self.parent = parent
 
     def setValue(self, x):
         wx.CallAfter(self.SetValue, x)
@@ -514,9 +532,6 @@ class ZB_ControlKnob(ZB_Base_Control):
         self.knobCenterPosY = self.knobRadius + 18
         self.knobStartAngle = 18 * p_math_pi / 180  # 18° := start angle
         self.knobEndAngle = 2 * p_math_pi - self.knobStartAngle
-        self.knobRec = wx.Rect(self.knobCenterPosX - self.knobRadius - 5,
-                               self.knobCenterPosY - self.knobRadius - 5,
-                               2 * self.knobRadius + 10, 2 * self.knobRadius + 10)
 
         if vars.constants["IS_MAC"]:
             self.font = wx.Font(9, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
@@ -528,9 +543,24 @@ class ZB_ControlKnob(ZB_Base_Control):
                          log=log, integer=integer,
                          outFunction=outFunction,
                          backColour=backColour, foreColour=foreColour, label=label)
+        self.parent = parent
+        self.SetMinSize(self.GetSize())
+        self.knobRadius = self.FromDIP(self.knobRadius)
+        self.knobCenterPosX = self.FromDIP(self.knobCenterPosX)
+        self.knobCenterPosY = self.FromDIP(self.knobCenterPosY)
+        self.knobRec = wx.Rect(self.knobCenterPosX - self.knobRadius - self.FromDIP(5),
+                               self.knobCenterPosY - self.knobRadius - self.FromDIP(5),
+                               2 * self.knobRadius + self.FromDIP(10), 2 * self.knobRadius + self.FromDIP(10))
 
         self.knobInnerColour = wx.Colour("#bebebe")
         self.knobColour = wx.Colour(self.foregroundColour.red, self.foregroundColour.green, self.foregroundColour.blue)
+        self.fromdip1 = self.FromDIP(1)
+        self.fromdip2 = self.FromDIP(2)
+        self.fromdip3 = self.FromDIP(3)
+        self.fromdip4 = self.FromDIP(4)
+        self.fromdip5 = self.FromDIP(5)
+        self.fromdip9 = self.FromDIP(9)
+        self.fromdip11 = self.FromDIP(11)
 
     def keyDown(self, event):
         if self.selected:
@@ -588,7 +618,7 @@ class ZB_ControlKnob(ZB_Base_Control):
             pos = event.GetPosition()
 
             # check for number field is pressed
-            reclab = wx.Rect(5, 55, w-10, 13)
+            reclab = wx.Rect(self.FromDIP(5), self.FromDIP(55), w-self.FromDIP(10), self.FromDIP(13))
             if reclab.Contains(pos):
                 self.selected = True
 
@@ -661,15 +691,15 @@ class ZB_ControlKnob(ZB_Base_Control):
         dc.SetFont(self.font)
 
         # Draw text label
-        reclab = wx.Rect(0, 1, w, 9)
+        reclab = wx.Rect(0, self.fromdip1, w, self.fromdip9)
         dc.DrawLabel(self.label, reclab, wx.ALIGN_CENTER_HORIZONTAL)
 
-        recval = wx.Rect(1, self.knobCenterPosY + self.knobRadius + 9, w - 1, 11)
+        recval = wx.Rect(self.fromdip1, self.knobCenterPosY + self.knobRadius + self.fromdip9, w - self.fromdip1, self.fromdip11)
 
         if self.selected:
             dc.SetPen(wx.Pen('#AAAAAA'))
             dc.SetBrush(wx.Brush(wx.WHITE, wx.TRANSPARENT))
-            dc.DrawRoundedRectangle(recval, 4)
+            dc.DrawRoundedRectangle(recval, self.fromdip4)
 
         # Draw knob
         ph = interpFloat(tFromValue(self.value, self.minvalue, self.maxvalue),
@@ -679,20 +709,20 @@ class ZB_ControlKnob(ZB_Base_Control):
 
         dc.SetPen(wx.Pen(self.knobColour, width=0, style=wx.SOLID))
         dc.SetBrush(wx.Brush(self.knobInnerColour, wx.SOLID))
-        dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius - 3)
+        dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius - self.fromdip3)
 
-        dc.SetPen(wx.Pen(self.knobColour, width=4, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.knobColour, width=self.fromdip4, style=wx.SOLID))
         dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
 
-        dc.SetPen(wx.Pen(self.backgroundColour, width=2, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.backgroundColour, width=self.fromdip2, style=wx.SOLID))
         dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
 
-        dc.SetPen(wx.Pen(self.foregroundColour, width=1, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.foregroundColour, width=self.fromdip1, style=wx.SOLID))
         dc.SetBrush(wx.Brush(self.knobColour, wx.TRANSPARENT))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius)
 
-        dc.SetPen(wx.Pen(self.backgroundColour, width=5, style=wx.SOLID))
-        dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius + 3)
+        dc.SetPen(wx.Pen(self.backgroundColour, width=self.fromdip5, style=wx.SOLID))
+        dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius + self.fromdip3)
 
         # Draw text value
         if self.selected and self.new:
@@ -732,6 +762,7 @@ class ZyneB_ControlKnob(ZB_ControlKnob):
                          log=log, integer=integer,
                          outFunction=outFunction,
                          backColour=backColour, foreColour=foreColour, label=label)
+        self.parent = parent
 
     def setValue(self, x):
         wx.CallAfter(self.SetValue, x)
@@ -753,14 +784,19 @@ class ZyneB_ControlKnob(ZB_ControlKnob):
 class ZB_VuMeter(wx.Panel):
     def __init__(self, parent, size=(200, 11), numSliders=2,
                  orient=wx.HORIZONTAL, pos=wx.DefaultPosition, style=0):
-        if orient == wx.HORIZONTAL:
-            size = (size[0], numSliders * 5 + 1)
-        else:
-            size = (numSliders * 5 + 1, size[1])
         wx.Panel.__init__(self, parent, -1, pos=pos, size=size, style=style)
+        self.SetSize(self.FromDIP(wx.Size(size)))
+        _b = self.FromDIP(1)
+        _b = 0 if _b == 1 else 1
+        if orient == wx.HORIZONTAL:
+            size = (self.GetSize()[0], numSliders * self.FromDIP(5) + self.FromDIP(1) + _b)
+        else:
+            size = (numSliders * self.FromDIP(5) + self.FromDIP(1) + _b, self.GetSize()[1])
+        self.SetSize(size)
+        self.SetMinSize(size)
         self.parent = parent
         self.orient = orient
-        self.SetBackgroundColour(wx.BLACK)
+        # self.SetBackgroundColour(wx.BLACK)
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
         self.old_nchnls = numSliders
         self.numSliders = numSliders
@@ -771,6 +807,8 @@ class ZB_VuMeter(wx.Panel):
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
+        self.fromdip6 = self.FromDIP(6)
+
     def OnSize(self, evt):
         self.createBitmaps()
         wx.CallAfter(self.Refresh)
@@ -780,18 +818,19 @@ class ZB_VuMeter(wx.Panel):
         if w == 0 or h == 0:
             return
 
-        b = wx.EmptyBitmap(w, h)
-        f = wx.EmptyBitmap(w, h)
+        b = wx.Bitmap(w, h)
+        f = wx.Bitmap(w, h)
         dcb = wx.MemoryDC(b)
         dcf = wx.MemoryDC(f)
+        _scale = self.FromDIP(1)
         dcb.SetPen(wx.Pen(wx.BLACK, width=1))
         dcf.SetPen(wx.Pen(wx.BLACK, width=1))
         if self.orient == wx.HORIZONTAL:
-            height = 6
-            steps = int(w / 10.0 + 0.5)
+            height = self.FromDIP(6)
+            steps = int(w / (10.0 * _scale) + 0.5)
         else:
-            width = 6
-            steps = int(h / 10.0 + 0.5)
+            width = self.FromDIP(6)
+            steps = int(h / (10.0 * _scale) + 0.5)
         bounds = int(steps / 6.0)
         for i in range(steps):
             if i == (steps - 1):
@@ -807,12 +846,12 @@ class ZB_VuMeter(wx.Panel):
                 dcb.SetBrush(wx.Brush("#004400"))
                 dcf.SetBrush(wx.Brush("#00CC00"))
             if self.orient == wx.HORIZONTAL:
-                dcb.DrawRectangle(i * 10, 0, 11, height)
-                dcf.DrawRectangle(i * 10, 0, 11, height)
+                dcb.DrawRectangle(i * 10 * _scale, 0, 11 * _scale, height)
+                dcf.DrawRectangle(i * 10 * _scale, 0, 11 * _scale, height)
             else:
                 ii = steps - 1 - i
-                dcb.DrawRectangle(0, ii * 10, width, 11)
-                dcf.DrawRectangle(0, ii * 10, width, 11)
+                dcb.DrawRectangle(0, ii * 10 * _scale, width, 11 * _scale)
+                dcf.DrawRectangle(0, ii * 10 * _scale, width, 11 * _scale)
         if self.orient == wx.HORIZONTAL:
             dcb.DrawLine(w - 1, 0, w - 1, height)
             dcf.DrawLine(w - 1, 0, w - 1, height)
@@ -861,7 +900,7 @@ class ZB_VuMeter(wx.Panel):
         dc.Clear()
         dc.DrawRectangle(0, 0, w, h)
         if self.orient == wx.HORIZONTAL:
-            height = 6
+            height = self.fromdip6
             for i in range(self.numSliders):
                 y = i * (height - 1)
                 if i < len(self.amplitude):
@@ -878,7 +917,7 @@ class ZB_VuMeter(wx.Panel):
                     dc.DrawBitmap(self.bitmap, 0, y)
                     dc.DestroyClippingRegion()
         else:
-            width = 6
+            width = self.fromdip6
             for i in range(self.numSliders):
                 y = i * (width - 1)
                 if i < len(self.amplitude):
@@ -905,8 +944,9 @@ class ZB_Keyboard_Control(wx.Panel):
         wx.Panel.__init__(self, parent, id=id, style=wx.SIMPLE_BORDER)
 
         self.keyboard = keyboard
+        self.parent = parent
 
-        self.SetBackgroundColour(parent.GetBackgroundColour())
+        # self.SetBackgroundColour(parent.GetBackgroundColour())
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -918,12 +958,12 @@ class ZB_Keyboard_Control(wx.Panel):
         font, psize = self.channelText.GetFont(), self.channelText.GetFont().GetPointSize()
         font.SetPointSize(psize - 2)
         w, h = font.GetPixelSize()
-        popsize = (-1, h + 12)
+        popsize = self.FromDIP(wx.Size(-1, h + 12))
         self.channelText.SetFont(font)
 
         chBox.Add(self.channelText, 0, wx.LEFT, 4)
-        self.cbChannel = wx.ComboBox(self, value="0", size=popsize,
-                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL"],
+        self.cbChannel = wx.ComboBox(self, value="1", size=popsize,
+                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL_KEYBOARD"],
                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.cbChannel.SetFont(font)
         self.cbChannel.Bind(wx.EVT_COMBOBOX, self.changeChannel)
@@ -986,6 +1026,7 @@ class ZB_Keyboard(wx.Panel):
         style=wx.TAB_TRAVERSAL,
     ):
         wx.Panel.__init__(self, parent, id, pos, size, style)
+        self.SetSize(self.FromDIP(self.GetSize()))
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
         self.SetBackgroundColour(BACKGROUND_COLOUR)
         self.parent = parent
@@ -993,8 +1034,8 @@ class ZB_Keyboard(wx.Panel):
 
         self.poly = poly
         self.gap = 0
-        self.offset = 12
-        self.w1 = 15
+        self.offset = self.FromDIP(12)
+        self.w1 = self.FromDIP(15)
         self.w2 = int(self.w1 / 2) + 1
         self.hold = 1
         self.keyPressed = None
@@ -1308,9 +1349,9 @@ class ZB_Keyboard(wx.Panel):
     def OnPaint(self, evt):
         w, h = self.GetSize()
         dc = wx.AutoBufferedPaintDC(self)
-        dc.SetBrush(wx.Brush("#000000", wx.SOLID))
+        dc.SetBrush(wx.Brush(wx.BLACK, wx.SOLID))
         dc.Clear()
-        dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
+        dc.SetPen(wx.Pen(wx.BLACK, width=1, style=wx.SOLID))
         dc.DrawRectangle(0, 0, w, h)
 
         if vars.constants["IS_MAC"]:
@@ -1325,17 +1366,17 @@ class ZB_Keyboard(wx.Panel):
                 dc.SetBrush(wx.Brush("#CCCCCC", wx.SOLID))
                 dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
             else:
-                dc.SetBrush(wx.Brush("#FFFFFF", wx.SOLID))
+                dc.SetBrush(wx.Brush(wx.WHITE, wx.SOLID))
                 dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
                 dc.DrawRectangle(rec)
             if i == (35 - (7 * int(self.offset / 12))):
                 if i in self.whiteSelected:
-                    dc.SetTextForeground("#FFFFFF")
+                    dc.SetTextForeground(wx.WHITE)
                 else:
-                    dc.SetTextForeground("#000000")
+                    dc.SetTextForeground(wx.BLACK)
                 dc.DrawText("C", rec[0] + 3, rec[3] - 25)
 
-        dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
+        dc.SetPen(wx.Pen(wx.BLACK, width=1, style=wx.SOLID))
         for i, rec in enumerate(self.blackKeys):
             if i in self.blackSelected:
                 amp = int(self.blackVelocities[i] * 1.5)
@@ -1345,8 +1386,8 @@ class ZB_Keyboard(wx.Panel):
                 dc.DrawLine(rec[0], rec[3], rec[0] + rec[2], rec[3])
                 dc.SetBrush(wx.Brush("#DDDDDD", wx.SOLID))
             else:
-                dc.SetBrush(wx.Brush("#000000", wx.SOLID))
-                dc.SetPen(wx.Pen("#000000", width=1, style=wx.SOLID))
+                dc.SetBrush(wx.Brush(wx.BLACK, wx.SOLID))
+                dc.SetPen(wx.Pen(wx.BLACK, width=1, style=wx.SOLID))
                 dc.DrawRectangle(rec)
 
         dc.SetBrush(wx.Brush(BACKGROUND_COLOUR, wx.SOLID))

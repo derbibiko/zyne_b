@@ -11,7 +11,6 @@ import Resources.variables as vars
 from Resources.audio import *
 from Resources.widgets import *
 from Resources.utils import toLog
-from wx.lib.stattext import GenStaticText
 import wx.richtext as rt
 
 HEADTITLE_BACK_COLOUR = "#9999A0"
@@ -109,8 +108,10 @@ LFO_CONFIG =    {
 
 LFO_INIT = {"state": False, "params": [.001, .1, .7, 1, .1, 4, 0, 0, .5], 
             "ctl_params": [None, None, None, None, None, None, None, None, None], "shown": False}
+
 def get_lfo_init():
     return copy.deepcopy(LFO_INIT)
+
 
 class MyFileDropTarget(wx.FileDropTarget):
     def __init__(self, window):
@@ -120,11 +121,12 @@ class MyFileDropTarget(wx.FileDropTarget):
     def OnDropFiles(self, x, y, filename):
         self.window.GetTopLevelParent().openfile(filename[0])
 
+
 class HelpFrame(wx.Frame):
     def __init__(self, parent, id, title, size, subtitle, lines, from_module=True):
         wx.Frame.__init__(self, parent, id, title, size=(750, 530))
-        self.SetBackgroundColour(parent.GetBackgroundColour())
-
+        # self.SetBackgroundColour(parent.GetBackgroundColour())
+        self.SetSize(self.FromDIP(self.GetSize()))
         self.menubar = wx.MenuBar()
         self.fileMenu = wx.Menu()
         self.fileMenu.Append(vars.constants["ID"]["CloseHelp"], 'Close...\tCtrl+W')
@@ -173,32 +175,32 @@ class HelpFrame(wx.Frame):
     def onClose(self, evt):
         self.Destroy()
 
-class LFOFrame(wx.MiniFrame):
+
+class LFOFrame(wx.Frame):
     def __init__(self, parent, synth, label, which):
-        wx.MiniFrame.__init__(self, parent, -1, style=wx.FRAME_TOOL_WINDOW | wx.FRAME_FLOAT_ON_PARENT | wx.NO_BORDER)
+        wx.Frame.__init__(self, parent, -1, style=wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE)
         self.parent = parent
-        self.SetMaxSize((230,270))
-        self.SetSize((230,270))
-        self.SetBackgroundColour(parent.GetBackgroundColour())
+        self.SetSize(self.FromDIP(wx.Size(228,278)))
+
         if vars.constants["IS_MAC"]:
             close_accel = wx.ACCEL_CMD
         else:
             close_accel = wx.ACCEL_CTRL
         self.SetAcceleratorTable(wx.AcceleratorTable([
-                                                        (wx.ACCEL_CTRL, ord("N"), vars.constants["ID"]["New"]), 
-                                                        (wx.ACCEL_CTRL, ord("O"), vars.constants["ID"]["Open"]), 
-                                                        (wx.ACCEL_CTRL, ord("S"), vars.constants["ID"]["Save"]), 
-                                                        (wx.ACCEL_CTRL|wx.ACCEL_SHIFT, ord("S"), vars.constants["ID"]["SaveAs"]), 
-                                                        (wx.ACCEL_CTRL, ord("E"), vars.constants["ID"]["Export"]), 
-                                                        (wx.ACCEL_CTRL, ord("M"), vars.constants["ID"]["MidiLearn"]),
-                                                        (wx.ACCEL_CTRL, ord(","), vars.constants["ID"]["Prefs"]), 
-                                                        (wx.ACCEL_CTRL, ord("G"), vars.constants["ID"]["Uniform"]), 
-                                                        (wx.ACCEL_CTRL, ord("K"), vars.constants["ID"]["Triangular"]), 
-                                                        (wx.ACCEL_CTRL, ord("L"), vars.constants["ID"]["Minimum"]), 
-                                                        (wx.ACCEL_CTRL, ord("J"), vars.constants["ID"]["Jitter"]), 
-                                                        (wx.ACCEL_CTRL, ord("Q"), vars.constants["ID"]["Quit"]), 
-                                                        (close_accel, ord("W"), vars.constants["ID"]["CloseLFO"]), 
-                                                     ]))
+                (wx.ACCEL_CTRL, ord("N"), vars.constants["ID"]["New"]),
+                (wx.ACCEL_CTRL, ord("O"), vars.constants["ID"]["Open"]),
+                (wx.ACCEL_CTRL, ord("S"), vars.constants["ID"]["Save"]),
+                (wx.ACCEL_CTRL|wx.ACCEL_SHIFT, ord("S"), vars.constants["ID"]["SaveAs"]),
+                (wx.ACCEL_CTRL, ord("E"), vars.constants["ID"]["Export"]),
+                (wx.ACCEL_CTRL, ord("M"), vars.constants["ID"]["MidiLearn"]),
+                (wx.ACCEL_CTRL, ord(","), vars.constants["ID"]["Prefs"]),
+                (wx.ACCEL_CTRL, ord("G"), vars.constants["ID"]["Uniform"]),
+                (wx.ACCEL_CTRL, ord("K"), vars.constants["ID"]["Triangular"]),
+                (wx.ACCEL_CTRL, ord("L"), vars.constants["ID"]["Minimum"]),
+                (wx.ACCEL_CTRL, ord("J"), vars.constants["ID"]["Jitter"]),
+                (wx.ACCEL_CTRL, ord("Q"), vars.constants["ID"]["Quit"]),
+                (close_accel, ord("W"), vars.constants["ID"]["CloseLFO"]),
+        ]))
         self.Bind(wx.EVT_MENU, self.parent.onNew, id=vars.constants["ID"]["New"])
         self.Bind(wx.EVT_MENU, self.parent.onOpen, id=vars.constants["ID"]["Open"])
         self.Bind(wx.EVT_MENU, self.parent.onSave, id=vars.constants["ID"]["Save"])
@@ -211,11 +213,13 @@ class LFOFrame(wx.MiniFrame):
         self.Bind(wx.EVT_MENU, self.onClose, id=vars.constants["ID"]["CloseLFO"])
         self.mouseOffset = (0,0)
         self.which = which
-        self.panel = LFOPanel(self, "LFO", f"{label} LFO", synth, LFO_CONFIG["p1"], LFO_CONFIG["p2"], LFO_CONFIG["p3"], LFO_CONFIG["p4"], which)
-        self.panel.SetPosition((0,0))
+        self.panel = LFOPanel(self, "LFO", f"{label} LFO", synth,
+                              LFO_CONFIG["p1"], LFO_CONFIG["p2"], LFO_CONFIG["p3"], LFO_CONFIG["p4"], which)
         self.panel.title.Bind(wx.EVT_LEFT_DOWN, self.onMouseDown)
         self.panel.title.Bind(wx.EVT_LEFT_UP, self.onMouseUp)
         self.panel.title.Bind(wx.EVT_MOTION, self.onMotion)
+        self.panel.SetPosition((0, 0))
+        self.panel.SetSize(self.GetSize())
         self.SetFocus()
         self.synth = synth
     
@@ -272,9 +276,11 @@ class LFOFrame(wx.MiniFrame):
                         self.panel.synth._params[self.which].assignLfoMidiCtl(ctl_param, slider, slider_idx)
                     slider_idx += 1
 
-class LFOButtons(GenStaticText):
+
+class LFOButtons(wx.StaticText):
     def __init__(self, parent, label="LFO", synth=None, which=0, callback=None):
-        GenStaticText.__init__(self, parent, -1, label=label, pos=(0, 44), size=(31, 11), style=wx.ALIGN_CENTRE)
+        wx.StaticText.__init__(self, parent, -1, label=label, style=wx.ALIGN_CENTRE)
+        self.SetSize(self.FromDIP(self.GetSize()))
         self.parent = parent
         self.synth = synth
         self.which = which
@@ -322,6 +328,7 @@ class LFOButtons(GenStaticText):
         else:
             self.SetForegroundColour(self.offStateBackColour)
             self.SetBackgroundColour(self.onStateBackColour)
+        wx.CallAfter(self.Refresh)
     
     def leave(self, evt):
         if self.state:
@@ -330,6 +337,7 @@ class LFOButtons(GenStaticText):
         else:
             self.SetForegroundColour(self.defaultForegroundColour)
             self.SetBackgroundColour(self.offStateBackColour)
+        wx.CallAfter(self.Refresh)
 
     def DoubleClick(self, evt):
         self.parent.lfo_frames[self.which].panel.synth = self.synth
@@ -356,14 +364,16 @@ class LFOButtons(GenStaticText):
         self.Refresh()
         self.callback(self.which, self.state)
 
+
 class ServerPanel(wx.Panel):
     def __init__(self, parent, backColour=None):
         wx.Panel.__init__(self, parent, style=wx.BORDER_NONE)
+        self.parent = parent
         if backColour is None:
             self.colour = parent.GetBackgroundColour()
         else:
             self.colour = backColour
-        self.SetSize((230,500))
+        self.SetSize(self.FromDIP(wx.Size(230,500)))
         self.fileformat = vars.vars["FORMAT"]
         self.sampletype = vars.vars["BITS"]
         self.virtualNotePressed = {}
@@ -385,7 +395,7 @@ class ServerPanel(wx.Panel):
         self.SetDropTarget(dropTarget)
 
         self.title = ZB_HeadTitle(self, "Server Controls")
-        self.mainBox.Add(self.title, 0, wx.BOTTOM | wx.EXPAND, 4)
+        self.mainBox.Add(self.title, 0, wx.BOTTOM | wx.EXPAND, self.FromDIP(4))
 
         self.driverText = wx.StaticText(self, id=-1, label="Output Driver")
         self.mainBox.Add(self.driverText, 0, wx.LEFT, 4)
@@ -393,8 +403,8 @@ class ServerPanel(wx.Panel):
         font, psize = self.driverText.GetFont(), self.driverText.GetFont().GetPointSize()
         font.SetPointSize(psize-2)
         w, h = font.GetPixelSize()
-        popsize = (-1, h+12)
-        butsize = (125, h+12)
+        popsize = wx.Size((-1, h + self.FromDIP(12)))
+        butsize = wx.Size((125, h + self.FromDIP(12)))
 
         if vars.constants["IS_MAC"]:
             self.driverText.SetFont(font)
@@ -531,7 +541,7 @@ class ServerPanel(wx.Panel):
 
         self.ppEqTitle = ZB_HeadTitle(self, "4 bands equalizer", togcall=self.handleOnOffEq)
         self.onOffEq = self.ppEqTitle.toggle
-        self.mainBox.Add(self.ppEqTitle, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 4)
+        self.mainBox.Add(self.ppEqTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
 
         eqFreqBox = wx.BoxSizer(wx.HORIZONTAL)
         self.knobEqF1 = ZB_ControlKnob(self, 40, 250, 100, label=' Freq 1', outFunction=self.changeEqF1)
@@ -553,11 +563,11 @@ class ServerPanel(wx.Panel):
         self.knobEqA4 = ZB_ControlKnob(self, -40, 18, 0, label='B4 gain', outFunction=self.changeEqA4)
         eqGainBox.Add(self.knobEqA4, 0, wx.LEFT | wx.RIGHT, 10)
 
-        self.mainBox.Add(eqGainBox, 0, wx.CENTER)
+        self.mainBox.Add(eqGainBox, 0, wx.CENTER | wx.BOTTOM)
     
         self.ppCompTitle = ZB_HeadTitle(self, "Dynamic compressor", togcall=self.handleOnOffComp)
         self.onOffComp = self.ppCompTitle.toggle
-        self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND|wx.BOTTOM, 4)
+        self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND, 4)
     
         cpKnobBox = wx.BoxSizer(wx.HORIZONTAL)
         self.knobComp1 = ZB_ControlKnob(self, -60, 0, -3, label=' Thresh', outFunction=self.changeComp1)
@@ -588,6 +598,7 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(self.footer, 0, wx.BOTTOM | wx.EXPAND, 4)
 
         self.SetSizerAndFit(self.mainBox)
+        self.SetMinSize(self.GetSize())
 
     def start(self):
         self.fsserver.start()
@@ -944,12 +955,15 @@ class ServerPanel(wx.Panel):
             self.fsserver.stopMidiLearn()
             self.setDriverSetting()
 
+
 class BasePanel(wx.Panel):
     def __init__(self, parent, name, title, synth, p1, p2, p3, from_lfo=False):
         wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
-        self.SetMaxSize((230,310))
+        self.parent = parent
+        self.SetMaxSize(self.FromDIP(wx.Size((240,320))))
+        self.SetMinSize(self.GetMaxSize())
         self.colour = parent.GetBackgroundColour()
-        self.SetBackgroundColour(self.colour)
+        # self.SetBackgroundColour(self.colour)
         self.from_lfo = from_lfo
         self.sliders = []
         self.labels = []
@@ -958,7 +972,7 @@ class BasePanel(wx.Panel):
     def createAdsrKnobs(self):
         self.knobSizer = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
-        self.knobSizer.Add(self.knobDel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
+        self.knobSizer.Add(self.knobDel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 1)
         self.knobAtt = ZyneB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
         self.knobSizer.Add(self.knobAtt, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
         self.knobDec = ZyneB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
@@ -967,7 +981,7 @@ class BasePanel(wx.Panel):
         self.knobSizer.Add(self.knobSus, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
         self.knobRel = ZyneB_ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
         self.knobSizer.Add(self.knobRel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.sizer.Add(self.knobSizer, 0, wx.BOTTOM|wx.LEFT, 1)
+        self.sizer.Add(self.knobSizer, 0, wx.ALIGN_CENTER, 0)
         self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
         if not vars.constants["IS_MAC"]:
             self.sizer.AddSpacer(3)
@@ -976,11 +990,11 @@ class BasePanel(wx.Panel):
 
         self.triggerSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.cbChannel = wx.ComboBox(self, value="0", size=(40, -1),
+        self.cbChannel = wx.ComboBox(self, value="0", size=self.FromDIP(wx.Size(40, -1)),
                                      choices=vars.constants["VAR_CHOICES"]["CHANNEL"],
                                      style=wx.CB_DROPDOWN | wx.CB_READONLY, name="channel")
         self.cbChannel.Bind(wx.EVT_COMBOBOX, self.changeChannel)
-        self.triggerSizer.Add(self.cbChannel, 0, wx.LEFT | wx.RIGHT, 5)
+        self.triggerSizer.Add(self.cbChannel, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
 
 
         font, psize = self.cbChannel.GetFont(), self.cbChannel.GetFont().GetPointSize()
@@ -988,22 +1002,24 @@ class BasePanel(wx.Panel):
         if not vars.constants["IS_WIN"]:
             self.cbChannel.SetFont(font)
 
-        self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT, 1)
+        self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT, self.FromDIP(1))
 
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
-        height = 14 if vars.constants["IS_MAC"] else 13
-        text = wx.StaticText(self, id=-1, label=label, size=(200,height))
+        height = 14 if vars.constants["IS_MAC"] else 16
+        text = wx.StaticText(self, id=-1, label=label, size=self.FromDIP(wx.Size(200, height)))
         self.labels.append(text)
+        font, psize = text.GetFont(), text.GetFont().GetPointSize()
         if not vars.constants["IS_WIN"]:
-            font, psize = text.GetFont(), text.GetFont().GetPointSize()
             font.SetPointSize(psize-2)
-            text.SetFont(font)
-        self.sizer.Add(text, 0, wx.LEFT, 5)
-        self.sizer.AddSpacer(1)
+        else:
+            font.SetPointSize(psize)
+        text.SetFont(font)
+        self.sizer.Add(text, 0, wx.LEFT, self.FromDIP(5))
+        self.sizer.AddSpacer(self.FromDIP(2))
         if self.from_lfo or integer:
             slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(212,16), log=log,
                                          integer=integer, outFunction=callback, label=label)
-            self.sizer.Add(slider, 0, wx.LEFT|wx.RIGHT, 5)
+            self.sizer.Add(slider, 0, wx.CENTER | wx.ALL, 0)
         else:
             hsizer = wx.BoxSizer(wx.HORIZONTAL)
             slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(195,16), log=log,
@@ -1012,22 +1028,23 @@ class BasePanel(wx.Panel):
             lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i)
             self.buttons[i] = button
             self.lfo_frames[i] = lfo_frame
-            hsizer.Add(slider, 0, wx.RIGHT, 1)
-            hsizer.Add(button, 0, wx.LEFT|wx.TOP, 2)
-            self.sizer.Add(hsizer, 0, wx.LEFT|wx.RIGHT, 5)
+            hsizer.Add(slider, 0, wx.LEFT, 1)
+            if vars.constants["IS_WIN"]:
+                hsizer.Add(button, 0, wx.LEFT | wx.TOP, self.FromDIP(3))
+            else:
+                hsizer.Add(button, 0, wx.LEFT | wx.TOP, self.FromDIP(2))
+            self.sizer.Add(hsizer, 0, wx.LEFT | wx.RIGHT, 5)
         self.sizer.AddSpacer(2)
         self.sliders.append(slider)
         return slider
     
     def hoverX(self, evt):
-        font = self.close.GetFont()
-        font.SetWeight(wx.BOLD)
-        self.close.SetFont(font)
-        self.close.SetForegroundColour("#CCCCCC")
+        self.close.SetBackgroundColour("#CCCCCC")
+        self.Refresh()
 
     def leaveX(self, evt):
-        self.close.SetFont(self.font)
-        self.close.SetForegroundColour(wx.WHITE)
+        self.close.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.Refresh()
 
     def MouseDown(self, evt):
         if not self.from_lfo:
@@ -1053,6 +1070,7 @@ class BasePanel(wx.Panel):
 class GenericPanel(BasePanel):
     def __init__(self, parent, name, title, synth, p1, p2, p3):
         BasePanel.__init__(self, parent, name, title, synth, p1, p2, p3)
+        self.parent = parent
         self.name, self.synth = name, synth([p1,p2,p3])
         self.mute = 1
         self.lfo_sliders = [get_lfo_init(), get_lfo_init(), get_lfo_init(), get_lfo_init(), get_lfo_init()]
@@ -1065,28 +1083,29 @@ class GenericPanel(BasePanel):
 
         self.titleSizer = wx.FlexGridSizer(1, 4, 5, 5)
         self.titleSizer.AddGrowableCol(2)
-        self.titleSizer.SetMinSize((220, -1))
-        self.close = GenStaticText(self.headPanel, -1, label="X")
+        self.close = wx.StaticText(self.headPanel, id=-1, label="X")
         self.close.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
         self.close.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.close.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.close.SetToolTip(wx.ToolTip("Delete module"))
-        self.info = GenStaticText(self.headPanel, -1, label="?")
+        self.info = wx.StaticText(self.headPanel, id=-1, label="?")
         self.info.Bind(wx.EVT_ENTER_WINDOW, self.hoverInfo)
         self.info.Bind(wx.EVT_LEAVE_WINDOW, self.leaveInfo)
         self.info.Bind(wx.EVT_LEFT_DOWN, self.MouseDownInfo)
         self.info.SetToolTip(wx.ToolTip("Show module's infos"))
         self.title = wx.StaticText(self.headPanel, id=-1, label=title)
-        self.corner = GenStaticText(self.headPanel, -1, label="m/s")
+        self.corner = wx.StaticText(self.headPanel, id=-1, label="M/S")
         self.corner.SetToolTip(wx.ToolTip("Mute / Solo. Click to mute, Shift+Click to solo"))
         self.corner.Bind(wx.EVT_LEFT_DOWN, self.MouseDownCorner)
         self.corner.Bind(wx.EVT_ENTER_WINDOW, self.hoverCorner)
         self.corner.Bind(wx.EVT_LEAVE_WINDOW, self.leaveCorner)
-        self.titleSizer.AddMany([(self.close, 0, wx.LEFT|wx.TOP, 3), (self.info, 0, wx.LEFT|wx.TOP, 3), 
-                                (self.title, 1, wx.ALIGN_CENTER_HORIZONTAL|wx.TOP, 3),
-                                (self.corner, 0, wx.RIGHT|wx.TOP, 3)])
+        self.titleSizer.AddMany([
+            (self.close, 0, wx.LEFT | wx.TOP, 3),
+            (self.info, 0, wx.LEFT | wx.TOP, 3),
+            (self.title, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, 3),
+            (self.corner, 0, wx.RIGHT | wx.TOP, 3)])
         self.headPanel.SetSizerAndFit(self.titleSizer)
-        self.sizer.Add(self.headPanel, 0, wx.BOTTOM|wx.EXPAND, 3)
+        self.sizer.Add(self.headPanel, 0, wx.BOTTOM | wx.EXPAND, 3)
 
         self.font = self.close.GetFont()
         if not vars.constants["IS_WIN"]:
@@ -1095,6 +1114,8 @@ class GenericPanel(BasePanel):
         for obj in [self.close, self.info, self.title, self.corner]:
             obj.SetFont(self.font)
             obj.SetForegroundColour(wx.WHITE)
+
+        self.sizer.AddSpacer(10)
 
         self.createAdsrKnobs()
 
@@ -1164,16 +1185,16 @@ class GenericPanel(BasePanel):
         self.synth._panner.set(x)
 
     def hoverCorner(self, evt):
-        col = {0: "#0000CC", 1: "#CCCCCC", 2: "#FFAA00"}[self.mute]
-        font = self.corner.GetFont()
-        font.SetWeight(wx.BOLD)
-        self.corner.SetFont(font)
+        col = {0: "#0000CC", 1: "white", 2: "#FFAA00"}[self.mute]
         self.corner.SetForegroundColour(col)
+        self.corner.SetBackgroundColour("#CCCCCC")
+        self.Refresh()
 
     def leaveCorner(self, evt):
         col = {0: "#0000FF", 1: "white", 2: "#FF7700"}[self.mute]
-        self.corner.SetFont(self.font)
         self.corner.SetForegroundColour(col)
+        self.corner.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.Refresh()
 
     def MouseDownCorner(self, evt):
         if evt.ShiftDown():
@@ -1192,14 +1213,12 @@ class GenericPanel(BasePanel):
         self.Refresh()
 
     def hoverInfo(self, evt):
-        font = self.info.GetFont()
-        font.SetWeight(wx.BOLD)
-        self.info.SetFont(font)
-        self.info.SetForegroundColour("#CCCCCC")
+        self.info.SetBackgroundColour("#CCCCCC")
+        self.Refresh()
 
     def leaveInfo(self, evt):
-        self.info.SetFont(self.font)
-        self.info.SetForegroundColour("white")
+        self.info.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.Refresh()
 
     def MouseDownInfo(self, evt):
         if self.synth.__doc__ != None:
@@ -1451,9 +1470,11 @@ class GenericPanel(BasePanel):
                         slider.SetValue(val)
                         slider.outFunction(val)
 
+
 class LFOPanel(BasePanel):
     def __init__(self, parent, name, title, synth, p1, p2, p3, p4, which):
         BasePanel.__init__(self, parent, name, title, synth, p1, p2, p3, from_lfo=True)
+        self.parent = parent
         self.name, self.synth = name, synth
         self.which = which
 
@@ -1462,17 +1483,18 @@ class LFOPanel(BasePanel):
 
         self.titleSizer = wx.FlexGridSizer(1, 2, 5, 5)
         self.titleSizer.AddGrowableCol(1)
-        self.titleSizer.SetMinSize((220, -1))
-        self.close = GenStaticText(self.headPanel, -1, label="X")
+        self.close = wx.StaticText(self.headPanel, -1, label="X")
         self.close.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
         self.close.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.close.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.close.SetToolTip(wx.ToolTip("Close window"))
-        self.title = GenStaticText(self.headPanel, -1, label=title)
+        self.title = wx.StaticText(self.headPanel, -1, label=title)
         self.title.SetToolTip(wx.ToolTip("Move window"))
-        self.titleSizer.AddMany([(self.close, 0, wx.LEFT|wx.TOP, 3), (self.title, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.TOP, 3)])
+        self.titleSizer.AddMany([
+            (self.close, 0, wx.LEFT | wx.TOP, 3),
+            (self.title, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP | wx.EXPAND, 3)])
         self.headPanel.SetSizerAndFit(self.titleSizer)
-        self.sizer.Add(self.headPanel, 0, wx.BOTTOM, 3)
+        self.sizer.Add(self.headPanel, 0, wx.BOTTOM | wx.EXPAND, 3)
 
         self.font = self.close.GetFont()
 
@@ -1492,7 +1514,7 @@ class LFOPanel(BasePanel):
         self.sliderP2 = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeP2)
         self.sliderP3 = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeP3)
         self.sliderP4 = self.createSlider(p4[0], p4[1], p4[2], p4[3], p4[4], p4[5], self.changeP4)
-        self.SetSizerAndFit(self.sizer) 
+        self.SetSizerAndFit(self.sizer, wx.CENTER)
 
     def changeP1(self, x):
         if self.which == 0:

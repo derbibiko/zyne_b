@@ -64,6 +64,7 @@ constants["VAR_CHOICES"] = {
     "POLY": list(map(str, range(1, 21))),
     "PYO_PRECISION": ['single', 'double'],
     "SR": ['44100', '48000', '96000'],
+    "CHANNEL_KEYBOARD": list(map(str, range(1, 16))),
     "CHANNEL": list(map(str, range(16))),
 }
 

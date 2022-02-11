@@ -30,7 +30,7 @@ class ZyneSplashScreen(wx.Frame):
         display = wx.Display(0)
         size = display.GetGeometry()[2:]
         wx.Frame.__init__(
-            self, parent, -1, "", pos=(-1, size[1]/6),
+            self, parent, -1, "", pos=(-1, -size[1]/6),
             style=wx.FRAME_SHAPED | wx.BORDER_NONE | wx.FRAME_NO_TASKBAR | wx.STAY_ON_TOP)
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
@@ -39,7 +39,7 @@ class ZyneSplashScreen(wx.Frame):
 
         wx.CallAfter(mainframe.Show)
 
-        self.w, self.h = self.bmp.GetSize()
+        self.w, self.h = self.FromDIP(self.bmp.GetSize())
         self.SetClientSize((self.w, self.h))
 
         if wx.Platform == "__WXGTK__":
@@ -52,10 +52,10 @@ class ZyneSplashScreen(wx.Frame):
 
         wx.CallLater(3500, self.OnClose)
 
-        self.Center(wx.HORIZONTAL)
+        self.Center(wx.BOTH)
         if vars.constants["IS_WIN"]:
             # win draws a border around shaped bmp, that's why fake shaped frame
-            self.SetPosition((570, 200))
+            self.SetPosition(self.FromDIP(wx.Point(570, 200)))
 
         wx.CallAfter(self.Show)
 
@@ -81,15 +81,15 @@ class ZyneSplashScreen(wx.Frame):
         else:
             font.SetFaceName("Monaco")
         dc.SetFont(font)
-        dc.DrawLabel("Zyne_B", wx.Rect(50, 230, 400, 18), wx.ALIGN_LEFT)
-        dc.DrawLabel("Modular Soft Synthesizer", wx.Rect(70, 250, 400, 18), wx.ALIGN_LEFT)
+        dc.DrawLabel("Zyne_B", wx.Rect(self.FromDIP(50), self.FromDIP(230), self.FromDIP(400), self.FromDIP(18)), wx.ALIGN_LEFT)
+        dc.DrawLabel("Modular Soft Synthesizer", wx.Rect(self.FromDIP(70), self.FromDIP(250), self.FromDIP(400), self.FromDIP(18)), wx.ALIGN_LEFT)
         font.SetPointSize(ptsize + 1)
         dc.SetFont(font)
         dc.DrawLabel("Olivier Bélanger (ajaxsoundstudio)",
-                     wx.Rect(0, 305, 400, 15), wx.ALIGN_CENTER)
-        dc.DrawLabel("Hans-Jörg Bibiko", wx.Rect(0, 320, 400, 15), wx.ALIGN_CENTER)
+                     wx.Rect(self.FromDIP(0), self.FromDIP(305), self.FromDIP(400), self.FromDIP(15)), wx.ALIGN_CENTER)
+        dc.DrawLabel("Hans-Jörg Bibiko", wx.Rect(self.FromDIP(0), self.FromDIP(320), self.FromDIP(400), self.FromDIP(15)), wx.ALIGN_CENTER)
         dc.DrawLabel(f"Version {vars.constants['VERSION']} - {vars.constants['YEAR']}",
-                     wx.Rect(0, 340, 400, 15), wx.ALIGN_CENTER)
+                     wx.Rect(self.FromDIP(0), self.FromDIP(340), self.FromDIP(400), self.FromDIP(15)), wx.ALIGN_CENTER)
 
     def OnClose(self):
         self.Destroy()

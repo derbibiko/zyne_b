@@ -17,6 +17,11 @@ from Resources.splash import ZyneSplashScreen
 from Resources.widgets import ZB_Keyboard
 from Resources.utils import toLog
 
+try:
+    import ctypes
+    ctypes.windll.shcore.SetProcessDpiAwareness(True)
+except Exception as e:
+    pass
 
 try:
     from wx.adv import AboutDialogInfo, AboutBox
@@ -141,6 +146,7 @@ class SamplingDialog(wx.Dialog):
 class ZyneFrame(wx.Frame):
     def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 660)):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
+        self.SetSize(self.FromDIP(self.GetSize()))
 
         self.menubar = wx.MenuBar()
         self.fileMenu = wx.Menu()
@@ -219,8 +225,6 @@ class ZyneFrame(wx.Frame):
         self.menubar.Append(helpMenu, "&Help")
         self.SetMenuBar(self.menubar)
 
-        self.Bind(wx.EVT_SIZE, self.OnSize)
-
         self.openedFile = ""
         self.modules = []
         self.selected = None
@@ -232,7 +236,7 @@ class ZyneFrame(wx.Frame):
         self.upperSplitWindow.SetMinimumPaneSize(1)
         self.upperSplitWindow.SetSashInvisible()
 
-        self.panel = scrolled.ScrolledPanel(self.upperSplitWindow, size=size, pos=(0,28), style=wx.BORDER_NONE)
+        self.panel = scrolled.ScrolledPanel(self.upperSplitWindow, size=self.GetSize(), pos=self.FromDIP(wx.Point(0,28)), style=wx.BORDER_NONE)
         self.panel.sizer = wx.WrapSizer()
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
 
@@ -254,17 +258,21 @@ class ZyneFrame(wx.Frame):
 
         self.control_keyboard = ZB_Keyboard_Control(self.lowerSplitWindow, self.keyboard)
 
-        self.lowerSplitWindow.SplitVertically(self.control_keyboard, self.keyboard, self.keyboard_height)
+        self.lowerSplitWindow.SplitVertically(self.control_keyboard, self.keyboard, -1)
         self.upperSplitWindow.SplitVertically(self.serverPanel, self.panel, -1)
 
-        self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.lowerSplitWindow, self.keyboard_height)
+        self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.lowerSplitWindow, -1 * self.keyboard_height)
         self.splitWindow.SetSashInvisible()
         self.splitWindow.Unsplit(None)
 
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+
         if vars.constants["IS_WIN"]:
-            self.SetMinSize((520, self.keyboard_height + 50))
+            self.SetMinSize(wx.Size(self.FromDIP(510), self.keyboard_height + self.FromDIP(50)))
         else:
-            self.SetMinSize((500, self.keyboard_height + 10))
+            self.SetMinSize(wx.Size(self.FromDIP(510), self.keyboard_height + self.FromDIP(10)))
+
+        self.backColour = self.GetBackgroundColour()
 
         dropTarget = MyFileDropTarget(self.panel)
         self.panel.SetDropTarget(dropTarget)
@@ -294,7 +302,7 @@ class ZyneFrame(wx.Frame):
 
     def clearSelection(self, evt):
         if self.selected is not None:
-            self.modules[self.selected].setBackgroundColour(self.GetBackgroundColour())
+            self.modules[self.selected].setBackgroundColour(self.backColour)
         self.selected = None
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(False)
@@ -441,7 +449,7 @@ class ZyneFrame(wx.Frame):
             self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.lowerSplitWindow, self.keyboard_height * -1)
             h = self.GetSize()[1]
             if h >= display_h:
-                self.SetSize((-1, display_h - 20))
+                self.SetSize(wx.Size(-1, display_h - self.FromDIP(20)))
         else:
             self.splitWindow.Unsplit()
 
@@ -453,9 +461,9 @@ class ZyneFrame(wx.Frame):
 
     def OnSize(self, evt):
         self.panel.SetVirtualSize(
-            (self.panel.GetSize()[0], self.panel.GetVirtualSize()[1]))
+            wx.Size(self.panel.GetSize()[0], self.panel.GetVirtualSize()[1]))
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
-        self.splitWindow.SetSashPosition(self.keyboard_height * -1)
+        wx.CallAfter(self.splitWindow.SetSashPosition, self.keyboard_height * -1)
         evt.Skip()
 
     def onMidiLearnModeFromLfoFrame(self):
@@ -833,7 +841,7 @@ class ZyneFrame(wx.Frame):
 class ZyneApp(wx.App):
     def OnInit(self):
         self.frame = ZyneFrame(None)
-        self.frame.SetPosition((50,50))
+        self.frame.SetPosition((50, 50))
         return True
     
     def MacOpenFile(self, filename):
