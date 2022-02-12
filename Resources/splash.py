@@ -67,7 +67,7 @@ class ZyneSplashScreen(wx.Frame):
         dc = wx.PaintDC(self)
         if vars.constants["IS_WIN"]:
             # win draws a border around shaped bmp, that's why fake shaped frame
-            dc.SetBackground(wx.Brush(wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENU)))
+            dc.SetBackground(wx.Brush(vars.constants["BACKCOLOUR"]))
         else:
             dc.SetBackground(wx.Brush(wx.BLACK))
         dc.Clear()

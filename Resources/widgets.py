@@ -51,8 +51,7 @@ class ZB_Base_Control(wx.Panel):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(200, 16),
                  log=False, powoftwo=False, integer=False,
-                 outFunction=None,
-                 backColour=None, foreColour=None, label=""):
+                 outFunction=None, label=""):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
                           style=wx.NO_BORDER | wx.WANTS_CHARS | wx.EXPAND)
 
@@ -64,9 +63,10 @@ class ZB_Base_Control(wx.Panel):
         self.minvalue = minvalue
         self.maxvalue = maxvalue
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
-        self.backgroundColour = parent.GetBackgroundColour() if backColour is None else backColour
-        self.foregroundColour = parent.GetForegroundColour() if foreColour is None else foreColour
-        # self.SetBackgroundColour(self.backgroundColour)
+        self.backgroundColour = vars.constants["BACKCOLOUR"]
+        self.foregroundColour = vars.constants["FORECOLOUR"]
+        self.SetBackgroundColour(self.backgroundColour)
+        self.SetForegroundColour(self.foregroundColour)
         self.outFunction = outFunction
         self.integer = integer
         self.log = log
@@ -218,9 +218,9 @@ class ZB_Base_Control(wx.Panel):
     def getLog(self):
         return self.log
 
-    def setBackgroundColour(self, colour):
-        self.backgroundColour = colour
-        self.SetBackgroundColour(colour)
+    def setBackgroundColour(self, col):
+        self.SetBackgroundColour(col)
+        self.backgroundColour = col
         self.Refresh()
 
     def OnResize(self, evt):
@@ -238,8 +238,7 @@ class ZB_ControlSlider(ZB_Base_Control):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(200, 16),
                  log=False, integer=False, powoftwo=False,
-                 outFunction=None,
-                 backColour=None, foreColour=None, label="", orient=wx.HORIZONTAL):
+                 outFunction=None, label="", orient=wx.HORIZONTAL):
 
         self.orient = orient
 
@@ -257,8 +256,7 @@ class ZB_ControlSlider(ZB_Base_Control):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos=pos, size=size,
                          log=log, integer=integer, powoftwo=powoftwo,
-                         outFunction=outFunction,
-                         backColour=backColour, foreColour=foreColour, label=label)
+                         outFunction=outFunction, label=label)
 
         self.parent = parent
         self.SetMinSize(self.GetSize())
@@ -494,13 +492,11 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(200, 16),
                  log=False, integer=False, powoftwo=False,
-                 outFunction=None,
-                 backColour=None, foreColour=None, label=""):
+                 outFunction=None, label=""):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos, size,
                          log, integer, powoftwo,
-                         outFunction,
-                         backColour=backColour, foreColour=foreColour, label=label)
+                         outFunction, label=label)
         self.parent = parent
 
     def setValue(self, x):
@@ -524,8 +520,7 @@ class ZB_ControlKnob(ZB_Base_Control):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(44, 74),
                  log=False, integer=False,
-                 outFunction=None,
-                 backColour=None, foreColour=None, label=''):
+                 outFunction=None, label=''):
 
         self.knobCenterPosX = int(size[0] / 2)
         self.knobRadius = 14
@@ -541,8 +536,7 @@ class ZB_ControlKnob(ZB_Base_Control):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos=pos, size=size,
                          log=log, integer=integer,
-                         outFunction=outFunction,
-                         backColour=backColour, foreColour=foreColour, label=label)
+                         outFunction=outFunction, label=label)
         self.parent = parent
         self.SetMinSize(self.GetSize())
         self.knobRadius = self.FromDIP(self.knobRadius)
@@ -679,13 +673,14 @@ class ZB_ControlKnob(ZB_Base_Control):
             dc = wx.GCDC(wx.BufferedPaintDC(self))
             dc.GetGraphicsContext().SetAntialiasMode(True)
         else:
-            dc = wx.AutoBufferedPaintDC(self)
+            dc = wx.BufferedPaintDC(self)
 
         dc.SetBrush(wx.Brush(self.backgroundColour, wx.SOLID))
+        dc.SetTextForeground(self.foregroundColour)
         dc.Clear()
 
         # Draw background
-        dc.SetPen(wx.Pen(self.backgroundColour, width=self.borderWidth, style=wx.SOLID))
+        dc.SetPen(wx.Pen(self.backgroundColour, width=0, style=wx.SOLID))
         dc.DrawRectangle(0, 0, w, h)
 
         dc.SetFont(self.font)
@@ -741,7 +736,6 @@ class ZB_ControlKnob(ZB_Base_Control):
                 dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             else:
                 dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-            dc.SetTextForeground(self.foregroundColour)
             dc.DrawLabel(str(self.midictlnumber), wx.Rect(4, recval[1] - 11, recval[2], 15), wx.ALIGN_LEFT)
 
         # Send value
@@ -755,13 +749,11 @@ class ZyneB_ControlKnob(ZB_ControlKnob):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(44, 74),
                  log=False, integer=False,
-                 outFunction=None,
-                 backColour=None, foreColour=None, label=''):
+                 outFunction=None, label=''):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos=pos, size=size,
                          log=log, integer=integer,
-                         outFunction=outFunction,
-                         backColour=backColour, foreColour=foreColour, label=label)
+                         outFunction=outFunction, label=label)
         self.parent = parent
 
     def setValue(self, x):
@@ -796,7 +788,7 @@ class ZB_VuMeter(wx.Panel):
         self.SetMinSize(size)
         self.parent = parent
         self.orient = orient
-        # self.SetBackgroundColour(wx.BLACK)
+        self.SetBackgroundColour(wx.BLACK)
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
         self.old_nchnls = numSliders
         self.numSliders = numSliders
@@ -946,7 +938,8 @@ class ZB_Keyboard_Control(wx.Panel):
         self.keyboard = keyboard
         self.parent = parent
 
-        # self.SetBackgroundColour(parent.GetBackgroundColour())
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.SetForegroundColour(vars.constants["FORECOLOUR"])
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -1028,7 +1021,7 @@ class ZB_Keyboard(wx.Panel):
         wx.Panel.__init__(self, parent, id, pos, size, style)
         self.SetSize(self.FromDIP(self.GetSize()))
         self.SetBackgroundStyle(wx.BG_STYLE_CUSTOM)
-        self.SetBackgroundColour(BACKGROUND_COLOUR)
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.parent = parent
         self.outFunction = outFunction
 

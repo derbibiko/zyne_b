@@ -16,7 +16,7 @@ import wx.richtext as rt
 HEADTITLE_BACK_COLOUR = "#9999A0"
 
 # Param values are: init, min, max, is_int, is_log
-MODULES =   {
+MODULES = {
             "FM": { "title": "Frequency Modulation", "synth": FmSynth, 
                     "p1": ["FM Ratio", 2, 1, 12, False, False],
                     "p2": ["FM Index", 5, 0, 40, False, False],
@@ -97,7 +97,7 @@ MODULES =   {
                     "p2": ["Shape", 0.5, 0, 1, False, False],
                     "p3": ["Lowpass Cutoff", 10000, 100, 15000, False, True]
                    },
-            }
+}
 
 LFO_CONFIG =    {
                 "p1": ["Speed", 4, .01, 1000, False, True],
@@ -125,7 +125,8 @@ class MyFileDropTarget(wx.FileDropTarget):
 class HelpFrame(wx.Frame):
     def __init__(self, parent, id, title, size, subtitle, lines, from_module=True):
         wx.Frame.__init__(self, parent, id, title, size=(750, 530))
-        # self.SetBackgroundColour(parent.GetBackgroundColour())
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.SetForegroundColour(vars.constants["FORECOLOUR"])
         self.SetSize(self.FromDIP(self.GetSize()))
         self.menubar = wx.MenuBar()
         self.fileMenu = wx.Menu()
@@ -178,9 +179,11 @@ class HelpFrame(wx.Frame):
 
 class LFOFrame(wx.Frame):
     def __init__(self, parent, synth, label, which):
-        wx.Frame.__init__(self, parent, -1, style=wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE)
+        wx.Frame.__init__(self, parent, -1, style=wx.FRAME_TOOL_WINDOW | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE)
         self.parent = parent
         self.SetSize(self.FromDIP(wx.Size(228,278)))
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.SetForegroundColour(vars.constants["FORECOLOUR"])
 
         if vars.constants["IS_MAC"]:
             close_accel = wx.ACCEL_CMD
@@ -286,11 +289,9 @@ class LFOButtons(wx.StaticText):
         self.which = which
         self.state = False
         self.callback = callback
-        self.onStateBackColour = "#2F68D9"
-        self.offStateBackColour = parent.GetBackgroundColour()
-        self.defaultForegroundColour = parent.GetForegroundColour()
-        self.SetBackgroundColour(self.offStateBackColour)
-        self.SetForegroundColour(self.defaultForegroundColour)
+        self.onStateBackColour = wx.Colour("#2F68D9")
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.SetForegroundColour(vars.constants["FORECOLOUR"])
 
         self.font, psize = self.GetFont(), self.GetFont().GetPointSize()
 
@@ -307,8 +308,8 @@ class LFOButtons(wx.StaticText):
         self.Bind(wx.EVT_ENTER_WINDOW, self.hover)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.leave)
         self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
-        self.Bind(wx.EVT_LEFT_DCLICK, self.DoubleClick)
-        self.SetToolTip(wx.ToolTip("Click to enable, Shift+Click to open controls"))
+        self.Bind(wx.EVT_RIGHT_DOWN, self.MouseRightDown)
+        self.SetToolTip(wx.ToolTip("Click to enable, Right+Click to open controls"))
 
     def setState(self, state):
         self.state = state
@@ -317,16 +318,16 @@ class LFOButtons(wx.StaticText):
             self.SetBackgroundColour(self.onStateBackColour)
             self.SetForegroundColour(wx.WHITE)
         else:
-            self.SetBackgroundColour(self.offStateBackColour)
-            self.SetForegroundColour(self.defaultForegroundColour)
+            self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+            self.SetForegroundColour(vars.constants["FORECOLOUR"])
         self.callback(self.which, self.state)
 
     def hover(self, evt):
         if self.state:
-            self.SetForegroundColour(self.offStateBackColour)
+            self.SetForegroundColour(vars.constants["BACKCOLOUR"])
             self.SetBackgroundColour(self.onStateBackColour)
         else:
-            self.SetForegroundColour(self.offStateBackColour)
+            self.SetForegroundColour(vars.constants["BACKCOLOUR"])
             self.SetBackgroundColour(self.onStateBackColour)
         wx.CallAfter(self.Refresh)
     
@@ -335,11 +336,11 @@ class LFOButtons(wx.StaticText):
             self.SetForegroundColour(wx.WHITE)
             self.SetBackgroundColour(self.onStateBackColour)
         else:
-            self.SetForegroundColour(self.defaultForegroundColour)
-            self.SetBackgroundColour(self.offStateBackColour)
+            self.SetForegroundColour(vars.constants["FORECOLOUR"])
+            self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         wx.CallAfter(self.Refresh)
 
-    def DoubleClick(self, evt):
+    def MouseRightDown(self, evt):
         self.parent.lfo_frames[self.which].panel.synth = self.synth
         pos = wx.GetMousePosition()
         self.parent.lfo_frames[self.which].SetPosition((pos[0]+5, pos[1]+5))
@@ -347,16 +348,10 @@ class LFOButtons(wx.StaticText):
         evt.Skip()
 
     def MouseDown(self, evt):
-        if evt.ShiftDown():
-            self.parent.lfo_frames[self.which].panel.synth = self.synth
-            pos = wx.GetMousePosition()
-            self.parent.lfo_frames[self.which].SetPosition((pos[0]+5, pos[1]+5))
-            self.parent.lfo_frames[self.which].Show()
-            return
         if self.state:
             self.state = False
-            self.SetForegroundColour(self.defaultForegroundColour)
-            self.SetBackgroundColour(self.offStateBackColour)
+            self.SetForegroundColour(vars.constants["FORECOLOUR"])
+            self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         else:
             self.state = True
             self.SetForegroundColour(wx.WHITE)
@@ -366,14 +361,12 @@ class LFOButtons(wx.StaticText):
 
 
 class ServerPanel(wx.Panel):
-    def __init__(self, parent, backColour=None):
+    def __init__(self, parent):
         wx.Panel.__init__(self, parent, style=wx.BORDER_NONE)
         self.parent = parent
-        if backColour is None:
-            self.colour = parent.GetBackgroundColour()
-        else:
-            self.colour = backColour
         self.SetSize(self.FromDIP(wx.Size(230,500)))
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.SetForegroundColour(vars.constants["FORECOLOUR"])
         self.fileformat = vars.vars["FORMAT"]
         self.sampletype = vars.vars["BITS"]
         self.virtualNotePressed = {}
@@ -543,6 +536,8 @@ class ServerPanel(wx.Panel):
         self.onOffEq = self.ppEqTitle.toggle
         self.mainBox.Add(self.ppEqTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
 
+        self.mainBox.AddSpacer(4)
+
         eqFreqBox = wx.BoxSizer(wx.HORIZONTAL)
         self.knobEqF1 = ZB_ControlKnob(self, 40, 250, 100, label=' Freq 1', outFunction=self.changeEqF1)
         eqFreqBox.Add(self.knobEqF1, 0, wx.LEFT | wx.RIGHT, 20)
@@ -567,8 +562,10 @@ class ServerPanel(wx.Panel):
     
         self.ppCompTitle = ZB_HeadTitle(self, "Dynamic compressor", togcall=self.handleOnOffComp)
         self.onOffComp = self.ppCompTitle.toggle
-        self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND, 4)
-    
+        self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
+
+        self.mainBox.AddSpacer(4)
+
         cpKnobBox = wx.BoxSizer(wx.HORIZONTAL)
         self.knobComp1 = ZB_ControlKnob(self, -60, 0, -3, label=' Thresh', outFunction=self.changeComp1)
         cpKnobBox.Add(self.knobComp1, 0, wx.LEFT | wx.RIGHT, 10)
@@ -598,7 +595,17 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(self.footer, 0, wx.BOTTOM | wx.EXPAND, 4)
 
         self.SetSizerAndFit(self.mainBox)
-        self.SetMinSize(self.GetSize())
+        # self.SetMinSize(self.GetSize())
+
+        self.popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
+        self.popupsLearn = self.popups + [self.onOff, self.rec]
+        self.widgets = [self.knobEqF1, self.knobEqF2, self.knobEqF3, self.knobEqA1, self.knobEqA2,
+                        self.knobEqA3, self.knobEqA4, self.knobComp1, self.knobComp2, self.knobComp3, self.knobComp4]
+
+        self.menuIds = [vars.constants["ID"]["New"], vars.constants["ID"]["Open"], vars.constants["ID"]["MidiLearn"],
+                        vars.constants["ID"]["Export"], vars.constants["ID"]["ExportChord"], vars.constants["ID"]["ExportTracks"],
+                        vars.constants["ID"]["ExportChordTracks"], vars.constants["ID"]["Quit"],
+                        vars.constants["ID"]["UpdateModules"], vars.constants["ID"]["CheckoutModules"]]
 
     def start(self):
         self.fsserver.start()
@@ -694,16 +701,11 @@ class ServerPanel(wx.Panel):
             self.keyboard.reset()
 
     def handleAudio(self, evt):
-        popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
-        menuIds = [vars.constants["ID"]["New"], vars.constants["ID"]["Open"], vars.constants["ID"]["MidiLearn"], 
-                   vars.constants["ID"]["Export"], vars.constants["ID"]["ExportChord"], vars.constants["ID"]["ExportTracks"], 
-                   vars.constants["ID"]["ExportChordTracks"], vars.constants["ID"]["Quit"], vars.constants["ID"]["UpdateModules"], 
-                   vars.constants["ID"]["CheckoutModules"]]
         modules = self.GetTopLevelParent().modules
         if evt.GetInt() == 1:
-            for popup in popups:
+            for popup in self.popups:
                 popup.Disable()
-            for menuId in menuIds:
+            for menuId in self.menuIds:
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
                 if menuItem != None:
                     menuItem.Enable(False)
@@ -712,10 +714,10 @@ class ServerPanel(wx.Panel):
             self.fsserver.start()
         else:
             self.fsserver.stop()
-            for popup in popups:
+            for popup in self.popups:
                 if popup != self.popupDriver or vars.vars["AUDIO_HOST"] != "Jack":
                     popup.Enable()
-            for menuId in menuIds:
+            for menuId in self.menuIds:
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
                 if menuItem != None:
                     menuItem.Enable(True)
@@ -793,6 +795,7 @@ class ServerPanel(wx.Panel):
                 widget.outFunction(comp[i])
         
     def setDriverSetting(self, func=None, val=0):
+        self.GetTopLevelParent().panel.Freeze()
         if vars.vars["VIRTUAL"]:
             self.resetVirtualKeyboard()
         modules, params, lfo_params, ctl_params = self.GetTopLevelParent().getModulesAndParams()
@@ -803,6 +806,7 @@ class ServerPanel(wx.Panel):
         self.fsserver.boot()
         self.GetTopLevelParent().setModulesAndParams(modules, params, lfo_params, ctl_params)
         self.setPostProcSettings(postProcSettings)
+        self.GetTopLevelParent().panel.Thaw()
 
     def setDriverByString(self, s):
         self.driverList, self.driverIndexes = get_output_devices()
@@ -818,6 +822,7 @@ class ServerPanel(wx.Panel):
         if vars.vars["AUDIO_HOST"] != "Jack":
             self.setDriverSetting(self.fsserver.setOutputDevice, self.driverIndexes[evt.GetInt()])
             self.selected_output_driver_name = evt.GetString()
+            self.SetFocus()
 
     def setInterfaceByString(self, s):
         self.interfaceList, self.interfaceIndexes = get_midi_input_devices()
@@ -854,7 +859,8 @@ class ServerPanel(wx.Panel):
                 mainFrame.SetSize((mainFrameSize[0], mainFrameSize[1]+80))
                 mainFrame.showKeyboard()
                 mainFrame.keyboard.SetFocus()
-        
+        self.SetFocus()
+
     def changeSr(self, evt):
         if evt.GetInt() == 0: sr = 44100
         elif evt.GetInt() == 1: sr = 48000
@@ -925,45 +931,39 @@ class ServerPanel(wx.Panel):
         self.fsserver.setCompParam("falltime", x)
     
     def midiLearn(self, state):
-        learnColour = "#EEEEFD"
-        popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat, self.onOff, self.rec]
-        widgets = [self.knobEqF1, self.knobEqF2, self.knobEqF3, self.knobEqA1, self.knobEqA2, 
-                   self.knobEqA3, self.knobEqA4, self.knobComp1, self.knobComp2, self.knobComp3, self.knobComp4]
+        learnColour = wx.Colour("#DEDEDE")
+        gbcolour = vars.constants["BACKCOLOUR"]
         if state:
             self.SetBackgroundColour(learnColour)
-            self.Refresh()
-            self.sliderAmp.setBackgroundColour(learnColour)
-            self.sliderAmp.Refresh()
-            for widget in widgets:
+            wx.CallAfter(self.Refresh)
+            for widget in self.widgets:
                 widget.setBackgroundColour(learnColour)
-                widget.Refresh()
-            for widget in popups:
-                widget.Disable()
+            for popup in self.popupsLearn:
+                popup.Disable()
             self.GetTopLevelParent().menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(False)
             self.fsserver.startMidiLearn()
         else:
-            self.SetBackgroundColour(self.colour)
-            self.Refresh()
-            self.sliderAmp.setBackgroundColour(self.colour)
-            self.sliderAmp.Refresh()
-            for widget in widgets:
-                widget.setBackgroundColour(self.colour)
-                widget.Refresh()
-            for widget in popups:
-                widget.Enable()
+            self.SetBackgroundColour(gbcolour)
+            wx.CallAfter(self.Refresh)
+            for widget in self.widgets:
+                widget.setBackgroundColour(gbcolour)
+            for popup in self.popupsLearn:
+                popup.Enable()
             self.GetTopLevelParent().menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(True)
             self.fsserver.stopMidiLearn()
             self.setDriverSetting()
+        wx.CallAfter(self.Refresh)
+        self.SetFocus()
 
 
 class BasePanel(wx.Panel):
     def __init__(self, parent, name, title, synth, p1, p2, p3, from_lfo=False):
-        wx.Panel.__init__(self, parent, style=wx.SUNKEN_BORDER)
+        wx.Panel.__init__(self, parent, style=wx.BORDER_THEME)
         self.parent = parent
-        self.SetMaxSize(self.FromDIP(wx.Size((240,320))))
+        self.SetMaxSize(self.FromDIP(wx.Size((240, 320))))
         self.SetMinSize(self.GetMaxSize())
-        self.colour = parent.GetBackgroundColour()
-        # self.SetBackgroundColour(self.colour)
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.SetForegroundColour(vars.constants["FORECOLOUR"])
         self.from_lfo = from_lfo
         self.sliders = []
         self.labels = []
@@ -983,8 +983,6 @@ class BasePanel(wx.Panel):
         self.knobSizer.Add(self.knobRel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
         self.sizer.Add(self.knobSizer, 0, wx.ALIGN_CENTER, 0)
         self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
-        if not vars.constants["IS_MAC"]:
-            self.sizer.AddSpacer(3)
 
     def createTriggerSettings(self):
 
@@ -1083,22 +1081,32 @@ class GenericPanel(BasePanel):
 
         self.titleSizer = wx.FlexGridSizer(1, 4, 5, 5)
         self.titleSizer.AddGrowableCol(2)
+
         self.close = wx.StaticText(self.headPanel, id=-1, label="X")
         self.close.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
         self.close.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.close.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.close.SetToolTip(wx.ToolTip("Delete module"))
-        self.info = wx.StaticText(self.headPanel, id=-1, label="?")
+
+        self.info = wx.StaticText(self.headPanel, id=-1, label=" ? ")
         self.info.Bind(wx.EVT_ENTER_WINDOW, self.hoverInfo)
         self.info.Bind(wx.EVT_LEAVE_WINDOW, self.leaveInfo)
         self.info.Bind(wx.EVT_LEFT_DOWN, self.MouseDownInfo)
         self.info.SetToolTip(wx.ToolTip("Show module's infos"))
-        self.title = wx.StaticText(self.headPanel, id=-1, label=title)
-        self.corner = wx.StaticText(self.headPanel, id=-1, label="M/S")
-        self.corner.SetToolTip(wx.ToolTip("Mute / Solo. Click to mute, Shift+Click to solo"))
+
+        if len(title) < 23:
+            self.title = wx.StaticText(self.headPanel, id=-1, label=title)
+        else:
+            self.title = wx.StaticText(self.headPanel, id=-1, label=title[:23].strip() + '..')
+            self.title.SetToolTip(wx.ToolTip(title))
+
+        self.corner = wx.StaticText(self.headPanel, id=-1, label=" M|S ")
+        self.corner.SetToolTip(wx.ToolTip("Mute / Solo. Click to toggle mute, Right+Click to toggle solo"))
         self.corner.Bind(wx.EVT_LEFT_DOWN, self.MouseDownCorner)
+        self.corner.Bind(wx.EVT_RIGHT_DOWN, self.MouseRightDownCorner)
         self.corner.Bind(wx.EVT_ENTER_WINDOW, self.hoverCorner)
         self.corner.Bind(wx.EVT_LEAVE_WINDOW, self.leaveCorner)
+
         self.titleSizer.AddMany([
             (self.close, 0, wx.LEFT | wx.TOP, 3),
             (self.info, 0, wx.LEFT | wx.TOP, 3),
@@ -1197,19 +1205,20 @@ class GenericPanel(BasePanel):
         self.Refresh()
 
     def MouseDownCorner(self, evt):
-        if evt.ShiftDown():
-            if self.mute <= 1:
-                self.setMute(2)
-            elif self.mute == 2:
-                self.setMute(1)
-                for module in self.GetTopLevelParent().modules:
-                    if module != self:
-                        module.setMute(1)
+        if self.mute:
+            self.setMute(0)
         else:
-            if self.mute:
-                self.setMute(0)
-            else:
-                self.setMute(1)
+            self.setMute(1)
+        self.Refresh()
+
+    def MouseRightDownCorner(self, evt):
+        if self.mute <= 1:
+            self.setMute(2)
+        elif self.mute == 2:
+            self.setMute(1)
+            for module in self.GetTopLevelParent().modules:
+                if module != self:
+                    module.setMute(1)
         self.Refresh()
 
     def hoverInfo(self, evt):

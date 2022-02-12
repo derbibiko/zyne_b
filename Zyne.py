@@ -28,6 +28,7 @@ try:
 except Exception as e:
     from wx import AboutDialogInfo, AboutBox
 
+
 class TutorialFrame(wx.Frame):
     def __init__(self, *args, **kw):
         wx.Frame.__init__(self, *args, **kw)
@@ -37,10 +38,10 @@ class TutorialFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onClose, id=vars.constants["ID"]["CloseTut"])
         self.menubar.Append(self.fileMenu, "&File")
         self.SetMenuBar(self.menubar)
-    
+
         self.code = False
 
-        self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL|wx.HSCROLL|wx.NO_BORDER)
+        self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL | wx.HSCROLL | wx.NO_BORDER)
         self.rtc.SetEditable(False)
         wx.CallAfter(self.rtc.SetFocus)
 
@@ -49,7 +50,7 @@ class TutorialFrame(wx.Frame):
                           wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
         if newfont.IsOk():
             self.rtc.SetFont(newfont)
-    
+
         self.rtc.Freeze()
         self.rtc.BeginSuppressUndo()
         self.rtc.BeginParagraphSpacing(0, 20)
@@ -92,46 +93,47 @@ class TutorialFrame(wx.Frame):
         self.rtc.EndParagraphSpacing()
         self.rtc.EndSuppressUndo()
         self.rtc.Thaw()
-    
+
     def onClose(self, evt):
         self.Destroy()
+
 
 class SamplingDialog(wx.Dialog):
     def __init__(self, parent, title="Export Samples...", pos=wx.DefaultPosition, size=wx.DefaultSize):
         wx.Dialog.__init__(self, parent, id=1, title=title, pos=pos, size=size)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(wx.StaticText(self, -1, "Export settings for sampled sounds."), 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-    
+        sizer.Add(wx.StaticText(self, -1, "Export settings for sampled sounds."), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+
         box = wx.BoxSizer(wx.HORIZONTAL)
-        box.Add(wx.StaticText(self, -1, "Common file name:"), 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.filename = wx.TextCtrl(self, -1, "zyne", size=(80,-1))
-        box.Add(self.filename, 1, wx.ALIGN_CENTRE|wx.ALL, 5)
-        sizer.Add(box, 0, wx.GROW|wx.ALL, 5)
-    
+        box.Add(wx.StaticText(self, -1, "Common file name:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        self.filename = wx.TextCtrl(self, -1, "zyne", size=(80, -1))
+        box.Add(self.filename, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
+        sizer.Add(box, 0, wx.GROW | wx.ALL, 5)
+
         box = wx.BoxSizer(wx.HORIZONTAL)
-        box.Add(wx.StaticText(self, -1, "First:"), 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.first = wx.TextCtrl(self, -1, "0", size=(40,-1))
-        box.Add(self.first, 1, wx.ALIGN_CENTRE|wx.ALL, 5)
-        box.Add(wx.StaticText(self, -1, "Last:"), 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.last = wx.TextCtrl(self, -1, "128", size=(40,-1))
-        box.Add(self.last, 1, wx.ALIGN_CENTRE|wx.ALL, 5)
-        box.Add(wx.StaticText(self, -1, "Step:"), 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.step = wx.TextCtrl(self, -1, "1", size=(40,-1))
-        box.Add(self.step, 1, wx.ALIGN_CENTRE|wx.ALL, 5)
-        sizer.Add(box, 0, wx.GROW|wx.ALL, 5)
-    
+        box.Add(wx.StaticText(self, -1, "First:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        self.first = wx.TextCtrl(self, -1, "0", size=(40, -1))
+        box.Add(self.first, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
+        box.Add(wx.StaticText(self, -1, "Last:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        self.last = wx.TextCtrl(self, -1, "128", size=(40, -1))
+        box.Add(self.last, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
+        box.Add(wx.StaticText(self, -1, "Step:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        self.step = wx.TextCtrl(self, -1, "1", size=(40, -1))
+        box.Add(self.step, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
+        sizer.Add(box, 0, wx.GROW | wx.ALL, 5)
+
         box = wx.BoxSizer(wx.HORIZONTAL)
-        box.Add(wx.StaticText(self, -1, "Noteon dur:"), 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.noteon = wx.TextCtrl(self, -1, "1", size=(50,-1))
-        box.Add(self.noteon, 1, wx.ALIGN_CENTRE|wx.ALL, 5)
-        box.Add(wx.StaticText(self, -1, "Release dur:"), 0, wx.ALIGN_CENTRE|wx.ALL, 5)
-        self.release = wx.TextCtrl(self, -1, "1", size=(50,-1))
-        box.Add(self.release, 1, wx.ALIGN_CENTRE|wx.ALL, 5)
-        sizer.Add(box, 0, wx.GROW|wx.ALL, 5)
-    
-        line = wx.StaticLine(self, -1, size=(20,-1), style=wx.LI_HORIZONTAL)
-        sizer.Add(line, 0, wx.GROW|wx.RIGHT|wx.TOP, 5)
-    
+        box.Add(wx.StaticText(self, -1, "Noteon dur:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        self.noteon = wx.TextCtrl(self, -1, "1", size=(50, -1))
+        box.Add(self.noteon, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
+        box.Add(wx.StaticText(self, -1, "Release dur:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
+        self.release = wx.TextCtrl(self, -1, "1", size=(50, -1))
+        box.Add(self.release, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
+        sizer.Add(box, 0, wx.GROW | wx.ALL, 5)
+
+        line = wx.StaticLine(self, -1, size=(20, -1), style=wx.LI_HORIZONTAL)
+        sizer.Add(line, 0, wx.GROW | wx.RIGHT | wx.TOP, 5)
+
         btnsizer = wx.StdDialogButtonSizer()
         btn = wx.Button(self, wx.ID_OK)
         btn.SetDefault()
@@ -139,14 +141,23 @@ class SamplingDialog(wx.Dialog):
         btn = wx.Button(self, wx.ID_CANCEL)
         btnsizer.AddButton(btn)
         btnsizer.Realize()
-        sizer.Add(btnsizer, 0, wx.ALIGN_RIGHT|wx.ALL, 5)
+        sizer.Add(btnsizer, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
         self.SetSizer(sizer)
         self.filename.SetFocus()
+
 
 class ZyneFrame(wx.Frame):
     def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 660)):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
+
         self.SetSize(self.FromDIP(self.GetSize()))
+
+        vars.constants["FORECOLOUR"] = wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENUTEXT)
+        vars.constants["BACKCOLOUR"] = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
+
+        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.SetForegroundColour(vars.constants["FORECOLOUR"])
+        self.selectionBackgroundColour = wx.Colour("#999999")
 
         self.menubar = wx.MenuBar()
         self.fileMenu = wx.Menu()
@@ -216,9 +227,9 @@ class ZyneFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.openMidiLearnHelp, midiLearnHelpItem)
         exportHelpItem = helpMenu.Append(vars.constants["ID"]["ExportHelp"], "How to use the export samples window")
         self.Bind(wx.EVT_MENU, self.openExportHelp, exportHelpItem)
-    
+
         self.Bind(wx.EVT_CLOSE, self.onQuit)
-        
+
         self.menubar.Append(self.fileMenu, "&File")
         self.menubar.Append(self.addMenu, "&Modules")
         self.menubar.Append(self.genMenu, "&Generate")
@@ -229,14 +240,15 @@ class ZyneFrame(wx.Frame):
         self.modules = []
         self.selected = None
 
-        self.splitWindow = wx.SplitterWindow(self, -1, style = wx.SP_LIVE_UPDATE)
+        self.splitWindow = wx.SplitterWindow(self, -1, style=wx.SP_LIVE_UPDATE)
         self.splitWindow.SetMinimumPaneSize(1)
 
-        self.upperSplitWindow = wx.SplitterWindow(self.splitWindow, -1, style = wx.SP_LIVE_UPDATE)
+        self.upperSplitWindow = wx.SplitterWindow(self.splitWindow, -1, style=wx.SP_LIVE_UPDATE)
         self.upperSplitWindow.SetMinimumPaneSize(1)
         self.upperSplitWindow.SetSashInvisible()
 
-        self.panel = scrolled.ScrolledPanel(self.upperSplitWindow, size=self.GetSize(), pos=self.FromDIP(wx.Point(0,28)), style=wx.BORDER_NONE)
+        self.panel = scrolled.ScrolledPanel(self.upperSplitWindow, size=self.GetSize(),
+                                            pos=self.FromDIP(wx.Point(0, 28)), style=wx.BORDER_NONE)
         self.panel.sizer = wx.WrapSizer()
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
 
@@ -246,7 +258,7 @@ class ZyneFrame(wx.Frame):
         mainSizer.Add(self.panel.sizer, 1, wx.EXPAND)
         self.panel.SetSizerAndFit(mainSizer)
 
-        self.lowerSplitWindow = wx.SplitterWindow(self.splitWindow, -1, style = wx.SP_LIVE_UPDATE)
+        self.lowerSplitWindow = wx.SplitterWindow(self.splitWindow, -1, style=wx.SP_LIVE_UPDATE)
         self.lowerSplitWindow.SetMinimumPaneSize(1)
         self.lowerSplitWindow.SetSashInvisible()
 
@@ -273,8 +285,6 @@ class ZyneFrame(wx.Frame):
         else:
             self.SetMinSize(wx.Size(self.FromDIP(510), self.keyboard_height + self.FromDIP(10)))
 
-        self.backColour = self.GetBackgroundColour()
-
         dropTarget = MyFileDropTarget(self.panel)
         self.panel.SetDropTarget(dropTarget)
         if vars.vars["AUTO_OPEN"] == 'Default':
@@ -283,7 +293,7 @@ class ZyneFrame(wx.Frame):
             path = vars.vars["LAST_SAVED"]
             try:
                 self.openfile(path)
-            except:
+            except Exception as e:
                 pass
 
     def tabulate(self, evt):
@@ -296,20 +306,20 @@ class ZyneFrame(wx.Frame):
         else:
             self.selected = (self.selected + 1) % num
         if old is not None:
-            self.modules[old].setBackgroundColour(self.GetBackgroundColour())
-        self.modules[self.selected].setBackgroundColour("#9999A7")
+            self.modules[old].setBackgroundColour(vars.constants["BACKCOLOUR"])
+        self.modules[self.selected].setBackgroundColour(self.selectionBackgroundColour)
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(True)
 
     def clearSelection(self, evt):
         if self.selected is not None:
-            self.modules[self.selected].setBackgroundColour(self.backColour)
+            self.modules[self.selected].setBackgroundColour(vars.constants["BACKCOLOUR"])
         self.selected = None
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(False)
 
     def duplicateSelection(self, evt):
-        if self.selected != None:
+        if self.selected is not None:
             module = self.modules[self.selected]
             name = module.name
             mute = module.mute
@@ -325,12 +335,12 @@ class ZyneFrame(wx.Frame):
                 slider.outFunction(param)
             self.modules[-1].reinitLFOS(lfo_params, ctl_binding=False)
             self.refresh()
-            
+
             old = self.selected
             self.selected = len(self.modules) - 1
-            self.modules[old].setBackgroundColour(self.GetBackgroundColour())
-            self.modules[self.selected].setBackgroundColour("#9999A7")
-            
+            self.modules[old].setBackgroundColour(vars.constants["BACKCOLOUR"])
+            self.modules[self.selected].setBackgroundColour(self.selectionBackgroundColour)
+
             wx.CallAfter(self.SetFocus)
 
     def onNewInstance(self, evt):
@@ -352,7 +362,7 @@ class ZyneFrame(wx.Frame):
 
     def onGenerateValues(self, evt):
         id = evt.GetId() - 10000
-        if self.selected == None:
+        if self.selected is None:
             modules = self.modules
         else:
             modules = [self.modules[self.selected]]
@@ -368,9 +378,9 @@ class ZyneFrame(wx.Frame):
 
     def updateAddModuleMenu(self, evt):
         for mod in list(MODULES.keys()):
-             if mod in vars.vars["EXTERNAL_MODULES"]:
-                 del MODULES[mod]["synth"]
-                 del MODULES[mod]
+            if mod in vars.vars["EXTERNAL_MODULES"]:
+                del MODULES[mod]["synth"]
+                del MODULES[mod]
         items = self.addMenu.GetMenuItems()
         for item in items:
             self.addMenu.DeleteItem(item)
@@ -390,17 +400,17 @@ class ZyneFrame(wx.Frame):
         id = vars.constants["ID"]["Modules"]
         for i, name in enumerate(self.moduleNames):
             if i < 10:
-                self.addMenu.Append(id, 'Add %s module\tCtrl+%d' % (name, ((i+1)%10)), kind=wx.ITEM_NORMAL)
+                self.addMenu.Append(id, f'Add {name} module\tCtrl+{((i + 1) % 10)}', kind=wx.ITEM_NORMAL)
                 self.Bind(wx.EVT_MENU, self.onAddModule, id=id)
             else:
-                self.addMenu.Append(id, 'Add %s module\tShift+Ctrl+%d' % (name, ((i+1)%10)), kind=wx.ITEM_NORMAL)
+                self.addMenu.Append(id, f'Add {name} module\tShift+Ctrl+{((i + 1) % 10)}', kind=wx.ITEM_NORMAL)
                 self.Bind(wx.EVT_MENU, self.onAddModule, id=id)
             id += 1
         self.addMenu.AppendSeparator()
         if vars.vars["EXTERNAL_MODULES"] != {}:
             moduleNames = sorted(vars.vars["EXTERNAL_MODULES"].keys())
             for i, name in enumerate(moduleNames):
-                self.addMenu.Append(id, 'Add %s module' % name, kind=wx.ITEM_NORMAL)
+                self.addMenu.Append(id, f'Add {name} module', kind=wx.ITEM_NORMAL)
                 self.Bind(wx.EVT_MENU, self.onAddModule, id=id)
                 self.moduleNames.append(name)
                 MODULES.update(vars.vars["EXTERNAL_MODULES"].items())
@@ -490,7 +500,7 @@ class ZyneFrame(wx.Frame):
         dlg = PreferencesDialog()
         dlg.ShowModal()
         dlg.Destroy()
-    
+
     def updateLastSavedInPreferencesFile(self, path):
         preffile = os.path.join(os.path.expanduser("~"), vars.constants["PREF_FILE_NAME"])
         if os.path.isfile(preffile):
@@ -504,11 +514,11 @@ class ZyneFrame(wx.Frame):
                         f.write(f"LAST_SAVED = {path}\n")
                     else:
                         f.write(line)
-    
+
     def onQuit(self, evt):
         try:
             self.serverPanel.keyboardFrame.Destroy()
-        except:
+        except Exception as e:
             pass
         for win in wx.GetTopLevelWindows():
             win.Destroy()
@@ -521,25 +531,25 @@ class ZyneFrame(wx.Frame):
         self.openedFile = ""
         self.setServerPanelFooter("")
         self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - Untitled")
-    
+
     def onSave(self, evt):
         if self.openedFile != "":
             self.savefile(self.openedFile)
         else:
             self.onSaveAs(evt)
-    
+
     def onSaveAs(self, evt):
         if self.openedFile != "":
             filename = os.path.split(self.openedFile)[1]
         else:
-            filename = "zynesynth.zy"    
+            filename = "zynesynth.zy"
         dlg = wx.FileDialog(self, "Save file as...", defaultFile=filename, style=wx.FD_SAVE)
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
             if path != "":
                 self.savefile(path)
         dlg.Destroy()
-    
+
     def onOpen(self, evt):
         wildcard = "Zyne files (*.zy)|*.zy"
         dlg = wx.FileDialog(self, "Choose Zyne Synth file...", wildcard=wildcard, style=wx.FD_OPEN)
@@ -548,7 +558,7 @@ class ZyneFrame(wx.Frame):
             if path != "":
                 self.openfile(path)
         dlg.Destroy()
-    
+
     def onExport(self, evt):
         if evt.GetId() == vars.constants["ID"]["Export"]:
             mode = "Samples"
@@ -556,7 +566,7 @@ class ZyneFrame(wx.Frame):
             title2 = "Exporting samples..."
             num_modules = 1
         elif evt.GetId() in [vars.constants["ID"]["ExportChord"], vars.constants["ID"]["ExportChordTracks"]]:
-            if evt.GetId() == vars.constants["ID"]["ExportChord"]:            
+            if evt.GetId() == vars.constants["ID"]["ExportChord"]:
                 mode = "Chords"
                 title = "Export chords..."
                 title2 = "Exporting chords..."
@@ -580,7 +590,7 @@ class ZyneFrame(wx.Frame):
             title = "Export samples as separated tracks..."
             title2 = "Exporting samples as separated tracks..."
             num_modules = len(self.modules)
-        dlg = SamplingDialog(self, title=title, size=(450,270))
+        dlg = SamplingDialog(self, title=title, size=(450, 270))
         dlg.CenterOnParent()
         if dlg.ShowModal() == wx.ID_OK:
             if vars.vars["EXPORT_PATH"] and os.path.isdir(vars.vars["EXPORT_PATH"]):
@@ -596,7 +606,7 @@ class ZyneFrame(wx.Frame):
             first = int(dlg.first.GetValue())
             last = int(dlg.last.GetValue())
             step = int(dlg.step.GetValue())
-            num_iter = len(range(first,last,step)) * num_modules
+            num_iter = len(range(first, last, step)) * num_modules
             vars.vars["NOTEONDUR"] = float(dlg.noteon.GetValue())
             duration = float(dlg.release.GetValue()) + vars.vars["NOTEONDUR"]
             ext = self.serverPanel.getExtensionFromFileFormat()
@@ -605,14 +615,14 @@ class ZyneFrame(wx.Frame):
             postProcSettings = self.serverPanel.getPostProcSettings()
             self.deleteAllModules()
             self.serverPanel.reinitServer(0.001, "offline", serverSettings, postProcSettings)
-            dlg2 = wx.ProgressDialog(title2, "", maximum = num_iter, parent=self,
-                                   style = wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
+            dlg2 = wx.ProgressDialog(title2, "", maximum=num_iter, parent=self,
+                                     style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_SMOOTH)
             if vars.constants["IS_WIN"]:
                 dlg2.SetSize((500, 125))
             else:
-                dlg2.SetSize((500,100))
+                dlg2.SetSize((500, 100))
             count = 0
-            for i in range(first,last,step):
+            for i in range(first, last, step):
                 if mode == "Samples":
                     vars.vars["MIDIPITCH"] = i
                     vars.vars["MIDIVELOCITY"] = 0.707
@@ -658,14 +668,14 @@ class ZyneFrame(wx.Frame):
             self.serverPanel.setAmpCallable()
             self.setModulesAndParams(modules, params, lfo_params, ctl_params)
         dlg.Destroy()
-    
+
     def getModulesAndParams(self):
         modules = [(module.name, module.mute) for module in self.modules]
         params = [[slider.GetValue() for slider in module.sliders] for module in self.modules]
         lfo_params = [module.getLFOParams() for module in self.modules]
         ctl_params = [[slider.midictlnumber for slider in module.sliders] for module in self.modules]
         return modules, params, lfo_params, ctl_params
-    
+
     def setModulesAndParams(self, modules, params, lfo_params, ctl_params, from_export=False):
         for name, mute in modules:
             dic = MODULES[name]
@@ -772,7 +782,7 @@ class ZyneFrame(wx.Frame):
         self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"], dic["p1"], dic["p2"], dic["p3"]))
         self.addModule(self.modules[-1])
         wx.CallAfter(self.SetFocus)
-    
+
     def addModule(self, mod):
         mod.cbChannel.Enable(not self.serverPanel.onOff.GetValue())
         self.refreshOutputSignal()
@@ -808,12 +818,12 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.resetVirtualKeyboard()
         self.OnSize(wx.CommandEvent())
         self.refresh()
-    
+
     def refreshOutputSignal(self):
         if len(self.modules) == 0:
             out = Sig(0.0)
         else:
-            for i,mod in enumerate(self.modules):
+            for i, mod in enumerate(self.modules):
                 if i == 0:
                     out = Sig(mod.synth.out)
                 else:
@@ -823,11 +833,11 @@ class ZyneFrame(wx.Frame):
 
     def refresh(self):
         self.panel.sizer.Layout()
-        self.Refresh()   
-    
+        self.Refresh()
+
     def showAbout(self, evt):
         info = AboutDialogInfo()
-    
+
         info.SetDescription(
             f"{vars.constants['WIN_TITLE']} is a simple soft synthesizer allowing the "
             "user to create original sounds and export bank of samples.\n\n"
@@ -839,14 +849,16 @@ class ZyneFrame(wx.Frame):
         info.SetCopyright(f'© {vars.constants["YEAR"]} Olivier Bélanger – Hans-Jörg Bibiko')
         AboutBox(info)
 
+
 class ZyneApp(wx.App):
     def OnInit(self):
         self.frame = ZyneFrame(None)
         self.frame.SetPosition((50, 50))
         return True
-    
+
     def MacOpenFile(self, filename):
         self.frame.openfile(filename)
+
 
 if __name__ == '__main__':
     file = None
@@ -861,4 +873,3 @@ if __name__ == '__main__':
     if file:
         app.frame.openfile(file)
     app.MainLoop()
-
