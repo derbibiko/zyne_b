@@ -253,6 +253,7 @@ class ZyneFrame(wx.Frame):
         self.keyboard = ZB_Keyboard(self.lowerSplitWindow, outFunction=self.serverPanel.onKeyboard)
         self.keyboard_height = self.keyboard.GetSize()[1]
         self.keyboard.SetMinSize((-1, self.keyboard_height))
+
         self.serverPanel.keyboard = self.keyboard
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
 
@@ -463,7 +464,7 @@ class ZyneFrame(wx.Frame):
         self.panel.SetVirtualSize(
             wx.Size(self.panel.GetSize()[0], self.panel.GetVirtualSize()[1]))
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
-        wx.CallAfter(self.splitWindow.SetSashPosition, self.keyboard_height * -1)
+        wx.CallAfter(self.splitWindow.SetSashPosition, self.keyboard_height * -1, False)
         evt.Skip()
 
     def onMidiLearnModeFromLfoFrame(self):
