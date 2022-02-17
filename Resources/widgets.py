@@ -1432,7 +1432,7 @@ class ZB_Keyboard(wx.Panel):
                     dc.SetTextForeground(wx.WHITE)
                 else:
                     dc.SetTextForeground(wx.BLACK)
-                dc.DrawText("C", rec[0] + 3, rec[3] - 25)
+                dc.DrawText("C", rec[0] + self.FromDIP(3), rec[3] - 25)
 
         dc.SetPen(self.pen_black)
         for i, rec in enumerate(self.blackKeys):
