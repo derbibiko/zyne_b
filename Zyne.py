@@ -209,7 +209,7 @@ class ZyneFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onGenerateValues, id=vars.constants["ID"]["Uniform"], id2=vars.constants["ID"]["Jitter"])
         self.genMenu.AppendSeparator()
         self.genMenu.Append(vars.constants["ID"]["Select"], 'Select first module\tCtrl+B', kind=wx.ITEM_NORMAL)
-        self.Bind(wx.EVT_MENU, self.tabulate, id=vars.constants["ID"]["Select"])
+        self.Bind(wx.EVT_MENU, self.selectFirstModule, id=vars.constants["ID"]["Select"])
         self.genMenu.Append(vars.constants["ID"]["DeSelect"], 'Clear module selection\tShift+Ctrl+B', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.clearSelection, id=vars.constants["ID"]["DeSelect"])
         self.genMenu.AppendSeparator()
@@ -297,7 +297,7 @@ class ZyneFrame(wx.Frame):
             except Exception as e:
                 pass
 
-    def tabulate(self, evt):
+    def selectFirstModule(self, evt):
         num = len(self.modules)
         old = self.selected
         if num == 0:
