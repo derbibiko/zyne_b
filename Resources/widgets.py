@@ -1102,6 +1102,14 @@ class ZB_Keyboard(wx.Panel):
         else:
             self.key_font = wx.Font(8, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
 
+        self.brush_444444 = wx.Brush("#444444", wx.SOLID)
+        self.brush_black = wx.Brush(wx.BLACK, wx.SOLID)
+        self.brush_cccccc = wx.Brush("#CCCCCC", wx.SOLID)
+        self.brush_white = wx.Brush(wx.WHITE, wx.SOLID)
+        self.gradient_start_col = (250, 250, 250)
+        self.pen_black = wx.Pen(wx.BLACK, width=1, style=wx.SOLID)
+        self.pen_cccccc = wx.Pen("#CCCCCC", width=1, style=wx.SOLID)
+
         self.keydown = []
         self.keymap = {
             90: 36,
@@ -1178,27 +1186,28 @@ class ZB_Keyboard(wx.Panel):
 
     def _setRects(self):
         w, h = self.GetSize()
-        if h < 100:
-            self.SetSize(-1, 100)
-            h = 100
-        num = int(w / self.w1)
-        self.gap = w - num * self.w1
-        self.whiteKeys = [wx.Rect(i * self.w1, 0, self.w1 - 1, h - 1) for i in range(num)]
-        self.blackKeys = []
         height2 = int(h * 4 / 7)
+        h1 = h - 1
+        w1 = self.w1
+        w11 = w1 - 1
+        w2 = self.w2
+        num = int(w / w1)
+        off_start = w2 + 1
+        self.gap = w - num * w1
+        self.whiteKeys = [wx.Rect(i * w1, 0, w11, h1) for i in range(num)]
+        self.blackKeys = []
         for i in range(int(num / 7) + 1):
-            space2 = self.w1 * 7 * i
-            off = int(self.w1 / 2) + space2 + 3
-            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
-            off += self.w1
-            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
-            off += self.w1 * 2
-            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
-            off += self.w1
-            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
-            off += self.w1
-            self.blackKeys.append(wx.Rect(off, 0, self.w2, height2))
-        wx.CallAfter(self.Refresh)
+            off =  off_start + w1 * 7 * i
+            self.blackKeys.append(wx.Rect(off, 0, w2, height2))
+            off += w1
+            self.blackKeys.append(wx.Rect(off, 0, w2, height2))
+            off += w1 * 2
+            self.blackKeys.append(wx.Rect(off, 0, w2, height2))
+            off += w1
+            self.blackKeys.append(wx.Rect(off, 0, w2, height2))
+            off += w1
+            self.blackKeys.append(wx.Rect(off, 0, w2, height2))
+        self.Refresh()
 
     def OnSize(self, evt):
         self._setRects()
@@ -1399,26 +1408,24 @@ class ZB_Keyboard(wx.Panel):
     def OnPaint(self, evt):
         w, h = self.GetSize()
         dc = wx.AutoBufferedPaintDC(self)
-        dc.SetBrush(wx.Brush(wx.BLACK, wx.SOLID))
+        dc.SetBrush(self.brush_black)
         dc.Clear()
-        dc.SetPen(wx.Pen(wx.BLACK, width=1, style=wx.SOLID))
+        dc.SetPen(self.pen_black)
         dc.DrawRectangle(0, 0, w, h)
-
         dc.SetFont(self.key_font)
-
+        gradient_start_col = self.gradient_start_col
         for i, rec in enumerate(self.whiteKeys):
             if i in self.whiteSelected:
                 amp = int(self.whiteVelocities[i] * 1.5)
-                dc.GradientFillLinear(rec, (250, 250, 250), (amp, amp, amp), wx.SOUTH)
-                dc.SetBrush(wx.Brush("#CCCCCC", wx.SOLID))
-                dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
+                dc.SetBrush(self.brush_cccccc)
+                dc.SetPen(self.pen_cccccc)
+                dc.GradientFillLinear(rec, gradient_start_col, (amp, amp, amp), wx.SOUTH)
             else:
-                if self.c_key_idx - 35 - i > 0 or i - self.c_key_idx + 35 > 74:
-                    dc.SetBrush(wx.Brush("#444444", wx.SOLID))
-                    dc.SetPen(wx.Pen("#444444", width=1, style=wx.SOLID))
+                if self.c_key_idx - 35 > i or self.c_key_idx + 39 < i:
+                    dc.SetBrush(self.brush_444444)
                 else:
-                    dc.SetBrush(wx.Brush(wx.WHITE, wx.SOLID))
-                    dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
+                    dc.SetBrush(self.brush_white)
+                dc.SetPen(self.pen_cccccc)
                 dc.DrawRectangle(rec)
             if i == self.c_key_idx:
                 if i in self.whiteSelected:
@@ -1427,22 +1434,20 @@ class ZB_Keyboard(wx.Panel):
                     dc.SetTextForeground(wx.BLACK)
                 dc.DrawText("C", rec[0] + 3, rec[3] - 25)
 
-        dc.SetPen(wx.Pen(wx.BLACK, width=1, style=wx.SOLID))
+        dc.SetPen(self.pen_black)
         for i, rec in enumerate(self.blackKeys):
             if i in self.blackSelected:
                 amp = int(self.blackVelocities[i] * 1.5)
-                dc.GradientFillLinear(rec, (250, 250, 250), (amp, amp, amp), wx.SOUTH)
+                dc.GradientFillLinear(rec, gradient_start_col, (amp, amp, amp), wx.SOUTH)
                 dc.DrawLine(rec[0], 0, rec[0], rec[3])
                 dc.DrawLine(rec[0] + rec[2], 0, rec[0] + rec[2], rec[3])
                 dc.DrawLine(rec[0], rec[3], rec[0] + rec[2], rec[3])
-                dc.SetBrush(wx.Brush("#DDDDDD", wx.SOLID))
             else:
-                dc.SetBrush(wx.Brush(wx.BLACK, wx.SOLID))
-                dc.SetPen(wx.Pen(wx.BLACK, width=1, style=wx.SOLID))
+                dc.SetBrush(self.brush_black)
                 dc.DrawRectangle(rec)
 
         dc.SetBrush(wx.Brush(BACKGROUND_COLOUR, wx.SOLID))
-        dc.SetPen(wx.Pen("#AAAAAA", width=1, style=wx.SOLID))
+        dc.SetPen(self.pen_cccccc)
         dc.DrawRectangle(wx.Rect(w - self.w1, 0, self.w1, h))
 
         evt.Skip()
