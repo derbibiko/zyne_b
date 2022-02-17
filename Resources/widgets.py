@@ -1110,7 +1110,7 @@ class ZB_Keyboard(wx.Panel):
         self.pen_black = wx.Pen(wx.BLACK, width=1, style=wx.SOLID)
         self.pen_cccccc = wx.Pen("#CCCCCC", width=1, style=wx.SOLID)
 
-        self.keydown = []
+        self.keydown = set()
         self.keymap = {
             90: 36,
             83: 37,
@@ -1219,9 +1219,10 @@ class ZB_Keyboard(wx.Panel):
             evt.Skip()
             return
 
-        if evt.GetKeyCode() in self.keymap and evt.GetKeyCode() not in self.keydown:
-            self.keydown.append(evt.GetKeyCode())
-            pit = self.keymap[evt.GetKeyCode()]
+        key_code = evt.GetKeyCode()
+        if key_code in self.keymap and key_code not in self.keydown:
+            self.keydown.add(key_code)
+            pit = self.keymap[key_code]
             deg = pit % 12
 
             total = len(self.blackSelected) + len(self.whiteSelected)
@@ -1277,11 +1278,12 @@ class ZB_Keyboard(wx.Panel):
             evt.Skip()
             return
 
-        if evt.GetKeyCode() in self.keydown:
-            del self.keydown[self.keydown.index(evt.GetKeyCode())]
+        key_code = evt.GetKeyCode()
+        if key_code in self.keydown:
+            self.keydown.remove(key_code)
 
-        if not self.hold and evt.GetKeyCode() in self.keymap:
-            pit = self.keymap[evt.GetKeyCode()]
+        if not self.hold and key_code in self.keymap:
+            pit = self.keymap[key_code]
             deg = pit % 12
 
             note = None
@@ -1327,7 +1329,6 @@ class ZB_Keyboard(wx.Panel):
         pos = evt.GetPosition()
 
         total = len(self.blackSelected) + len(self.whiteSelected)
-        scanWhite = True
         note = None
         if self.hold:
             for i, rec in enumerate(self.blackKeys):
@@ -1347,9 +1348,8 @@ class ZB_Keyboard(wx.Panel):
                             self.blackSelected.add(i)
                             self.blackVelocities[i] = int(127 - vel)
                     note = (pit, vel, self.channel)
-                    scanWhite = False
                     break
-            if scanWhite:
+            else:
                 for i, rec in enumerate(self.whiteKeys):
                     if rec.Contains(pos):
                         pit = self.white[i % 7] + int(i / 7) * 12 + self.octave
@@ -1383,9 +1383,8 @@ class ZB_Keyboard(wx.Panel):
                             self.blackVelocities[i] = int(127 - vel)
                     note = (pit, vel, self.channel)
                     self.keyPressed = (i, pit)
-                    scanWhite = False
                     break
-            if scanWhite:
+            else:
                 for i, rec in enumerate(self.whiteKeys):
                     if rec.Contains(pos):
                         pit = self.white[i % 7] + int(i / 7) * 12 + self.octave
