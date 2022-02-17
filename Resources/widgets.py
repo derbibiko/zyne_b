@@ -1090,12 +1090,17 @@ class ZB_Keyboard(wx.Panel):
 
         self.white = (0, 2, 4, 5, 7, 9, 11)
         self.black = (1, 3, 6, 8, 10)
-        self.whiteSelected = []
-        self.blackSelected = []
+        self.whiteSelected = set()
+        self.blackSelected = set()
         self.whiteVelocities = {}
         self.blackVelocities = {}
         self.whiteKeys = []
         self.blackKeys = []
+
+        if vars.constants["IS_MAC"]:
+            self.key_font = wx.Font(12, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
+        else:
+            self.key_font = wx.Font(8, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD)
 
         self.keydown = []
         self.keymap = {
@@ -1161,8 +1166,8 @@ class ZB_Keyboard(wx.Panel):
             note = (pit + self.octave, 0, 0)
             if self.outFunction:
                 self.outFunction(note)
-        self.whiteSelected = []
-        self.blackSelected = []
+        self.whiteSelected = set()
+        self.blackSelected = set()
         self.whiteVelocities = {}
         self.blackVelocities = {}
         wx.CallAfter(self.Refresh)
@@ -1222,7 +1227,7 @@ class ZB_Keyboard(wx.Panel):
                         note = (pit + self.octave, 0, self.channel)
                     else:
                         if total < self.poly:
-                            self.blackSelected.append(which)
+                            self.blackSelected.add(which)
                             self.blackVelocities[which] = 100
                             note = (pit + self.octave, 100, self.channel)
 
@@ -1235,20 +1240,20 @@ class ZB_Keyboard(wx.Panel):
                         note = (pit + self.octave, 0, self.channel)
                     else:
                         if total < self.poly:
-                            self.whiteSelected.append(which)
+                            self.whiteSelected.add(which)
                             self.whiteVelocities[which] = 100
                             note = (pit + self.octave, 100, self.channel)
             else:
                 if deg in self.black:
                     which = self.black.index(deg) + int(pit / 12) * 5
                     if which not in self.blackSelected and total < self.poly:
-                        self.blackSelected.append(which)
+                        self.blackSelected.add(which)
                         self.blackVelocities[which] = 100
                         note = (pit + self.octave, 100, self.channel)
                 elif deg in self.white:
                     which = self.white.index(deg) + int(pit / 12) * 7
                     if which not in self.whiteSelected and total < self.poly:
-                        self.whiteSelected.append(which)
+                        self.whiteSelected.add(which)
                         self.whiteVelocities[which] = 100
                         note = (pit + self.octave, 100, self.channel)
 
@@ -1330,7 +1335,7 @@ class ZB_Keyboard(wx.Panel):
                         hb = int(h * 4 / 7)
                         vel = int((hb - pos[1]) * 127 / hb)
                         if total < self.poly:
-                            self.blackSelected.append(i)
+                            self.blackSelected.add(i)
                             self.blackVelocities[i] = int(127 - vel)
                     note = (pit, vel, self.channel)
                     scanWhite = False
@@ -1349,7 +1354,7 @@ class ZB_Keyboard(wx.Panel):
                         else:
                             vel = int((h - pos[1]) * 127 / h)
                             if total < self.poly:
-                                self.whiteSelected.append(i)
+                                self.whiteSelected.add(i)
                                 self.whiteVelocities[i] = int(127 - vel)
                         note = (pit, vel, self.channel)
                         break
@@ -1365,7 +1370,7 @@ class ZB_Keyboard(wx.Panel):
                         hb = int(h * 4 / 7)
                         vel = int((hb - pos[1]) * 127 / hb)
                         if total < self.poly:
-                            self.blackSelected.append(i)
+                            self.blackSelected.add(i)
                             self.blackVelocities[i] = int(127 - vel)
                     note = (pit, vel, self.channel)
                     self.keyPressed = (i, pit)
@@ -1381,7 +1386,7 @@ class ZB_Keyboard(wx.Panel):
                         if i not in self.whiteSelected:
                             vel = int((h - pos[1]) * 127 / h)
                             if total < self.poly:
-                                self.whiteSelected.append(i)
+                                self.whiteSelected.add(i)
                                 self.whiteVelocities[i] = int(127 - vel)
                         note = (pit, vel, self.channel)
                         self.keyPressed = (i, pit)
@@ -1399,10 +1404,7 @@ class ZB_Keyboard(wx.Panel):
         dc.SetPen(wx.Pen(wx.BLACK, width=1, style=wx.SOLID))
         dc.DrawRectangle(0, 0, w, h)
 
-        if vars.constants["IS_MAC"]:
-            dc.SetFont(wx.Font(12, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-        else:
-            dc.SetFont(wx.Font(8, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
+        dc.SetFont(self.key_font)
 
         for i, rec in enumerate(self.whiteKeys):
             if i in self.whiteSelected:
