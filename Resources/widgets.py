@@ -22,6 +22,7 @@ if "phoenix" in wx.version():
 
 HEADTITLE_BACK_COLOUR = "#9999A0"
 BACKGROUND_COLOUR = "#EBEBEB"
+CHAR_SET = set("0123456789.-")
 
 
 class ZB_HeadTitle(wx.Panel):
@@ -44,7 +45,11 @@ class ZB_HeadTitle(wx.Panel):
         self.SetSizerAndFit(mainsizer)
 
     def setLabel(self, s):
-        self.label.SetLabel(s)
+        if len(s) > 27:
+            self.label.SetLabel(s[:27].strip() + '..')
+            self.label.SetToolTip(wx.ToolTip(s))
+        else:
+            self.label.SetLabel(s)
 
 
 class ZB_Base_Control(wx.Panel):
@@ -77,7 +82,6 @@ class ZB_Base_Control(wx.Panel):
         self.borderWidth = 1
         self.selected = False
         self._enable = True
-        self.propagate = True
         self.midictl = None
         self.midictlnumber = None
         self.last_midi_val = 0
@@ -107,14 +111,85 @@ class ZB_Base_Control(wx.Panel):
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnResize)
         self.Bind(wx.EVT_CHAR, self.onChar)
-        self.Bind(wx.EVT_KEY_DOWN, self.keyDown)
         self.Bind(wx.EVT_KILL_FOCUS, self.LooseFocus)
+
+        self.handleNewValue()
+
+    def onChar(self, event):
+        if self.selected:
+            old_val = self.GetValue()
+            char = ""
+            if event.GetKeyCode() in range(wx.WXK_NUMPAD0, wx.WXK_NUMPAD9 + 1):
+                char = str(event.GetKeyCode() - wx.WXK_NUMPAD0)
+
+            elif event.GetKeyCode() in [wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT]:
+                char = "-"
+
+            elif event.GetKeyCode() in [wx.WXK_DECIMAL, wx.WXK_NUMPAD_DECIMAL]:
+                char = "."
+
+            elif event.GetKeyCode() == wx.WXK_BACK:
+                if self.new != "":
+                    self.new = self.new[0:-1]
+
+            elif event.GetKeyCode() in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
+                try:
+                    self.SetValue(float(self.new))
+                except Exception:
+                    self.SetValue(float(old_val))
+                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
+                wx.PostEvent(self.GetEventHandler(), evt)
+
+            elif event.GetKeyCode() == wx.WXK_ESCAPE:
+                self.SetValue(float(old_val))
+                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
+                wx.PostEvent(self.GetEventHandler(), evt)
+
+            elif event.GetKeyCode() in [wx.WXK_LEFT, wx.WXK_DOWN]:
+                if event.GetKeyCode() == wx.WXK_DOWN and not self.integer:
+                    new_val = old_val - 0.01
+                else:
+                    if self.integer:
+                        new_val = old_val - 1
+                    else:
+                        new_val = old_val - 0.001
+                try:
+                    self.SetValue(float(new_val))
+                    self.selected = True
+                    self.SetFocus()
+                except Exception:
+                    self.SetValue(float(old_val))
+                    self.selected = False
+
+            elif event.GetKeyCode() in [wx.WXK_RIGHT, wx.WXK_UP]:
+                if event.GetKeyCode() == wx.WXK_UP and not self.integer:
+                    new_val = old_val + 0.01
+                else:
+                    if self.integer:
+                        new_val = old_val + 1
+                    else:
+                        new_val = old_val + 0.001
+                try:
+                    self.SetValue(float(new_val))
+                    self.selected = True
+                    self.SetFocus()
+                except Exception:
+                    self.SetValue(float(old_val))
+                    self.selected = False
+
+            elif event.GetKeyCode() < 256:
+                char = chr(event.GetKeyCode())
+
+            if char in CHAR_SET:
+                self.new += char
+
+            wx.CallAfter(self.Refresh)
+            event.StopPropagation()
 
     def getLabel(self):
         return self.label
 
-    def setMidiCtlNumber(self, x, propagate=True):
-        self.propagate = propagate
+    def setMidiCtlNumber(self, x):
         self.midictlnumber = x
         self.Refresh()
 
@@ -145,7 +220,10 @@ class ZB_Base_Control(wx.Panel):
     def getRange(self):
         return [self.minvalue, self.maxvalue]
 
-    def formatDisplayValue(self):
+    def handleNewValue(self):
+        if self.outFunction:
+            self.outFunction(self.GetValue())
+
         if self.integer:
             self.display_value = str(self.GetValue())
         else:
@@ -160,8 +238,16 @@ class ZB_Base_Control(wx.Panel):
             elif absval < 10:
                 self.display_value = "%.3f" % val
 
-    def SetValue(self, value, propagate=True):
-        self.propagate = propagate
+    def setFocusToKeyboard(self):
+        if not vars.vars["VIRTUAL"] or self.selected:
+            return
+        try:
+            wx.GetTopLevelWindows()[0].keyboard.SetFocus()
+        except Exception as e:
+            pass
+
+    def SetValue(self, value):
+        self.selected = False
         if self.HasCapture():
             self.ReleaseMouse()
         if self.powoftwo:
@@ -177,9 +263,9 @@ class ZB_Base_Control(wx.Panel):
             self.value = int(self.value)
         if self.powoftwo:
             self.value = powOfTwo(self.value)
-        self.formatDisplayValue()
+        self.handleNewValue()
         self.clampPos()
-        self.selected = False
+        wx.CallAfter(self.setFocusToKeyboard)
         wx.CallAfter(self.Refresh)
 
     def GetValue(self):
@@ -209,7 +295,7 @@ class ZB_Base_Control(wx.Panel):
     def LooseFocus(self, event):
         self.new = ""
         self.selected = False
-        self.Refresh()
+        wx.CallAfter(self.Refresh)
         event.Skip()
 
     def getLabel(self):
@@ -226,12 +312,6 @@ class ZB_Base_Control(wx.Panel):
     def OnResize(self, evt):
         self.clampPos()
         self.Refresh()
-
-    def onChar(self, evt):
-        evt.Skip()
-
-    def keyDown(self, evt):
-        evt.Skip()
 
 
 class ZB_ControlSlider(ZB_Base_Control):
@@ -265,6 +345,7 @@ class ZB_ControlSlider(ZB_Base_Control):
         self.fromdip3 = self.FromDIP(3)
         self.fromdip12 = self.FromDIP(12)
         self.clampPos()
+        self.pos_offset = 0
 
         self.knobSize = self.FromDIP(self.knobSize)
         self.knobHalfSize = self.FromDIP(self.knobHalfSize)
@@ -297,50 +378,29 @@ class ZB_ControlSlider(ZB_Base_Control):
         else:
             return int(interpFloat(inter, self.minvalue, self.maxvalue))
 
-    def onChar(self, event):
-        if self.selected:
-            old_val = self.GetValue()
-            char = ""
-            if event.GetKeyCode() in range(wx.WXK_NUMPAD0, wx.WXK_NUMPAD9 + 1):
-                char = str(event.GetKeyCode() - wx.WXK_NUMPAD0)
-            elif event.GetKeyCode() in [wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT]:
-                char = "-"
-            elif event.GetKeyCode() in [wx.WXK_DECIMAL, wx.WXK_NUMPAD_DECIMAL]:
-                char = "."
-            elif event.GetKeyCode() == wx.WXK_BACK:
-                if self.new != "":
-                    self.new = self.new[0:-1]
-            elif event.GetKeyCode() < 256:
-                char = chr(event.GetKeyCode())
-
-            if char in "0123456789.-":
-                self.new += char
-            elif event.GetKeyCode() in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
-                try:
-                    self.SetValue(float(self.new))
-                except Exception:
-                    self.SetValue(old_val)
-                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
-                wx.PostEvent(self.GetEventHandler(), evt)
-            elif event.GetKeyCode() == wx.WXK_ESCAPE:
-                self.SetValue(old_val)
-                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
-                wx.PostEvent(self.GetEventHandler(), evt)
-            self.Refresh()
-        event.StopPropagation()
-
     def MouseDown(self, evt):
         if evt.ShiftDown():
             self.DoubleClick(evt)
             return
         if self._enable:
-            size = self.GetSize()
+            w, h = self.GetSize()
+            pos = evt.GetPosition()
             if self.orient == wx.VERTICAL:
-                self.pos = clamp(evt.GetPosition()[1], self.knobHalfSize, size[1] - self.knobHalfSize)
+                if not wx.Rect(0, self.pos - self.knobHalfSize, w, self.knobSize).Contains(pos):
+                    self.pos = clamp(evt.GetPosition()[1], self.knobHalfSize, h - self.knobHalfSize)
+                    self.value = self.scale()
+                    self.handleNewValue()
+                    self.pos_offset = 0
+                else:
+                    self.pos_offset = pos[1] - self.pos
             else:
-                self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, size[0] - self.knobHalfSize)
-            self.value = self.scale()
-            self.formatDisplayValue()
+                if not wx.Rect(self.pos - self.knobHalfSize, 0, self.knobSize, h).Contains(pos):
+                    self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, w - self.knobHalfSize)
+                    self.value = self.scale()
+                    self.handleNewValue()
+                    self.pos_offset = 0
+                else:
+                    self.pos_offset = pos[0] - self.pos
             self.CaptureMouse()
             self.selected = False
             self.Refresh()
@@ -349,9 +409,11 @@ class ZB_ControlSlider(ZB_Base_Control):
     def MouseUp(self, evt):
         if self.HasCapture():
             self.ReleaseMouse()
+        self.setFocusToKeyboard()
 
     def DoubleClick(self, event):
         if self._enable:
+            self.SetFocus()
             w, h = self.GetSize()
             pos = event.GetPosition()
             if self.orient == wx.VERTICAL:
@@ -368,11 +430,11 @@ class ZB_ControlSlider(ZB_Base_Control):
             size = self.GetSize()
             if self.HasCapture():
                 if self.orient == wx.VERTICAL:
-                    self.pos = clamp(evt.GetPosition()[1], self.knobHalfSize, size[1] - self.knobHalfSize)
+                    self.pos = clamp(evt.GetPosition()[1] - self.pos_offset, self.knobHalfSize, size[1] - self.knobHalfSize)
                 else:
-                    self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, size[0] - self.knobHalfSize)
+                    self.pos = clamp(evt.GetPosition()[0] - self.pos_offset, self.knobHalfSize, size[0] - self.knobHalfSize)
                 self.value = self.scale()
-                self.formatDisplayValue()
+                self.handleNewValue()
                 self.selected = False
                 self.Refresh()
 
@@ -480,11 +542,6 @@ class ZB_ControlSlider(ZB_Base_Control):
         dc.SetTextForeground(wx.WHITE)
         dc.DrawLabel(val, rec, wx.ALIGN_CENTER)
 
-        # Send value
-        if self.outFunction and self.propagate:
-            self.outFunction(self.GetValue())
-        self.propagate = True
-
         evt.Skip()
 
 
@@ -511,6 +568,10 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
                 vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
                 vars.vars["LEARNINGSLIDER"] is None
                 self.Enable()
+            else:
+                vars.vars["LEARNINGSLIDER"].Enable()
+                vars.vars["LEARNINGSLIDER"] = self
+                self.Disable()
             evt.StopPropagation()
         else:
             ZB_ControlSlider.MouseDown(self, evt)
@@ -556,38 +617,6 @@ class ZB_ControlKnob(ZB_Base_Control):
         self.fromdip9 = self.FromDIP(9)
         self.fromdip11 = self.FromDIP(11)
 
-    def keyDown(self, event):
-        if self.selected:
-            old_val = self.GetValue()
-            char = ""
-            if event.GetKeyCode() in range(wx.WXK_NUMPAD0, wx.WXK_NUMPAD9 + 1):
-                char = str(event.GetKeyCode() - wx.WXK_NUMPAD0)
-            elif event.GetKeyCode() in [wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT]:
-                char = "-"
-            elif event.GetKeyCode() in [wx.WXK_DECIMAL, wx.WXK_NUMPAD_DECIMAL]:
-                char = "."
-            elif event.GetKeyCode() == wx.WXK_BACK:
-                if self.new != "":
-                    self.new = self.new[0:-1]
-            elif event.GetKeyCode() < 256:
-                char = chr(event.GetKeyCode())
-
-            if char in "0123456789.-":
-                self.new += char
-            elif event.GetKeyCode() in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
-                try:
-                    self.SetValue(float(self.new))
-                except Exception:
-                    self.SetValue(old_val)
-                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
-                wx.PostEvent(self.GetEventHandler(), evt)
-            elif event.GetKeyCode() == wx.WXK_ESCAPE:
-                self.SetValue(old_val)
-                evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
-                wx.PostEvent(self.GetEventHandler(), evt)
-            self.Refresh()
-            event.StopPropagation()
-
     def MouseDown(self, evt):
         if evt.ShiftDown() and not evt.Dragging():
             self.DoubleClick(evt)
@@ -605,9 +634,11 @@ class ZB_ControlKnob(ZB_Base_Control):
     def MouseUp(self, evt):
         if self.HasCapture():
             self.ReleaseMouse()
+        self.setFocusToKeyboard()
 
     def DoubleClick(self, event):
         if self._enable:
+            self.SetFocus()
             w, h = self.GetSize()
             pos = event.GetPosition()
 
@@ -662,7 +693,7 @@ class ZB_ControlKnob(ZB_Base_Control):
                 off = 0.005 * offY * (self.maxvalue - self.minvalue) - \
                     0.001 * offX * (self.maxvalue - self.minvalue)
                 self.value = clamp(self.oldValue + off, self.minvalue, self.maxvalue)
-                self.formatDisplayValue()
+                self.handleNewValue()
                 self.selected = False
                 self.Refresh()
 
@@ -680,7 +711,12 @@ class ZB_ControlKnob(ZB_Base_Control):
         dc.Clear()
 
         # Draw background
-        dc.SetPen(wx.Pen(self.backgroundColour, width=0, style=wx.SOLID))
+        if self._enable:
+            dc.SetBrush(wx.Brush(self.backgroundColour, wx.SOLID))
+            dc.SetPen(wx.Pen(self.backgroundColour, width=0, style=wx.SOLID))
+        else:
+            dc.SetBrush(wx.Brush("#DDDDDD99", wx.SOLID))
+            dc.SetPen(wx.Pen("#DDDDDD", width=0, style=wx.SOLID))
         dc.DrawRectangle(0, 0, w, h)
 
         dc.SetFont(self.font)
@@ -702,7 +738,10 @@ class ZB_ControlKnob(ZB_Base_Control):
         lendx = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
         lendy = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
 
-        dc.SetPen(wx.Pen(self.knobColour, width=0, style=wx.SOLID))
+        if vars.constants["IS_WIN"]:
+            dc.SetPen(wx.Pen(self.knobInnerColour, width=2, style=wx.SOLID))
+        else:
+            dc.SetPen(wx.Pen(self.knobInnerColour, width=0, style=wx.SOLID))
         dc.SetBrush(wx.Brush(self.knobInnerColour, wx.SOLID))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius - self.fromdip3)
 
@@ -736,11 +775,10 @@ class ZB_ControlKnob(ZB_Base_Control):
                 dc.SetFont(wx.Font(6, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
             else:
                 dc.SetFont(wx.Font(9, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-            dc.DrawLabel(str(self.midictlnumber), wx.Rect(4, recval[1] - 11, recval[2], 15), wx.ALIGN_LEFT)
-
-        # Send value
-        if self.outFunction:
-            self.outFunction(self.GetValue())
+            if vars.constants["IS_WIN"]:
+                dc.DrawLabel(str(self.midictlnumber), wx.Rect(4, recval[1] - 27, recval[2], 15), wx.ALIGN_LEFT)
+            else:
+                dc.DrawLabel(str(self.midictlnumber), wx.Rect(4, recval[1] - 11, recval[2], 15), wx.ALIGN_LEFT)
 
         evt.Skip()
 
@@ -768,6 +806,10 @@ class ZyneB_ControlKnob(ZB_ControlKnob):
                 vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
                 vars.vars["LEARNINGSLIDER"] is None
                 self.Enable()
+            else:
+                vars.vars["LEARNINGSLIDER"].Enable()
+                vars.vars["LEARNINGSLIDER"] = self
+                self.Disable()
             evt.StopPropagation()
         else:
             ZB_ControlKnob.MouseDown(self, evt)
@@ -966,8 +1008,8 @@ class ZB_Keyboard_Control(wx.Panel):
         self.octaveText = wx.StaticText(self, id=-1, label="Octave")
         self.octaveText.SetFont(font)
         scBox.Add(self.octaveText, 0, wx.LEFT, 4)
-        self.cbOctave = wx.ComboBox(self, value="1", size=popsize,
-                                     choices=list(map(str, range(-2, 6))),
+        self.cbOctave = wx.ComboBox(self, value="0", size=popsize,
+                                     choices=list(map(str, range(-3, 5))),
                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.cbOctave.SetFont(font)
         self.cbOctave.Bind(wx.EVT_COMBOBOX, self.changeOctave)
@@ -992,11 +1034,14 @@ class ZB_Keyboard_Control(wx.Panel):
     def changeChannel(self, evt):
         self.keyboard.reset()
         self.keyboard.channel = int(self.cbChannel.GetValue())
+        self.keyboard.SetFocus()
 
     def changeOctave(self, evt):
         self.keyboard.reset()
-        self.keyboard.offset = clamp(int(self.cbOctave.GetValue()) * 12, -24, 60)
+        self.keyboard.octave = int(self.cbOctave.GetValue()) * 12
+        self.keyboard.c_key_idx = (35 - (7 * int(self.keyboard.octave / 12)))
         wx.CallAfter(self.keyboard.Refresh)
+        self.keyboard.SetFocus()
 
     def changeKeymode(self, evt):
         self.keyboard.reset()
@@ -1005,6 +1050,7 @@ class ZB_Keyboard_Control(wx.Panel):
             self.keyboard.hold = 0
         elif mode == 1:
             self.keyboard.hold = 1
+        self.keyboard.SetFocus()
 
 
 class ZB_Keyboard(wx.Panel):
@@ -1027,12 +1073,13 @@ class ZB_Keyboard(wx.Panel):
 
         self.poly = poly
         self.gap = 0
-        self.offset = self.FromDIP(12)
+        self.octave = 0
         self.w1 = self.FromDIP(15)
         self.w2 = int(self.w1 / 2) + 1
         self.hold = 1
         self.keyPressed = None
         self.channel = 0
+        self.c_key_idx = 35
 
         self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
@@ -1054,7 +1101,7 @@ class ZB_Keyboard(wx.Panel):
         self.keymap = {
             90: 36,
             83: 37,
-            88: 38,
+            88: 38, #  X
             68: 39,
             67: 40,
             86: 41,
@@ -1069,7 +1116,7 @@ class ZB_Keyboard(wx.Panel):
             46: 50,
             59: 51,
             47: 52,
-            81: 60,
+            81: 60, #  Q
             50: 61,
             87: 62,
             51: 63,
@@ -1094,10 +1141,10 @@ class ZB_Keyboard(wx.Panel):
         "Returns a list of the current notes."
         notes = []
         for key in self.whiteSelected:
-            notes.append((self.white[key % 7] + int(key / 7) * 12 + self.offset,
+            notes.append((self.white[key % 7] + int(key / 7) * 12 + self.octave,
                           127 - self.whiteVelocities[key], self.channel))
         for key in self.blackSelected:
-            notes.append((self.black[key % 5] + int(key / 5) * 12 + self.offset,
+            notes.append((self.black[key % 5] + int(key / 5) * 12 + self.octave,
                           127 - self.blackVelocities[key], self.channel))
         notes.sort()
         return notes
@@ -1105,13 +1152,13 @@ class ZB_Keyboard(wx.Panel):
     def reset(self):
         "Resets the keyboard state."
         for key in self.blackSelected:
-            pit = self.black[key % 5] + int(key / 5) * 12 + self.offset
-            note = (pit, 0, 0)
+            pit = self.black[key % 5] + int(key / 5) * 12
+            note = (pit + self.octave, 0, 0)
             if self.outFunction:
                 self.outFunction(note)
         for key in self.whiteSelected:
-            pit = self.white[key % 7] + int(key / 7) * 12 + self.offset
-            note = (pit, 0, 0)
+            pit = self.white[key % 7] + int(key / 7) * 12
+            note = (pit + self.octave, 0, 0)
             if self.outFunction:
                 self.outFunction(note)
         self.whiteSelected = []
@@ -1129,7 +1176,6 @@ class ZB_Keyboard(wx.Panel):
         if h < 100:
             self.SetSize(-1, 100)
             h = 100
-        # self.controlPanel.SetSize(-1, h)
         num = int(w / self.w1)
         self.gap = w - num * self.w1
         self.whiteKeys = [wx.Rect(i * self.w1, 0, self.w1 - 1, h - 1) for i in range(num)]
@@ -1168,43 +1214,43 @@ class ZB_Keyboard(wx.Panel):
             note = None
             if self.hold:
                 if deg in self.black:
-                    which = self.black.index(deg) + int((pit - self.offset) / 12) * 5
+                    which = self.black.index(deg) + int(pit / 12) * 5
                     if which in self.blackSelected:
                         self.blackSelected.remove(which)
                         del self.blackVelocities[which]
                         total -= 1
-                        note = (pit, 0, self.channel)
+                        note = (pit + self.octave, 0, self.channel)
                     else:
                         if total < self.poly:
                             self.blackSelected.append(which)
                             self.blackVelocities[which] = 100
-                            note = (pit, 100, self.channel)
+                            note = (pit + self.octave, 100, self.channel)
 
                 elif deg in self.white:
-                    which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
+                    which = self.white.index(deg) + int(pit / 12) * 7
                     if which in self.whiteSelected:
                         self.whiteSelected.remove(which)
                         del self.whiteVelocities[which]
                         total -= 1
-                        note = (pit, 0, self.channel)
+                        note = (pit + self.octave, 0, self.channel)
                     else:
                         if total < self.poly:
                             self.whiteSelected.append(which)
                             self.whiteVelocities[which] = 100
-                            note = (pit, 100, self.channel)
+                            note = (pit + self.octave, 100, self.channel)
             else:
                 if deg in self.black:
-                    which = self.black.index(deg) + int((pit - self.offset) / 12) * 5
+                    which = self.black.index(deg) + int(pit / 12) * 5
                     if which not in self.blackSelected and total < self.poly:
                         self.blackSelected.append(which)
                         self.blackVelocities[which] = 100
-                        note = (pit, 100, self.channel)
+                        note = (pit + self.octave, 100, self.channel)
                 elif deg in self.white:
-                    which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
+                    which = self.white.index(deg) + int(pit / 12) * 7
                     if which not in self.whiteSelected and total < self.poly:
                         self.whiteSelected.append(which)
                         self.whiteVelocities[which] = 100
-                        note = (pit, 100, self.channel)
+                        note = (pit + self.octave, 100, self.channel)
 
             if note and self.outFunction and total < self.poly:
                 self.outFunction(note)
@@ -1226,17 +1272,17 @@ class ZB_Keyboard(wx.Panel):
 
             note = None
             if deg in self.black:
-                which = self.black.index(deg) + int((pit - self.offset) / 12) * 5
+                which = self.black.index(deg) + int(pit / 12) * 5
                 if which in self.blackSelected:
                     self.blackSelected.remove(which)
                     del self.blackVelocities[which]
-                    note = (pit, 0, self.channel)
+                    note = (pit + self.octave, 0, self.channel)
             elif deg in self.white:
-                which = self.white.index(deg) + int((pit - self.offset) / 12) * 7
+                which = self.white.index(deg) + int(pit / 12) * 7
                 if which in self.whiteSelected:
                     self.whiteSelected.remove(which)
                     del self.whiteVelocities[which]
-                    note = (pit, 0, self.channel)
+                    note = (pit + self.octave, 0, self.channel)
 
             if note and self.outFunction:
                 self.outFunction(note)
@@ -1272,7 +1318,9 @@ class ZB_Keyboard(wx.Panel):
         if self.hold:
             for i, rec in enumerate(self.blackKeys):
                 if rec.Contains(pos):
-                    pit = self.black[i % 5] + int(i / 5) * 12 + self.offset
+                    pit = self.black[i % 5] + int(i / 5) * 12 + self.octave
+                    if pit < 0 or pit > 127:
+                        return
                     if i in self.blackSelected:
                         self.blackSelected.remove(i)
                         del self.blackVelocities[i]
@@ -1290,7 +1338,9 @@ class ZB_Keyboard(wx.Panel):
             if scanWhite:
                 for i, rec in enumerate(self.whiteKeys):
                     if rec.Contains(pos):
-                        pit = self.white[i % 7] + int(i / 7) * 12 + self.offset
+                        pit = self.white[i % 7] + int(i / 7) * 12 + self.octave
+                        if pit < 0 or pit > 127:
+                            return
                         if i in self.whiteSelected:
                             self.whiteSelected.remove(i)
                             del self.whiteVelocities[i]
@@ -1303,13 +1353,13 @@ class ZB_Keyboard(wx.Panel):
                                 self.whiteVelocities[i] = int(127 - vel)
                         note = (pit, vel, self.channel)
                         break
-            if note and self.outFunction and total < self.poly:
-                self.outFunction(note)
         else:
             self.keyPressed = None
             for i, rec in enumerate(self.blackKeys):
                 if rec.Contains(pos):
-                    pit = self.black[i % 5] + int(i / 5) * 12 + self.offset
+                    pit = self.black[i % 5] + int(i / 5) * 12 + self.octave
+                    if pit < 0 or pit > 127:
+                        return
                     vel = 0
                     if i not in self.blackSelected:
                         hb = int(h * 4 / 7)
@@ -1324,7 +1374,9 @@ class ZB_Keyboard(wx.Panel):
             if scanWhite:
                 for i, rec in enumerate(self.whiteKeys):
                     if rec.Contains(pos):
-                        pit = self.white[i % 7] + int(i / 7) * 12 + self.offset
+                        pit = self.white[i % 7] + int(i / 7) * 12 + self.octave
+                        if pit < 0 or pit > 127:
+                            return
                         vel = 0
                         if i not in self.whiteSelected:
                             vel = int((h - pos[1]) * 127 / h)
@@ -1334,8 +1386,8 @@ class ZB_Keyboard(wx.Panel):
                         note = (pit, vel, self.channel)
                         self.keyPressed = (i, pit)
                         break
-            if note and self.outFunction and total < self.poly:
-                self.outFunction(note)
+        if note and self.outFunction and total < self.poly:
+            self.outFunction(note)
         wx.CallAfter(self.Refresh)
         evt.Skip()
 
@@ -1359,10 +1411,14 @@ class ZB_Keyboard(wx.Panel):
                 dc.SetBrush(wx.Brush("#CCCCCC", wx.SOLID))
                 dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
             else:
-                dc.SetBrush(wx.Brush(wx.WHITE, wx.SOLID))
-                dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
+                if self.c_key_idx - 35 - i > 0 or i - self.c_key_idx + 35 > 74:
+                    dc.SetBrush(wx.Brush("#444444", wx.SOLID))
+                    dc.SetPen(wx.Pen("#444444", width=1, style=wx.SOLID))
+                else:
+                    dc.SetBrush(wx.Brush(wx.WHITE, wx.SOLID))
+                    dc.SetPen(wx.Pen("#CCCCCC", width=1, style=wx.SOLID))
                 dc.DrawRectangle(rec)
-            if i == (35 - (7 * int(self.offset / 12))):
+            if i == self.c_key_idx:
                 if i in self.whiteSelected:
                     dc.SetTextForeground(wx.WHITE)
                 else:

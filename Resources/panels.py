@@ -15,6 +15,10 @@ import wx.richtext as rt
 
 HEADTITLE_BACK_COLOUR = "#9999A0"
 
+WAVE_TITLES = {0: "Sine", 1: "Ramp", 2: "Sawtooth", 3: "Square", 4: "Triangle",
+               5: "Pulse", 6: "Bipolar Pulse", 7: "Sample and Hold"}
+
+
 # Param values are: init, min, max, is_int, is_log
 MODULES = {
             "FM": { "title": "Frequency Modulation", "synth": FmSynth, 
@@ -178,9 +182,10 @@ class HelpFrame(wx.Frame):
 
 
 class LFOFrame(wx.Frame):
-    def __init__(self, parent, synth, label, which):
-        wx.Frame.__init__(self, parent, -1, style=wx.FRAME_TOOL_WINDOW | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE)
+    def __init__(self, parent, synth, label, which, module):
+        wx.Frame.__init__(self, parent, -1, style=wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE)
         self.parent = parent
+        self.module = module
         self.SetSize(self.FromDIP(wx.Size(228,278)))
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.SetForegroundColour(vars.constants["FORECOLOUR"])
@@ -223,9 +228,8 @@ class LFOFrame(wx.Frame):
         self.panel.title.Bind(wx.EVT_MOTION, self.onMotion)
         self.panel.SetPosition((0, 0))
         self.panel.SetSize(self.GetSize())
-        self.SetFocus()
         self.synth = synth
-    
+
     def onClose(self, evt):
         self.Hide()
 
@@ -242,7 +246,6 @@ class LFOFrame(wx.Frame):
         self.mouseOffset = (0,0)
         if self.panel.title.HasCapture():
             self.panel.title.ReleaseMouse()
-        self.SetFocus()
 
     def onMotion(self, evt):
         if self.panel.title.HasCapture():
@@ -262,7 +265,7 @@ class LFOFrame(wx.Frame):
         slider_idx = 0
         for i, ctl_param in enumerate(ctl_params):
             slider = self.panel.sliders[i]
-            slider.setMidiCtlNumber(ctl_param, False)
+            slider.setMidiCtlNumber(ctl_param)
             if ctl_param is not None and vars.vars["MIDI_ACTIVE"]:
                 if 'knobRadius' in slider.__dict__:
                     mini = slider.getMinValue()
@@ -532,7 +535,7 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(self.meter, 0, wx.EXPAND | wx.ALL, 2)
         self.setAmpCallable()
 
-        self.ppEqTitle = ZB_HeadTitle(self, "4 bands equalizer", togcall=self.handleOnOffEq)
+        self.ppEqTitle = ZB_HeadTitle(self, "4 Bands Equalizer", togcall=self.handleOnOffEq)
         self.onOffEq = self.ppEqTitle.toggle
         self.mainBox.Add(self.ppEqTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
 
@@ -560,7 +563,7 @@ class ServerPanel(wx.Panel):
 
         self.mainBox.Add(eqGainBox, 0, wx.CENTER | wx.BOTTOM)
     
-        self.ppCompTitle = ZB_HeadTitle(self, "Dynamic compressor", togcall=self.handleOnOffComp)
+        self.ppCompTitle = ZB_HeadTitle(self, "Dynamic Compressor", togcall=self.handleOnOffComp)
         self.onOffComp = self.ppCompTitle.toggle
         self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
 
@@ -795,18 +798,24 @@ class ServerPanel(wx.Panel):
                 widget.outFunction(comp[i])
         
     def setDriverSetting(self, func=None, val=0):
-        self.GetTopLevelParent().panel.Freeze()
+        mainframe = self.GetTopLevelParent()
+        mainframe.panel.Freeze()
         if vars.vars["VIRTUAL"]:
             self.resetVirtualKeyboard()
         modules, params, lfo_params, ctl_params = self.GetTopLevelParent().getModulesAndParams()
         postProcSettings = self.getPostProcSettings()
-        self.GetTopLevelParent().deleteAllModules()
-        self.fsserver.shutdown()
-        if func != None: func(val)
-        self.fsserver.boot()
-        self.GetTopLevelParent().setModulesAndParams(modules, params, lfo_params, ctl_params)
+        mainframe.deleteAllModules()
+        self.shutdown()
+        if func is not None:
+            func(val)
+        self.boot()
+        mainframe.setModulesAndParams(modules, params, lfo_params, ctl_params)
         self.setPostProcSettings(postProcSettings)
-        self.GetTopLevelParent().panel.Thaw()
+        mainframe.panel.Thaw()
+        if self.keyboardShown:
+            mainframe.keyboard.SetFocus()
+        else:
+            self.SetFocus()
 
     def setDriverByString(self, s):
         self.driverList, self.driverIndexes = get_output_devices()
@@ -822,7 +831,6 @@ class ServerPanel(wx.Panel):
         if vars.vars["AUDIO_HOST"] != "Jack":
             self.setDriverSetting(self.fsserver.setOutputDevice, self.driverIndexes[evt.GetInt()])
             self.selected_output_driver_name = evt.GetString()
-            self.SetFocus()
 
     def setInterfaceByString(self, s):
         self.interfaceList, self.interfaceIndexes = get_midi_input_devices()
@@ -836,7 +844,6 @@ class ServerPanel(wx.Panel):
 
     def changeInterface(self, evt):
         mainFrame = self.GetTopLevelParent()
-        mainFrameSize = mainFrame.GetSize()
         try:
             vars.vars["VIRTUAL"] = False
             if evt.GetString() in self.interfaceList:
@@ -848,18 +855,14 @@ class ServerPanel(wx.Panel):
             if self.keyboardShown:
                 self.keyboardShown = 0
                 self.keyboard.reset()
-                mainFrame.SetSize((mainFrameSize[0], mainFrameSize[1]-80))
                 mainFrame.showKeyboard(False)
         except IndexError:
             vars.vars["VIRTUAL"] = True
             if not self.keyboardShown:
+                self.keyboardShown = 1
                 self.setDriverSetting()
                 screenRect = self.GetTopLevelParent().GetScreenRect()
-                self.keyboardShown = 1
-                mainFrame.SetSize((mainFrameSize[0], mainFrameSize[1]+80))
                 mainFrame.showKeyboard()
-                mainFrame.keyboard.SetFocus()
-        self.SetFocus()
 
     def changeSr(self, evt):
         if evt.GetInt() == 0: sr = 44100
@@ -931,29 +934,31 @@ class ServerPanel(wx.Panel):
         self.fsserver.setCompParam("falltime", x)
     
     def midiLearn(self, state):
+        mainFrame = self.GetTopLevelParent()
         learnColour = wx.Colour("#DEDEDE")
         gbcolour = vars.constants["BACKCOLOUR"]
         if state:
             self.SetBackgroundColour(learnColour)
-            wx.CallAfter(self.Refresh)
             for widget in self.widgets:
                 widget.setBackgroundColour(learnColour)
             for popup in self.popupsLearn:
                 popup.Disable()
-            self.GetTopLevelParent().menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(False)
+            mainFrame.menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(False)
             self.fsserver.startMidiLearn()
         else:
             self.SetBackgroundColour(gbcolour)
-            wx.CallAfter(self.Refresh)
             for widget in self.widgets:
                 widget.setBackgroundColour(gbcolour)
             for popup in self.popupsLearn:
                 popup.Enable()
-            self.GetTopLevelParent().menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(True)
+            mainFrame.menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(True)
             self.fsserver.stopMidiLearn()
-            self.setDriverSetting()
+            wx.CallAfter(self.setDriverSetting)
         wx.CallAfter(self.Refresh)
-        self.SetFocus()
+        if self.keyboardShown:
+            mainFrame.keyboard.SetFocus()
+        else:
+            self.SetFocus()
 
 
 class BasePanel(wx.Panel):
@@ -968,6 +973,8 @@ class BasePanel(wx.Panel):
         self.sliders = []
         self.labels = []
         self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.name = name
+        self.title = title
 
     def createAdsrKnobs(self):
         self.knobSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -1023,7 +1030,7 @@ class BasePanel(wx.Panel):
             slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(195,16), log=log,
                                          integer=integer, outFunction=callback, label=label)
             button = LFOButtons(self, synth=self.synth, which=i, callback=self.startLFO)
-            lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i)
+            lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, f"{label}", i, self)
             self.buttons[i] = button
             self.lfo_frames[i] = lfo_frame
             hsizer.Add(slider, 0, wx.LEFT, 1)
@@ -1108,12 +1115,12 @@ class GenericPanel(BasePanel):
         self.corner.Bind(wx.EVT_LEAVE_WINDOW, self.leaveCorner)
 
         self.titleSizer.AddMany([
-            (self.close, 0, wx.LEFT | wx.TOP, 3),
-            (self.info, 0, wx.LEFT | wx.TOP, 3),
-            (self.title, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, 3),
-            (self.corner, 0, wx.RIGHT | wx.TOP, 3)])
+            (self.close, 0, wx.TOP | wx.LEFT, 2),
+            (self.info, 0, wx.TOP | wx.LEFT, 2),
+            (self.title, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP | wx.RIGHT | wx.LEFT, 2),
+            (self.corner, 0, wx.TOP | wx.RIGHT, 2)])
         self.headPanel.SetSizerAndFit(self.titleSizer)
-        self.sizer.Add(self.headPanel, 0, wx.BOTTOM | wx.EXPAND, 3)
+        self.sizer.Add(self.headPanel, 0, wx.BOTTOM | wx.EXPAND, 1)
 
         self.font = self.close.GetFont()
         if not vars.constants["IS_WIN"]:
@@ -1128,6 +1135,7 @@ class GenericPanel(BasePanel):
         self.createAdsrKnobs()
 
         self.sizer.AddSpacer(2)
+
         self.sliderAmp = self.createSlider("Amplitude", 1, 0.0001, 2, False, False, self.changeAmp, 0)
         self.tmp_amplitude = 1
 
@@ -1135,15 +1143,19 @@ class GenericPanel(BasePanel):
             self.sliderTranspo = self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeTranspo, 1)
         else:
             self.sliderP1 = self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeP1, 1)
+
         if p2[0] == "Transposition":
             self.sliderTranspo = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeTranspo, 2)
         else:
             self.sliderP2 = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeP2, 2)
+
         if p3[0] == "Transposition":
             self.sliderTranspo = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeTranspo, 3)
         else:
             self.sliderP3 = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeP3, 3)
+
         self.sliderPan = self.createSlider("Panning", .5, 0, 1, False, False, self.changePan, 4)
+
         if not vars.constants["IS_MAC"]:
             self.sizer.AddSpacer(4)
 
@@ -1490,20 +1502,31 @@ class LFOPanel(BasePanel):
         self.headPanel = wx.Panel(self)
         self.headPanel.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
 
-        self.titleSizer = wx.FlexGridSizer(1, 2, 5, 5)
+        self.titleSizer = wx.FlexGridSizer(1, 3, 5, 5)
         self.titleSizer.AddGrowableCol(1)
+
         self.close = wx.StaticText(self.headPanel, -1, label="X")
         self.close.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
         self.close.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.close.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.close.SetToolTip(wx.ToolTip("Close window"))
+
+        self.minfo = wx.StaticText(self.headPanel, -1, label=" ? ")
+        self.minfo.Bind(wx.EVT_ENTER_WINDOW, self.hoverInfo)
+        self.minfo.Bind(wx.EVT_LEAVE_WINDOW, self.leaveInfo)
+        self.minfo.Bind(wx.EVT_LEFT_DOWN, self.MouseDownInfo)
+        self.minfo.SetToolTip(wx.ToolTip("Click to highlight parent module"))
+
         self.title = wx.StaticText(self.headPanel, -1, label=title)
         self.title.SetToolTip(wx.ToolTip("Move window"))
+
         self.titleSizer.AddMany([
-            (self.close, 0, wx.LEFT | wx.TOP, 3),
-            (self.title, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP | wx.EXPAND, 3)])
+            (self.close, 0, wx.TOP | wx.LEFT, 2),
+            (self.title, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.TOP | wx.RIGHT | wx.LEFT, 2),
+            (self.minfo, 0, wx.TOP | wx.RIGHT, 2)])
+
         self.headPanel.SetSizerAndFit(self.titleSizer)
-        self.sizer.Add(self.headPanel, 0, wx.BOTTOM | wx.EXPAND, 3)
+        self.sizer.Add(self.headPanel, 0, wx.BOTTOM | wx.EXPAND, 1)
 
         self.font = self.close.GetFont()
 
@@ -1525,20 +1548,37 @@ class LFOPanel(BasePanel):
         self.sliderP4 = self.createSlider(p4[0], p4[1], p4[2], p4[3], p4[4], p4[5], self.changeP4)
         self.SetSizerAndFit(self.sizer, wx.CENTER)
 
+
+    def hoverInfo(self, evt):
+        self.minfo.SetBackgroundColour("#CCCCCC")
+        self.Refresh()
+
+    def leaveInfo(self, evt):
+        self.minfo.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.Refresh()
+
+    def MouseDownInfo(self, evt):
+        old_col = self.parent.module.GetBackgroundColour()
+        self.parent.module.setBackgroundColour((43, 96, 200))
+        wx.CallLater(80, self.parent.module.setBackgroundColour, old_col)
+
     def changeP1(self, x):
         if self.which == 0:
             self.synth._params[self.which].setSpeed(x)
         else:
             self.synth._params[self.which].lfo.setSpeed(x)
-    
+
     def changeP2(self, x):
         if self.which == 0:
             self.synth._params[self.which].setType(x)
         else:
-            self.synth._params[self.which].lfo.setType(x)
-        wave = {0: "Sine", 1: "Ramp", 2: "Sawtooth", 3: "Square", 4: "Triangle", 
-                5: "Pulse", 6: "Bipolar Pulse", 7: "Sample and Hold"}[x]
-        self.labels[2].SetLabel("Waveform  -  %s" % wave)
+            self.synth._params[self.which].lfo.setType(int(x))
+            try:
+                t = WAVE_TITLES[int(x)]
+            except Exception as e:
+                t = ""
+            self.labels[2].SetLabel(f"Waveform  -  {t}")
+            wx.CallAfter(self.Refresh)
 
     def changeP3(self, x):
         if self.which == 0:

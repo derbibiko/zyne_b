@@ -279,6 +279,7 @@ class ZyneFrame(wx.Frame):
         self.splitWindow.Unsplit(None)
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_ACTIVATE, self.OnActivate)
 
         if vars.constants["IS_WIN"]:
             self.SetMinSize(wx.Size(self.FromDIP(510), self.keyboard_height + self.FromDIP(50)))
@@ -474,8 +475,11 @@ class ZyneFrame(wx.Frame):
         self.panel.SetVirtualSize(
             wx.Size(self.panel.GetSize()[0], self.panel.GetVirtualSize()[1]))
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
-        wx.CallAfter(self.splitWindow.SetSashPosition, self.keyboard_height * -1, False)
+        self.splitWindow.SetSashPosition(self.keyboard_height * -1, False)
         evt.Skip()
+
+    def OnActivate(self, evt):
+        wx.CallAfter(self.keyboard.SetFocus)
 
     def onMidiLearnModeFromLfoFrame(self):
         item = self.fileMenu.FindItemById(vars.constants["ID"]["MidiLearn"])
@@ -692,7 +696,7 @@ class ZyneFrame(wx.Frame):
         for i, ctl_paramset in enumerate(ctl_params):
             for j, ctl_param in enumerate(ctl_paramset):
                 slider = self.modules[i].sliders[j]
-                slider.setMidiCtlNumber(ctl_param, False)
+                slider.setMidiCtlNumber(ctl_param)
                 if ctl_param is not None and not from_export and vars.vars["MIDI_ACTIVE"]:
                     if 'knobRadius' in slider.__dict__:
                         mini = slider.getMinValue()
@@ -787,8 +791,6 @@ class ZyneFrame(wx.Frame):
         mod.cbChannel.Enable(not self.serverPanel.onOff.GetValue())
         self.refreshOutputSignal()
         self.panel.sizer.Add(mod, 0, wx.ALL, 1)
-        self.panel.sizer.Layout()
-        wx.CallAfter(self.refresh)
         wx.CallAfter(self.OnSize, wx.CommandEvent())
 
     def deleteModule(self, module):
@@ -802,8 +804,8 @@ class ZyneFrame(wx.Frame):
         module.Destroy()
         self.modules.remove(module)
         self.refreshOutputSignal()
-        self.OnSize(wx.CommandEvent())
-        self.refresh()
+        wx.CallAfter(self.OnSize, wx.CommandEvent())
+        # self.refresh()
 
     def deleteAllModules(self):
         for module in self.modules:
@@ -816,8 +818,8 @@ class ZyneFrame(wx.Frame):
         self.modules = []
         self.refreshOutputSignal()
         self.serverPanel.resetVirtualKeyboard()
-        self.OnSize(wx.CommandEvent())
-        self.refresh()
+        wx.CallAfter(self.OnSize, wx.CommandEvent())
+        # self.refresh()
 
     def refreshOutputSignal(self):
         if len(self.modules) == 0:

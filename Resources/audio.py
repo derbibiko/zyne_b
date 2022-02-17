@@ -37,38 +37,46 @@ class FSServer:
         self.boot()
     
     def scanning(self, ctlnum, midichnl):
-        if vars.vars["LEARNINGSLIDER"] != None:
+        if vars.vars["LEARNINGSLIDER"] is not None:
             vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(ctlnum)
             vars.vars["LEARNINGSLIDER"].Enable()
             vars.vars["LEARNINGSLIDER"] = None
-    
+
     def startMidiLearn(self):
-        self.server.shutdown()
-        self.server.boot()
+        self.shutdown()
+        self.boot()
         self.scan = CtlScan2(self.scanning, False)
-        self.server.start()
-    
+        self.start()
+
     def stopMidiLearn(self):
-        del self.scan
-        self.server.stop()
+        delattr(self, 'scan')
+        self.stop()
+        if vars.vars["LEARNINGSLIDER"] is not None:
+            vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
+            vars.vars["LEARNINGSLIDER"].Enable()
+            vars.vars["LEARNINGSLIDER"] = None
         time.sleep(.25)
+        self.start()
     
     def start(self):
         self.server.start()
-    
+        while not self.server.getIsStarted:
+            time.sleep(0.01)
+
     def stop(self):
         self.server.stop()
-    
+
     def shutdown(self):
         del self._modMix, self._outSig, self._outSigMix, self._fbEqAmps, self._fbEq
         del self._outEq, self._outEqMix, self._compLevel, self._compDelay, self._outComp
         self.server.shutdown()
-    
+
     def boot(self):
         self.server.boot()
+        while not self.server.getIsBooted:
+            time.sleep(0.01)
         self._modMix = Sig([0,0])
         self._outSig = Sig(self._modMix).out()
-        vars.vars["MIDI_ACTIVE"] = self.server.getMidiActive()
         self._outSigMix = self._outSig.mix(1)
         
         self._fbEqAmps = SigTo(self.eqGain, time=.1, init=self.eqGain)
@@ -82,7 +90,8 @@ class FSServer:
         self._compDelay = Delay(self._outSig, delay=0.005).stop()
         self._outComp = self._compDelay * self._compLevel
         self._outComp.stop()
-    
+        vars.vars["MIDI_ACTIVE"] = self.server.getMidiActive()
+
     def reinit(self, audio):
         self.server.reinit(duplex=0, audio=audio.lower())
     
@@ -336,7 +345,7 @@ class LFOSynth(CtlBind):
         self.speed.value = x
     
     def setType(self, x):
-        self.lfo_type = (x - 1) % 8
+        self.lfo_type = int((x - 1) % 8)
         if self.lfo_type == 7:
             self.lfo.sharp = 0
         else:
