@@ -39,7 +39,7 @@ constants["ID"] = {
     "ExportHelp": 6002, "CloseTut": 7000, "CloseHelp": 7001, "CloseLFO": 7002,
     "DeSelect": 9998, "Select": 9999, "Uniform": 10000, "Triangular": 10001,
     "Minimum": 10002, "Jitter": 10003, "Duplicate": 10100,
-    "NewInstance": 1014
+    "NewInstance": 1014, "ActivateKeyboard": 1015
 }
 
 constants["VAR_PREF_LABELS"] = {

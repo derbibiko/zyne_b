@@ -181,6 +181,8 @@ class ZyneFrame(wx.Frame):
         self.fileMenu.AppendSeparator()
         self.fileMenu.Append(vars.constants["ID"]["MidiLearn"], 'Midi learn mode\tShift+Ctrl+M', kind=wx.ITEM_CHECK)
         self.Bind(wx.EVT_MENU, self.onMidiLearnMode, id=vars.constants["ID"]["MidiLearn"])
+        self.fileMenu.Append(vars.constants["ID"]["ActivateKeyboard"], 'Activate virtual keyboard\tCtrl+P', kind=wx.ITEM_NORMAL)
+        self.Bind(wx.EVT_MENU, self.onKeyboardFocus, id=vars.constants["ID"]["ActivateKeyboard"])
         self.fileMenu.Append(vars.constants["ID"]["ResetKeyboard"], 'Reset virtual keyboard\tCtrl+Y', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onResetKeyboard, id=vars.constants["ID"]["ResetKeyboard"])
         self.fileMenu.Append(vars.constants["ID"]["Retrig"], 'Retrig virtual notes\tCtrl+T', kind=wx.ITEM_NORMAL)
@@ -460,6 +462,9 @@ class ZyneFrame(wx.Frame):
 
     def showKeyboard(self, state=True):
         display_h = wx.Display(0).GetGeometry()[2:][1]
+        for itemid in ["ActivateKeyboard", "Retrig", "ResetKeyboard"]:
+            item = self.fileMenu.FindItemById(vars.constants["ID"][itemid])
+            item.Enable(state)
         if state:
             self.splitWindow.SplitHorizontally(self.upperSplitWindow, self.lowerSplitWindow, self.keyboard_height * -1)
             h = self.GetSize()[1]
@@ -470,6 +475,11 @@ class ZyneFrame(wx.Frame):
 
     def onResetKeyboard(self, evt):
         self.serverPanel.resetVirtualKeyboard()
+
+    def onKeyboardFocus(self, evt):
+        if vars.vars["VIRTUAL"] and self.splitWindow.IsSplit():
+            wx.GetTopLevelWindows()[0].Raise()
+            self.serverPanel.keyboard.SetFocus()
 
     def onRetrig(self, evt):
         self.serverPanel.retrigVirtualNotes()

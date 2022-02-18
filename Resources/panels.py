@@ -247,6 +247,7 @@ class LFOFrame(wx.Frame):
         self.mouseOffset = (0,0)
         if self.panel.title.HasCapture():
             self.panel.title.ReleaseMouse()
+        wx.GetTopLevelWindows()[0].Raise()
 
     def onMotion(self, evt):
         if self.panel.title.HasCapture():
@@ -862,7 +863,6 @@ class ServerPanel(wx.Panel):
             if not self.keyboardShown:
                 self.keyboardShown = 1
                 self.setDriverSetting()
-                screenRect = self.GetTopLevelParent().GetScreenRect()
                 mainFrame.showKeyboard()
 
     def changeSr(self, evt):

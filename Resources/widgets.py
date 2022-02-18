@@ -154,8 +154,7 @@ class ZB_Base_Control(wx.Panel):
                     else:
                         new_val = old_val - 0.001
                 try:
-                    self.SetValue(float(new_val))
-                    self.selected = True
+                    self.SetValue(float(new_val), True)
                     self.SetFocus()
                 except Exception:
                     self.SetValue(float(old_val))
@@ -170,8 +169,7 @@ class ZB_Base_Control(wx.Panel):
                     else:
                         new_val = old_val + 0.001
                 try:
-                    self.SetValue(float(new_val))
-                    self.selected = True
+                    self.SetValue(float(new_val), True)
                     self.SetFocus()
                 except Exception:
                     self.SetValue(float(old_val))
@@ -182,7 +180,8 @@ class ZB_Base_Control(wx.Panel):
 
             if char in CHAR_SET:
                 self.new += char
-
+            if not self.selected:
+                wx.GetTopLevelWindows()[0].Raise()
             wx.CallAfter(self.Refresh)
             event.StopPropagation()
 
@@ -237,17 +236,19 @@ class ZB_Base_Control(wx.Panel):
                 self.display_value = "%.2f" % val
             elif absval < 10:
                 self.display_value = "%.3f" % val
+        self.setFocusToKeyboard()
 
     def setFocusToKeyboard(self):
         if not vars.vars["VIRTUAL"] or self.selected:
             return
         try:
+            wx.GetTopLevelWindows()[0].Raise()
             wx.GetTopLevelWindows()[0].keyboard.SetFocus()
         except Exception as e:
             pass
 
-    def SetValue(self, value):
-        self.selected = False
+    def SetValue(self, value, keepSelected=False):
+        self.selected = keepSelected
         if self.HasCapture():
             self.ReleaseMouse()
         if self.powoftwo:
@@ -409,7 +410,6 @@ class ZB_ControlSlider(ZB_Base_Control):
     def MouseUp(self, evt):
         if self.HasCapture():
             self.ReleaseMouse()
-        self.setFocusToKeyboard()
 
     def DoubleClick(self, event):
         if self._enable:
@@ -634,7 +634,6 @@ class ZB_ControlKnob(ZB_Base_Control):
     def MouseUp(self, evt):
         if self.HasCapture():
             self.ReleaseMouse()
-        self.setFocusToKeyboard()
 
     def DoubleClick(self, event):
         if self._enable:
