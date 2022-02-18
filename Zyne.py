@@ -360,6 +360,7 @@ class ZyneFrame(wx.Frame):
             evt.SetInt(1)
             self.serverPanel.onOff.SetValue(True)
         self.serverPanel.onOff.ProcessWindowEvent(evt)
+        wx.GetTopLevelWindows()[0].Raise()
         if vars.vars["VIRTUAL"]:
             wx.CallAfter(self.keyboard.SetFocus)
 
@@ -485,6 +486,8 @@ class ZyneFrame(wx.Frame):
             wx.CallAfter(self.keyboard.SetFocus)
 
     def onMidiLearnModeFromLfoFrame(self):
+        if self.serverPanel.onOff.GetValue():
+            return
         item = self.fileMenu.FindItemById(vars.constants["ID"]["MidiLearn"])
         if item.IsChecked():
             self.serverPanel.midiLearn(False)
@@ -494,19 +497,24 @@ class ZyneFrame(wx.Frame):
             self.serverPanel.midiLearn(True)
             vars.vars["MIDILEARN"] = True
             item.Check(True)
+        wx.GetTopLevelWindows()[0].Raise()
 
     def onMidiLearnMode(self, evt):
+        if self.serverPanel.onOff.GetValue():
+            return
         if evt.GetInt():
             self.serverPanel.midiLearn(True)
             vars.vars["MIDILEARN"] = True
         else:
             self.serverPanel.midiLearn(False)
             vars.vars["MIDILEARN"] = False
+        wx.GetTopLevelWindows()[0].Raise()
 
     def onPreferences(self, evt):
         dlg = PreferencesDialog()
         dlg.ShowModal()
         dlg.Destroy()
+        wx.GetTopLevelWindows()[0].Raise()
 
     def updateLastSavedInPreferencesFile(self, path):
         preffile = os.path.join(os.path.expanduser("~"), vars.constants["PREF_FILE_NAME"])
@@ -534,16 +542,22 @@ class ZyneFrame(wx.Frame):
         sys.exit()
 
     def onNew(self, evt):
+        if self.serverPanel.onOff.GetValue():
+            return
         self.deleteAllModules()
         self.openedFile = ""
         self.setServerPanelFooter("")
         self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - Untitled")
+        wx.GetTopLevelWindows()[0].Raise()
 
     def onSave(self, evt):
         if self.openedFile != "":
             self.savefile(self.openedFile)
         else:
             self.onSaveAs(evt)
+        wx.GetTopLevelWindows()[0].Raise()
+        if vars.vars["VIRTUAL"]:
+            wx.CallAfter(self.keyboard.SetFocus)
 
     def onSaveAs(self, evt):
         if self.openedFile != "":
@@ -556,8 +570,13 @@ class ZyneFrame(wx.Frame):
             if path != "":
                 self.savefile(path)
         dlg.Destroy()
+        wx.GetTopLevelWindows()[0].Raise()
+        if vars.vars["VIRTUAL"]:
+            wx.CallAfter(self.keyboard.SetFocus)
 
     def onOpen(self, evt):
+        if self.serverPanel.onOff.GetValue():
+            return
         wildcard = "Zyne files (*.zy)|*.zy"
         dlg = wx.FileDialog(self, "Choose Zyne Synth file...", wildcard=wildcard, style=wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
@@ -565,10 +584,13 @@ class ZyneFrame(wx.Frame):
             if path != "":
                 self.openfile(path)
         dlg.Destroy()
+        wx.GetTopLevelWindows()[0].Raise()
         if vars.vars["VIRTUAL"]:
             wx.CallAfter(self.keyboard.SetFocus)
 
     def onExport(self, evt):
+        if self.serverPanel.onOff.GetValue():
+            return
         if evt.GetId() == vars.constants["ID"]["Export"]:
             mode = "Samples"
             title = "Export samples..."

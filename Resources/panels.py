@@ -184,7 +184,7 @@ class HelpFrame(wx.Frame):
 
 class LFOFrame(wx.Frame):
     def __init__(self, parent, synth, label, which, module):
-        wx.Frame.__init__(self, parent, -1, style=wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE)
+        wx.Frame.__init__(self, parent, -1, style=wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE | wx.FRAME_TOOL_WINDOW)
         self.parent = parent
         self.module = module
         self.SetSize(self.FromDIP(wx.Size(228,278)))
@@ -711,7 +711,7 @@ class ServerPanel(wx.Panel):
                 popup.Disable()
             for menuId in self.menuIds:
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
-                if menuItem != None:
+                if menuItem is not None:
                     menuItem.Enable(False)
             for module in modules:
                 synth = module.cbChannel.Enable(False)
@@ -723,7 +723,7 @@ class ServerPanel(wx.Panel):
                     popup.Enable()
             for menuId in self.menuIds:
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
-                if menuItem != None:
+                if menuItem is not None:
                     menuItem.Enable(True)
             for module in modules:
                 synth = module.cbChannel.Enable(True)
