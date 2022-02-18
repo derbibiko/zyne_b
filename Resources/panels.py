@@ -733,7 +733,16 @@ class ServerPanel(wx.Panel):
     def handleRec(self, evt):
         if evt.GetInt() == 1:
             ext = self.getExtensionFromFileFormat()
-            path = os.path.join(os.path.expanduser("~"), "Desktop", "zyne_live_rec.%s" % ext)
+            path = os.path.join(os.path.expanduser("~"), "Desktop", f"zyne_live_rec.{ext}")
+            if os.path.isfile(path):
+                for i in range(1, 1000):
+                    path = os.path.join(os.path.expanduser("~"), "Desktop", f"zyne_live_rec_{i}.{ext}")
+                    if not os.path.isfile(path):
+                        break
+                else:
+                    self.rec.SetValue(0)
+                    wx.MessageBox("Could not generate a new file name for recording")
+                    return
             self.setRecordOptions(dur=-1, filename=path)
             self.fsserver.recstart()
         else:
