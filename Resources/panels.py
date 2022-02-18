@@ -124,6 +124,7 @@ class MyFileDropTarget(wx.FileDropTarget):
     
     def OnDropFiles(self, x, y, filename):
         self.window.GetTopLevelParent().openfile(filename[0])
+        return True
 
 
 class HelpFrame(wx.Frame):

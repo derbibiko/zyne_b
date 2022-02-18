@@ -360,6 +360,8 @@ class ZyneFrame(wx.Frame):
             evt.SetInt(1)
             self.serverPanel.onOff.SetValue(True)
         self.serverPanel.onOff.ProcessWindowEvent(evt)
+        if vars.vars["VIRTUAL"]:
+            wx.CallAfter(self.keyboard.SetFocus)
 
     def onGenerateValues(self, evt):
         id = evt.GetId() - 10000
@@ -479,7 +481,8 @@ class ZyneFrame(wx.Frame):
         evt.Skip()
 
     def OnActivate(self, evt):
-        wx.CallAfter(self.keyboard.SetFocus)
+        if vars.vars["VIRTUAL"]:
+            wx.CallAfter(self.keyboard.SetFocus)
 
     def onMidiLearnModeFromLfoFrame(self):
         item = self.fileMenu.FindItemById(vars.constants["ID"]["MidiLearn"])
@@ -562,6 +565,8 @@ class ZyneFrame(wx.Frame):
             if path != "":
                 self.openfile(path)
         dlg.Destroy()
+        if vars.vars["VIRTUAL"]:
+            wx.CallAfter(self.keyboard.SetFocus)
 
     def onExport(self, evt):
         if evt.GetId() == vars.constants["ID"]["Export"]:
@@ -741,7 +746,7 @@ class ZyneFrame(wx.Frame):
         with open(filename, "w") as f:
             f.write(json.dumps(dic))
         self.openedFile = filename
-        self.SetTitle(f"{vars.constants['WIN_TITLE']} - " + os.path.split(filename)[1])
+        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
         self.setServerPanelFooter()
         self.updateLastSavedInPreferencesFile(filename)
 
@@ -805,7 +810,6 @@ class ZyneFrame(wx.Frame):
         self.modules.remove(module)
         self.refreshOutputSignal()
         wx.CallAfter(self.OnSize, wx.CommandEvent())
-        # self.refresh()
 
     def deleteAllModules(self):
         for module in self.modules:
@@ -819,7 +823,6 @@ class ZyneFrame(wx.Frame):
         self.refreshOutputSignal()
         self.serverPanel.resetVirtualKeyboard()
         wx.CallAfter(self.OnSize, wx.CommandEvent())
-        # self.refresh()
 
     def refreshOutputSignal(self):
         if len(self.modules) == 0:
