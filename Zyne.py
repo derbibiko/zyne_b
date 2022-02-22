@@ -329,7 +329,9 @@ class ZyneFrame(wx.Frame):
             params = [slider.GetValue() for slider in module.sliders]
             lfo_params = module.getLFOParams()
             dic = MODULES[name]
-            self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"], dic["p1"], dic["p2"], dic["p3"]))
+            titleDic = dic.get("slider_title_dicts", None)
+            self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
+                                             dic["p1"], dic["p2"], dic["p3"], titleDic))
             self.addModule(self.modules[-1])
             self.modules[-1].setMute(mute)
             for j, param in enumerate(params):
@@ -720,10 +722,14 @@ class ZyneFrame(wx.Frame):
     def setModulesAndParams(self, modules, params, lfo_params, ctl_params, from_export=False):
         for name, mute in modules:
             dic = MODULES[name]
-            self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"], dic["p1"], dic["p2"], dic["p3"]))
+            titleDic = dic.get("slider_title_dicts", None)
+            self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
+                                             dic["p1"], dic["p2"], dic["p3"], titleDic))
             self.addModule(self.modules[-1])
             self.modules[-1].setMute(mute)
         for i, paramset in enumerate(params):
+            if len(paramset) == 10:  # old zy
+                paramset = paramset[:5] + [1.] + paramset[5:]
             for j, param in enumerate(paramset):
                 slider = self.modules[i].sliders[j]
                 slider.SetValue(param)
@@ -820,7 +826,9 @@ class ZyneFrame(wx.Frame):
     def onAddModule(self, evt):
         name = self.moduleNames[evt.GetId()-vars.constants["ID"]["Modules"]]
         dic = MODULES[name]
-        self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"], dic["p1"], dic["p2"], dic["p3"]))
+        titleDic = dic.get("slider_title_dicts", None)
+        self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
+                                         dic["p1"], dic["p2"], dic["p3"], titleDic))
         self.addModule(self.modules[-1])
         wx.CallAfter(self.SetFocus)
 

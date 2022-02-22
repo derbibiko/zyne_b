@@ -314,17 +314,22 @@ class ZB_Base_Control(wx.Panel):
         self.clampPos()
         self.Refresh()
 
+    def SetLabel(self, label):
+        self.label = label
+
 
 class ZB_ControlSlider(ZB_Base_Control):
     def __init__(self, parent, minvalue, maxvalue, init=None,
-                 pos=(0, 0), size=(200, 16),
+                 pos=(0, 0), size=(-1, -1),
                  log=False, integer=False, powoftwo=False,
                  outFunction=None, label="", orient=wx.HORIZONTAL):
 
         self.orient = orient
 
-        if size == (200, 16) and self.orient == wx.VERTICAL:
-            size = (40, 200)
+        if self.orient == wx.VERTICAL:
+            size = (40, -1)
+        else:
+            size = (-1, 16)
         if self.orient == wx.VERTICAL:
             self.knobSize = 17
             self.knobHalfSize = 8
@@ -549,11 +554,11 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(200, 16),
                  log=False, integer=False, powoftwo=False,
-                 outFunction=None, label=""):
+                 outFunction=None, label="", orient=wx.HORIZONTAL):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos, size,
                          log, integer, powoftwo,
-                         outFunction, label=label)
+                         outFunction, label=label, orient=orient)
         self.parent = parent
 
     def setValue(self, x):
@@ -1008,8 +1013,8 @@ class ZB_Keyboard_Control(wx.Panel):
         self.octaveText.SetFont(font)
         scBox.Add(self.octaveText, 0, wx.LEFT, 4)
         self.cbOctave = wx.ComboBox(self, value="0", size=popsize,
-                                     choices=list(map(str, range(-3, 5))),
-                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
+                                    choices=list(map(str, range(-3, 5))),
+                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.cbOctave.SetFont(font)
         self.cbOctave.Bind(wx.EVT_COMBOBOX, self.changeOctave)
         scBox.Add(self.cbOctave, 0, wx.EXPAND | wx.ALL, 2)
@@ -1113,7 +1118,7 @@ class ZB_Keyboard(wx.Panel):
         self.keymap = {
             90: 36,
             83: 37,
-            88: 38, #  X
+            88: 38,  # X
             68: 39,
             67: 40,
             86: 41,
@@ -1128,7 +1133,7 @@ class ZB_Keyboard(wx.Panel):
             46: 50,
             59: 51,
             47: 52,
-            81: 60, #  Q
+            81: 60,  # Q
             50: 61,
             87: 62,
             51: 63,
@@ -1196,7 +1201,7 @@ class ZB_Keyboard(wx.Panel):
         self.whiteKeys = [wx.Rect(i * w1, 0, w11, h1) for i in range(num)]
         self.blackKeys = []
         for i in range(int(num / 7) + 1):
-            off =  off_start + w1 * 7 * i
+            off = off_start + w1 * 7 * i
             self.blackKeys.append(wx.Rect(off, 0, w2, height2))
             off += w1
             self.blackKeys.append(wx.Rect(off, 0, w2, height2))

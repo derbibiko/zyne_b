@@ -41,6 +41,7 @@ class FSServer:
             vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(ctlnum)
             vars.vars["LEARNINGSLIDER"].Enable()
             vars.vars["LEARNINGSLIDER"] = None
+            self.scan.reset()
 
     def startMidiLearn(self):
         self.shutdown()
@@ -49,6 +50,7 @@ class FSServer:
         self.start()
 
     def stopMidiLearn(self):
+        self.scan.reset()
         delattr(self, 'scan')
         self.stop()
         if vars.vars["LEARNINGSLIDER"] is not None:
@@ -304,6 +306,7 @@ class CtlBind:
             del self.lfo_trigFunc_2
         if hasattr(self, "lfo_trigFunc_3"):
             del self.lfo_trigFunc_3
+
 
 class LFOSynth(CtlBind):
     def __init__(self, rng, trigger, midi_metro, lfo_config=None):

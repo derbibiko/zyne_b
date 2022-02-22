@@ -21,97 +21,101 @@ WAVE_TITLES = {0: "Sine", 1: "Ramp", 2: "Sawtooth", 3: "Square", 4: "Triangle",
 
 # Param values are: init, min, max, is_int, is_log
 MODULES = {
-            "FM": { "title": "Frequency Modulation", "synth": FmSynth, 
+            "FM": { "title": "Frequency Modulation", "synth": FmSynth,
                     "p1": ["FM Ratio", 2, 1, 12, False, False],
                     "p2": ["FM Index", 5, 0, 40, False, False],
                     "p3": ["Lowpass Cutoff", 2000, 100, 18000, False, True],
                     },
-            "Additive": { "title": "Additive Synthesis", "synth": AddSynth, 
+            "Additive": { "title": "Additive Synthesis", "synth": AddSynth,
                     "p1": ["Transposition", 0, -36, 36, True, False],
                     "p2": ["Spread", 1, 0.001, 2, False, True],
                     "p3": ["Feedback", 0, 0, 1, False, False]
                     },
-            "Wind": { "title": "Wind Synthesis", "synth": WindSynth, 
+            "Wind": { "title": "Wind Synthesis", "synth": WindSynth,
                     "p1": ["Rand frequency", 1, 0.01, 20, False, True],
                     "p2": ["Rand Depth", .1, .001, .25, False, False],
                     "p3": ["Filter Q", 5, 1, 20, False, False]
                     },
-            "SquareMod": { "title": "Square Modulation", "synth": SquareMod, 
+            "SquareMod": { "title": "Square Modulation", "synth": SquareMod,
                     "p1": ["Harmonics", 10, 1, 40, True, False],
                     "p2": ["LFO Frequency", 1, .001, 20, False, False],
                     "p3": ["LFO Amplitude", 1, 0, 1, False, False]
                     },
-            "SawMod": { "title": "Sawtooth Modulation", "synth": SawMod, 
+            "SawMod": { "title": "Sawtooth Modulation", "synth": SawMod,
                     "p1": ["Harmonics", 10, 1, 40, True, False],
                     "p2": ["LFO Frequency", 1, .001, 20, False, False],
                     "p3": ["LFO Amplitude", 1, 0, 1, False, False]
                     },
-            "Pulsar": { "title": "Pulsar Synthesis", "synth": PulsarSynth, 
+            "Pulsar": { "title": "Pulsar Synthesis", "synth": PulsarSynth,
                     "p1": ["Harmonics", 10, 1, 20, True, False],
                     "p2": ["Transposition", 0, -36, 36, True, False],
                     "p3": ["LFO Frequency", 1, .02, 200, False, True],
                     },
-            "Ross": { "title": "Rossler Attractors", "synth": Ross, 
+            "Ross": { "title": "Rossler Attractors", "synth": Ross,
                     "p1": ["Chaos", 0.5, 0., 1., False, False],
                     "p2": ["Chorus Depth", .001, .001, .125, False, True],
                     "p3": ["Lowpass Cutoff", 5000, 100, 15000, False, True]
                     },
-            "Wave": { "title": "Waveform Synthesis", "synth": Wave, 
+            "Wave": { "title": "Waveform Synthesis", "synth": Wave,
                     "p1": ["Waveform", 0, 0, 7, True, False],
                     "p2": ["Transposition", 0, -36, 36, True, False],
                     "p3": ["Sharpness", 0.5, 0., 1., False, False],
+                    "slider_title_dicts": [
+                        {0: "Ramp (saw up)", 1: "Sawtooth", 2: "Square", 3: "Triangle",
+                         4: "Pulse", 5: "Bipolar pulse", 6: "Sample and Hold", 7: "Modulated sine"},
+                        None,
+                        None]
                     },
-            "PluckedString": { "title": "Plucked String Synth", "synth": PluckedString, 
+            "PluckedString": { "title": "Plucked String Synth", "synth": PluckedString,
                     "p1": ["Transposition", 0, -48, 0, True, False],
                     "p2": ["Duration", 30, .25, 60, False, False],
                     "p3": ["Chorus Depth", .001, .001, .125, False, True]
                     },
-            "Reson": { "title": "Resonators Synthesis", "synth": Reson, 
+            "Reson": { "title": "Resonators Synthesis", "synth": Reson,
                     "p1": ["Transposition", 0, -36, 36, True, False],
                     "p2": ["Chorus Depth", .001, .001, .125, False, True],
                     "p3": ["Lowpass Cutoff", 5000, 100, 10000, False, True]
                     },
-            "CrossFM": { "title": "Cross FM Modulation", "synth": CrossFmSynth, 
+            "CrossFM": { "title": "Cross FM Modulation", "synth": CrossFmSynth,
                     "p1": ["FM Ratio", 2, 1, 12, False, False],
                     "p2": ["FM Index 1", 2, 0, 40, False, False],
                     "p3": ["FM Index 2", 2, 0, 40, False, False],
                     },
-            "OTReson": { "title": "Out of tune Resonators", "synth": OTReson, 
+            "OTReson": { "title": "Out of tune Resonators", "synth": OTReson,
                     "p1": ["Transposition", 0, -36, 36, True, False],
                     "p2": ["Detune", .01, .0001, 1, False, True],
                     "p3": ["Lowpass Cutoff", 5000, 100, 10000, False, True]
                     },
-            "InfiniteRev": { "title": "Infinite Reverb", "synth": InfiniteRev, 
+            "InfiniteRev": { "title": "Infinite Reverb", "synth": InfiniteRev,
                     "p1": ["Transposition", 0, -36, 36, True, False],
                     "p2": ["Brightness", 5, 0, 100, True, False],
                     "p3": ["Lowpass Cutoff", 10000, 100, 15000, False, True]
                     },
-            "Degradation": { "title": "Wave Degradation", "synth": Degradation, 
+            "Degradation": { "title": "Wave Degradation", "synth": Degradation,
                     "p1": ["Bit Depth", 6, 2, 8, False, True],
                     "p2": ["SR Scale", .1, 0.001, .5, False, True],
                     "p3": ["Lowpass Cutoff", 10000, 100, 15000, False, True]
                     },
-            "PulseWidthMod": { "title": "Pulse Width Modulation", "synth": PulseWidthModulation, 
+            "PulseWidthMod": { "title": "Pulse Width Modulation", "synth": PulseWidthModulation,
                     "p1": ["Detune", 0, 0, 1, True, False],
                     "p2": ["Duty Cycle", 0.5, 0.01, 0.99, False, False],
                     "p3": ["Lowpass Cutoff", 10000, 100, 15000, False, True]
                    },
-            "VoltageControlledOsc": { "title": "Voltage Controlled Osc", "synth": VoltageControlledOsc, 
+            "VoltageControlledOsc": { "title": "Voltage Controlled Osc", "synth": VoltageControlledOsc,
                     "p1": ["Transposition", 0, -36, 36, True, False],
                     "p2": ["Shape", 0.5, 0, 1, False, False],
                     "p3": ["Lowpass Cutoff", 10000, 100, 15000, False, True]
                    },
 }
 
-LFO_CONFIG =    {
-                "p1": ["Speed", 4, .01, 1000, False, True],
-                "p2": ["Waveform", 0, 0, 7, True, False],
-                "p3": ["Jitter", 0, 0, 1, False, False],
-                "p4": ["Sharpness", 0.5, 0, 1, False, False],
-                }
+LFO_CONFIG = {"p1": ["Speed", 4, .01, 1000, False, True],
+              "p2": ["Waveform", 0, 0, 7, True, False],
+              "p3": ["Jitter", 0, 0, 1, False, False],
+              "p4": ["Sharpness", 0.5, 0, 1, False, False]}
 
-LFO_INIT = {"state": False, "params": [.001, .1, .7, 1, .1, 4, 0, 0, .5], 
-            "ctl_params": [None, None, None, None, None, None, None, None, None], "shown": False}
+LFO_INIT = {"state": False, "params": [.001, .1, .7, 1, 1, .1, 4, 0, 0, .5],
+            "ctl_params": [None, None, None, None, None, None, None, None, None, None], "shown": False}
+
 
 def get_lfo_init():
     return copy.deepcopy(LFO_INIT)
@@ -121,7 +125,7 @@ class MyFileDropTarget(wx.FileDropTarget):
     def __init__(self, window):
         wx.FileDropTarget.__init__(self)
         self.window = window
-    
+
     def OnDropFiles(self, x, y, filename):
         self.window.GetTopLevelParent().openfile(filename[0])
         return True
@@ -143,7 +147,7 @@ class HelpFrame(wx.Frame):
             self.menubar.Append(self.fileMenu, "&Help")
         self.SetMenuBar(self.menubar)
 
-        self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL|wx.HSCROLL|wx.RAISED_BORDER)
+        self.rtc = rt.RichTextCtrl(self, style=wx.VSCROLL | wx.HSCROLL | wx.RAISED_BORDER)
         self.rtc.SetEditable(False)
 
         caret = self.rtc.GetCaret()
@@ -187,7 +191,6 @@ class LFOFrame(wx.Frame):
         wx.Frame.__init__(self, parent, -1, style=wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE | wx.FRAME_TOOL_WINDOW)
         self.parent = parent
         self.module = module
-        self.SetSize(self.FromDIP(wx.Size(228,278)))
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.SetForegroundColour(vars.constants["FORECOLOUR"])
 
@@ -199,7 +202,7 @@ class LFOFrame(wx.Frame):
                 (wx.ACCEL_CTRL, ord("N"), vars.constants["ID"]["New"]),
                 (wx.ACCEL_CTRL, ord("O"), vars.constants["ID"]["Open"]),
                 (wx.ACCEL_CTRL, ord("S"), vars.constants["ID"]["Save"]),
-                (wx.ACCEL_CTRL|wx.ACCEL_SHIFT, ord("S"), vars.constants["ID"]["SaveAs"]),
+                (wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord("S"), vars.constants["ID"]["SaveAs"]),
                 (wx.ACCEL_CTRL, ord("E"), vars.constants["ID"]["Export"]),
                 (wx.ACCEL_CTRL, ord("M"), vars.constants["ID"]["MidiLearn"]),
                 (wx.ACCEL_CTRL, ord(","), vars.constants["ID"]["Prefs"]),
@@ -220,16 +223,17 @@ class LFOFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.parent.onGenerateValues, id=vars.constants["ID"]["Uniform"], id2=vars.constants["ID"]["Jitter"])
         self.Bind(wx.EVT_MENU, self.parent.onQuit, id=vars.constants["ID"]["Quit"])
         self.Bind(wx.EVT_MENU, self.onClose, id=vars.constants["ID"]["CloseLFO"])
-        self.mouseOffset = (0,0)
+        self.mouseOffset = (0, 0)
         self.which = which
         self.panel = LFOPanel(self, "LFO", f"{label} LFO", synth,
                               LFO_CONFIG["p1"], LFO_CONFIG["p2"], LFO_CONFIG["p3"], LFO_CONFIG["p4"], which)
         self.panel.title.Bind(wx.EVT_LEFT_DOWN, self.onMouseDown)
         self.panel.title.Bind(wx.EVT_LEFT_UP, self.onMouseUp)
         self.panel.title.Bind(wx.EVT_MOTION, self.onMotion)
-        self.panel.SetPosition((0, 0))
-        self.panel.SetSize(self.GetSize())
         self.synth = synth
+        self.SetSize(self.FromDIP(wx.Size(267, 350)))
+        self.SetMaxSize(self.GetSize())
+        self.Layout()
 
     def onClose(self, evt):
         self.Hide()
@@ -244,21 +248,21 @@ class LFOFrame(wx.Frame):
         self.panel.title.CaptureMouse()
 
     def onMouseUp(self, evt):
-        self.mouseOffset = (0,0)
+        self.mouseOffset = (0, 0)
         if self.panel.title.HasCapture():
             self.panel.title.ReleaseMouse()
         wx.GetTopLevelWindows()[0].Raise()
 
     def onMotion(self, evt):
         if self.panel.title.HasCapture():
-            pos =  wx.GetMousePosition()
-            self.SetPosition((pos[0]-self.mouseOffset[0], pos[1]-self.mouseOffset[1]))
+            pos = wx.GetMousePosition()
+            self.SetPosition((pos[0] - self.mouseOffset[0], pos[1] - self.mouseOffset[1]))
 
     def get(self):
         params = [slider.GetValue() for slider in self.panel.sliders]
         ctl_params = [slider.midictlnumber for slider in self.panel.sliders]
         return params, ctl_params
-    
+
     def set(self, params, ctl_params):
         for i, p in enumerate(params):
             slider = self.panel.sliders[i]
@@ -288,7 +292,6 @@ class LFOFrame(wx.Frame):
 class LFOButtons(wx.StaticText):
     def __init__(self, parent, label="LFO", synth=None, which=0, callback=None):
         wx.StaticText.__init__(self, parent, -1, label=label, style=wx.ALIGN_CENTRE)
-        self.SetSize(self.FromDIP(self.GetSize()))
         self.parent = parent
         self.synth = synth
         self.which = which
@@ -303,11 +306,9 @@ class LFOButtons(wx.StaticText):
         self.font.SetFamily(wx.FONTFAMILY_TELETYPE)
         if not vars.constants["IS_WIN"]:
             self.font.SetWeight(wx.FONTWEIGHT_BOLD)
-            
-        if not vars.constants["IS_MAC"]:
-            self.font.SetPointSize(psize-3)
-        else:
-            self.font.SetPointSize(psize-3)
+
+        if vars.constants["IS_MAC"]:
+            self.font.SetPointSize(psize - 3)
         self.SetFont(self.font)
 
         self.Bind(wx.EVT_ENTER_WINDOW, self.hover)
@@ -335,7 +336,7 @@ class LFOButtons(wx.StaticText):
             self.SetForegroundColour(vars.constants["BACKCOLOUR"])
             self.SetBackgroundColour(self.onStateBackColour)
         wx.CallAfter(self.Refresh)
-    
+
     def leave(self, evt):
         if self.state:
             self.SetForegroundColour(wx.WHITE)
@@ -369,7 +370,7 @@ class ServerPanel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent, style=wx.BORDER_NONE)
         self.parent = parent
-        self.SetSize(self.FromDIP(wx.Size(230,500)))
+        self.SetSize(self.FromDIP(wx.Size(230, 500)))
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.SetForegroundColour(vars.constants["FORECOLOUR"])
         self.fileformat = vars.vars["FORMAT"]
@@ -456,7 +457,7 @@ class ServerPanel(wx.Panel):
                 interfacename = self.interfaceList[self.defaultInterface]
                 self.popupInterface.SetStringSelection(interfacename)
                 self.selected_midi_interface_name = interfacename
-        else:    
+        else:
             self.popupInterface = wx.Choice(self, id=-1, choices=["No interface", "Virtual Keyboard"], size=popsize)
             self.popupInterface.SetSelection(1)
             wx.CallAfter(self.prepareForVirtualKeyboard)
@@ -468,7 +469,7 @@ class ServerPanel(wx.Panel):
         srBox = wx.BoxSizer(wx.VERTICAL)
         self.srText = wx.StaticText(self, id=-1, label="Sample Rate")
         srBox.Add(self.srText, 0, wx.TOP | wx.LEFT, 4)
-        self.popupSr = wx.Choice(self, id=-1, choices=["44100","48000","96000"], size=popsize)
+        self.popupSr = wx.Choice(self, id=-1, choices=["44100", "48000", "96000"], size=popsize)
         srBox.Add(self.popupSr, 0, wx.EXPAND | wx.ALL, 2)
         self.popupSr.SetStringSelection(str(vars.vars["SR"]))
         self.serverSettings.append(self.popupSr.GetSelection())
@@ -476,7 +477,7 @@ class ServerPanel(wx.Panel):
         polyBox = wx.BoxSizer(wx.VERTICAL)
         self.polyText = wx.StaticText(self, id=-1, label="Polyphony")
         polyBox.Add(self.polyText, 0, wx.TOP | wx.LEFT, 4)
-        self.popupPoly = wx.Choice(self, id=-1, choices=[str(i) for i in range(1,21)], size=popsize)
+        self.popupPoly = wx.Choice(self, id=-1, choices=[str(i) for i in range(1, 21)], size=popsize)
         polyBox.Add(self.popupPoly, 0, wx.EXPAND | wx.ALL, 2)
         self.popupPoly.SetStringSelection(str(vars.vars["POLY"]))
         self.serverSettings.append(self.popupPoly.GetSelection())
@@ -491,7 +492,7 @@ class ServerPanel(wx.Panel):
         bitBox = wx.BoxSizer(wx.VERTICAL)
         self.bitText = wx.StaticText(self, id=-1, label="Bits")
         bitBox.Add(self.bitText, 0, wx.TOP | wx.LEFT, 4)
-        self.popupBit = wx.Choice(self, id=-1, choices=["16","24","32"], size=popsize)
+        self.popupBit = wx.Choice(self, id=-1, choices=["16", "24", "32"], size=popsize)
         bitBox.Add(self.popupBit, 0, wx.EXPAND | wx.ALL, 2)
         self.popupBit.SetStringSelection(str(vars.vars["BITS"]))
         self.serverSettings.append(self.popupBit.GetSelection())
@@ -499,7 +500,7 @@ class ServerPanel(wx.Panel):
         formatBox = wx.BoxSizer(wx.VERTICAL)
         self.formatText = wx.StaticText(self, id=-1, label="Audio File Format")
         formatBox.Add(self.formatText, 0, wx.TOP | wx.LEFT, 4)
-        self.popupFormat = wx.Choice(self, id=-1, choices=["wav","aif"], size=popsize)
+        self.popupFormat = wx.Choice(self, id=-1, choices=["wav", "aif"], size=popsize)
         formatBox.Add(self.popupFormat, 0, wx.EXPAND | wx.ALL, 2)
         self.popupFormat.SetStringSelection(vars.vars["FORMAT"])
         self.serverSettings.append(self.popupFormat.GetSelection())
@@ -510,7 +511,7 @@ class ServerPanel(wx.Panel):
         self.mainBox.Add(row2Box, 0, wx.EXPAND | wx.TOP, 2)
 
         row3Box = wx.BoxSizer(wx.HORIZONTAL)
-            
+
         onBox = wx.BoxSizer(wx.VERTICAL)
         self.onOffText = wx.StaticText(self, id=-1, label="Audio")
         onBox.Add(self.onOffText, 0, wx.TOP | wx.LEFT, 4)
@@ -527,7 +528,7 @@ class ServerPanel(wx.Panel):
         row3Box.Add(onBox, 1)
         row3Box.Add(recBox, 1)
         self.mainBox.Add(row3Box, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 2)
-    
+
         self.textAmp = wx.StaticText(self, id=-1, label="Global Amplitude (dB)")
         self.mainBox.Add(self.textAmp, 0, wx.TOP | wx.LEFT, 4)
         self.sliderAmp = ZyneB_ControlSlider(self, -60, 18, 0, outFunction=self.changeAmp)
@@ -564,7 +565,7 @@ class ServerPanel(wx.Panel):
         eqGainBox.Add(self.knobEqA4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(eqGainBox, 0, wx.CENTER | wx.BOTTOM)
-    
+
         self.ppCompTitle = ZB_HeadTitle(self, "Dynamic Compressor", togcall=self.handleOnOffComp)
         self.onOffComp = self.ppCompTitle.toggle
         self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
@@ -582,7 +583,7 @@ class ServerPanel(wx.Panel):
         cpKnobBox.Add(self.knobComp4, 0, wx.LEFT | wx.RIGHT, 10)
 
         self.mainBox.Add(cpKnobBox, 0, wx.CENTER)
-    
+
         if not vars.constants["IS_WIN"]:
             # reduce font for OSX and linux display
             objs = [self.srText, self.popupSr, self.polyText, self.popupPoly, self.bitText,
@@ -614,19 +615,19 @@ class ServerPanel(wx.Panel):
 
     def start(self):
         self.fsserver.start()
-    
+
     def stop(self):
         self.fsserver.stop()
-    
+
     def shutdown(self):
         self.fsserver.shutdown()
-    
+
     def boot(self):
         self.fsserver.boot()
-    
+
     def setAmpCallable(self):
         self.fsserver.setAmpCallable(self.meter)
-    
+
     def setRecordOptions(self, dur, filename):
         fileformats = {"wav": 0, "aif": 1}
         if self.fileformat in fileformats:
@@ -639,7 +640,7 @@ class ServerPanel(wx.Panel):
         else:
             sampletype = self.sampletype
         self.fsserver.recordOptions(dur, filename, fileformat, sampletype)
-    
+
     def reinitServer(self, sliderport, audio, serverSettings, postProcSettings):
         vars.vars["SLIDERPORT"] = sliderport
         self.fsserver.shutdown()
@@ -656,12 +657,12 @@ class ServerPanel(wx.Panel):
 
     def getExtensionFromFileFormat(self):
         return {0: "wav", 1: "aif"}.get(self.fileformat, "wav")
-    
+
     def prepareForVirtualKeyboard(self):
         evt = wx.CommandEvent(wx.EVT_CHOICE.typeId, self.popupInterface.GetId())
         evt.SetString("Virtual Keyboard")
         self.changeInterface(evt)
-    
+
     def resetVirtualKeyboard(self, resetDisplay=True):
         if resetDisplay:
             self.keyboard.reset()
@@ -674,7 +675,7 @@ class ServerPanel(wx.Panel):
                     synth._trigamp[voice].setValue(0)
             self.virtualNotePressed = {}
         self.virtualvoice = 0
-    
+
     def retrigVirtualNotes(self):
         notes = self.keyboard.getCurrentNotes()
         self.resetVirtualKeyboard(resetDisplay=False)
@@ -747,15 +748,15 @@ class ServerPanel(wx.Panel):
             self.fsserver.recstart()
         else:
             self.fsserver.recstop()
-    
+
     def changeAmp(self, value):
         self.fsserver.setAmp(math.pow(10.0, float(value) * 0.05))
-    
+
     def getServerSettings(self):
         return [self.popupSr.GetSelection(), self.popupPoly.GetSelection(),
                 self.popupBit.GetSelection(), self.popupFormat.GetSelection(),
                 self.sliderAmp.GetValue()]
-    
+
     def getPostProcSettings(self):
         dic = {}
         dic["EQ"] = [self.onOffEq.GetValue(), self.knobEqF1.GetValue(),
@@ -766,7 +767,7 @@ class ServerPanel(wx.Panel):
                        self.knobComp2.GetValue(), self.knobComp3.GetValue(),
                        self.knobComp4.GetValue()]
         return dic
-    
+
     def setServerSettings(self, serverSettings):
         popups = [self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
         self.setPoly(serverSettings[1]+1)
@@ -780,12 +781,12 @@ class ServerPanel(wx.Panel):
         self.sliderAmp.SetValue(amp)
         self.sliderAmp.outFunction(amp)
         self.resetVirtualKeyboard()
-    
+
     def setPostProcSettings(self, postProcSettings):
         eq = postProcSettings["EQ"]
         comp = postProcSettings["Comp"]
         widgets = [self.onOffEq, self.knobEqF1, self.knobEqF2, self.knobEqF3,
-                    self.knobEqA1, self.knobEqA2, self.knobEqA3, self.knobEqA4]
+                   self.knobEqA1, self.knobEqA2, self.knobEqA3, self.knobEqA4]
         for i, widget in enumerate(widgets):
             if i == 0:
                 val = eq[i]
@@ -807,7 +808,7 @@ class ServerPanel(wx.Panel):
             else:
                 widget.SetValue(comp[i])
                 widget.outFunction(comp[i])
-        
+
     def setDriverSetting(self, func=None, val=0):
         mainframe = self.GetTopLevelParent()
         mainframe.panel.Freeze()
@@ -875,74 +876,77 @@ class ServerPanel(wx.Panel):
                 mainFrame.showKeyboard()
 
     def changeSr(self, evt):
-        if evt.GetInt() == 0: sr = 44100
-        elif evt.GetInt() == 1: sr = 48000
-        else: sr = 96000
+        if evt.GetInt() == 0:
+            sr = 44100
+        elif evt.GetInt() == 1:
+            sr = 48000
+        else:
+            sr = 96000
         self.setDriverSetting(self.fsserver.setSamplingRate, sr)
-    
+
     def setPoly(self, poly):
         vars.vars["POLY"] = poly
         self.keyboard.setPoly(poly)
-    
+
     def changePoly(self, evt):
         vars.vars["POLY"] = evt.GetInt() + 1
         self.keyboard.setPoly(vars.vars["POLY"])
         self.setDriverSetting()
-    
+
     def changeBit(self, evt):
         if evt.GetString():
             self.sampletype = int(evt.GetString())
-    
+
     def changeFormat(self, evt):
         self.fileformat = evt.GetInt()
-    
-    ### EQ controls ###
+
+    # EQ controls ###
     def handleOnOffEq(self, evt):
         if evt.GetInt() == 1:
             self.fsserver.onOffEq(1)
         else:
             self.fsserver.onOffEq(0)
-    
+
     def changeEqF1(self, x):
         self.fsserver.setEqFreq(0, x)
-    
+
     def changeEqF2(self, x):
         self.fsserver.setEqFreq(1, x)
-    
+
     def changeEqF3(self, x):
         self.fsserver.setEqFreq(2, x)
-    
+
     def changeEqA1(self, x):
         self.fsserver.setEqGain(0, math.pow(10.0, x * 0.05))
-    
+
     def changeEqA2(self, x):
         self.fsserver.setEqGain(1, math.pow(10.0, x * 0.05))
-    
+
     def changeEqA3(self, x):
         self.fsserver.setEqGain(2, math.pow(10.0, x * 0.05))
-    
+
     def changeEqA4(self, x):
         self.fsserver.setEqGain(3, math.pow(10.0, x * 0.05))
-    
-    ### Compressor controls ###
+
+    # Compressor controls ###
     def handleOnOffComp(self, evt):
         if evt.GetInt() == 1:
             self.fsserver.onOffComp(1)
         else:
             self.fsserver.onOffComp(0)
-    
+
     def changeComp1(self, x):
         self.fsserver.setCompParam("thresh", x)
-    
+
     def changeComp2(self, x):
         self.fsserver.setCompParam("ratio", x)
-    
+
     def changeComp3(self, x):
         self.fsserver.setCompParam("risetime", x)
-    
+
     def changeComp4(self, x):
         self.fsserver.setCompParam("falltime", x)
-    
+
     def midiLearn(self, state):
         mainFrame = self.GetTopLevelParent()
         learnColour = wx.Colour("#DEDEDE")
@@ -975,8 +979,6 @@ class BasePanel(wx.Panel):
     def __init__(self, parent, name, title, synth, p1, p2, p3, from_lfo=False):
         wx.Panel.__init__(self, parent, style=wx.BORDER_THEME)
         self.parent = parent
-        self.SetMaxSize(self.FromDIP(wx.Size((240, 320))))
-        self.SetMinSize(self.GetMaxSize())
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.SetForegroundColour(vars.constants["FORECOLOUR"])
         self.from_lfo = from_lfo
@@ -986,20 +988,39 @@ class BasePanel(wx.Panel):
         self.name = name
         self.title = title
 
+    def updateSliderTitle(self, idx, x):
+        if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
+            sep = "  -  "
+            prefix = self.labels[idx].GetLabel().split(sep)[0]
+            try:
+                t = self.slider_title_dicts[idx - 1][int(x)]
+                self.labels[idx].SetLabel(f"{prefix}{sep}{t}")
+            except Exception as e:
+                self.labels[idx].SetLabel(prefix)
+            wx.CallAfter(self.labels[idx].Refresh)
+
     def createAdsrKnobs(self):
-        self.knobSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.knobSizerTop = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
-        self.knobSizer.Add(self.knobDel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 1)
+        self.knobSizerTop.Add(self.knobDel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobAtt = ZyneB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
-        self.knobSizer.Add(self.knobAtt, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
+        self.knobSizerTop.Add(self.knobAtt, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobDec = ZyneB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
-        self.knobSizer.Add(self.knobDec, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
+        self.knobSizerTop.Add(self.knobDec, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobSus = ZyneB_ControlKnob(self, 0.001, 1.0, 0.7, label='Sustain', outFunction=self.changeSustain)
-        self.knobSizer.Add(self.knobSus, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
+        self.knobSizerTop.Add(self.knobSus, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobRel = ZyneB_ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
-        self.knobSizer.Add(self.knobRel, 0, wx.BOTTOM|wx.LEFT|wx.RIGHT, 0)
-        self.sizer.Add(self.knobSizer, 0, wx.ALIGN_CENTER, 0)
-        self.sliders.extend([self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel])
+        self.knobSizerTop.Add(self.knobRel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobExp = ZyneB_ControlKnob(self, 0.001, 3.0, 1.0, label='Exponent', outFunction=self.changeExponent)
+        self.knobSizerTop.Add(self.knobExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.sizer.Add(self.knobSizerTop, 0, wx.CENTER, 0)
+
+        self.knobSizerBottom = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.sizer.Add(self.knobSizerBottom, 0, wx.CENTER, 0)
+
+        self.sliders.extend(
+            [self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel, self.knobExp])
 
     def createTriggerSettings(self):
 
@@ -1011,7 +1032,6 @@ class BasePanel(wx.Panel):
         self.cbChannel.Bind(wx.EVT_COMBOBOX, self.changeChannel)
         self.triggerSizer.Add(self.cbChannel, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
 
-
         font, psize = self.cbChannel.GetFont(), self.cbChannel.GetFont().GetPointSize()
         font.SetPointSize(psize-2)
         if not vars.constants["IS_WIN"]:
@@ -1021,38 +1041,32 @@ class BasePanel(wx.Panel):
 
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
         height = 14 if vars.constants["IS_MAC"] else 16
-        text = wx.StaticText(self, id=-1, label=label, size=self.FromDIP(wx.Size(200, height)))
+        text = wx.StaticText(self, id=-1, label=label, size=self.FromDIP(wx.Size(-1, height)))
         self.labels.append(text)
         font, psize = text.GetFont(), text.GetFont().GetPointSize()
         if not vars.constants["IS_WIN"]:
             font.SetPointSize(psize-2)
-        else:
-            font.SetPointSize(psize)
         text.SetFont(font)
         self.sizer.Add(text, 0, wx.LEFT, self.FromDIP(5))
         self.sizer.AddSpacer(self.FromDIP(2))
+        hsizer = wx.FlexGridSizer(0, 2, 3, 3)
+        hsizer.AddGrowableCol(0)
+        slider = ZyneB_ControlSlider(self, minValue, maxValue, value, log=log,
+                                     integer=integer, outFunction=callback, label=label)
         if self.from_lfo or integer:
-            slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(212,16), log=log,
-                                         integer=integer, outFunction=callback, label=label)
-            self.sizer.Add(slider, 0, wx.CENTER | wx.ALL, 0)
+            hsizer.Add(slider, 0, wx.CENTER | wx.ALL | wx.EXPAND, 0)
         else:
-            hsizer = wx.BoxSizer(wx.HORIZONTAL)
-            slider = ZyneB_ControlSlider(self, minValue, maxValue, value, size=(195,16), log=log,
-                                         integer=integer, outFunction=callback, label=label)
             button = LFOButtons(self, synth=self.synth, which=i, callback=self.startLFO)
-            lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, f"{label}", i, self)
+            lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i, self)
             self.buttons[i] = button
             self.lfo_frames[i] = lfo_frame
-            hsizer.Add(slider, 0, wx.LEFT, 1)
-            if vars.constants["IS_WIN"]:
-                hsizer.Add(button, 0, wx.LEFT | wx.TOP, self.FromDIP(3))
-            else:
-                hsizer.Add(button, 0, wx.LEFT | wx.TOP, self.FromDIP(2))
-            self.sizer.Add(hsizer, 0, wx.LEFT | wx.RIGHT, 5)
+            hsizer.Add(slider, 0, wx.CENTER | wx.ALL | wx.EXPAND, 0)
+            hsizer.Add(button, 0, wx.TOP, self.FromDIP(3) if vars.constants["IS_MAC"] else self.FromDIP(1))
+        self.sizer.Add(hsizer, 0, wx.LEFT | wx.RIGHT | wx.EXPAND, 3)
         self.sizer.AddSpacer(2)
         self.sliders.append(slider)
         return slider
-    
+
     def hoverX(self, evt):
         self.close.SetBackgroundColour("#CCCCCC")
         self.Refresh()
@@ -1077,21 +1091,24 @@ class BasePanel(wx.Panel):
         for slider in self.sliders:
             slider.setBackgroundColour(col)
         for but in self.buttons:
-            if but != None:
+            if but is not None:
                 but.SetBackgroundColour(col)
         self.Refresh()
 
 
 class GenericPanel(BasePanel):
-    def __init__(self, parent, name, title, synth, p1, p2, p3):
+    def __init__(self, parent, name, title, synth, p1, p2, p3, slider_title_dicts=None):
         BasePanel.__init__(self, parent, name, title, synth, p1, p2, p3)
         self.parent = parent
-        self.name, self.synth = name, synth([p1,p2,p3])
+        self.name, self.synth = name, synth([p1, p2, p3])
         self.mute = 1
         self.lfo_sliders = [get_lfo_init(), get_lfo_init(), get_lfo_init(), get_lfo_init(), get_lfo_init()]
         self.buttons = [None, None, None, None, None]
         self.lfo_frames = [None, None, None, None, None]
         self.channel = 0
+
+        if slider_title_dicts is not None:
+            self.slider_title_dicts = slider_title_dicts
 
         self.headPanel = wx.Panel(self)
         self.headPanel.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
@@ -1140,27 +1157,27 @@ class GenericPanel(BasePanel):
             obj.SetFont(self.font)
             obj.SetForegroundColour(wx.WHITE)
 
-        self.sizer.AddSpacer(10)
+        self.sizer.AddSpacer(8)
 
         self.createAdsrKnobs()
 
-        self.sizer.AddSpacer(2)
+        self.sizer.AddSpacer(1)
 
         self.sliderAmp = self.createSlider("Amplitude", 1, 0.0001, 2, False, False, self.changeAmp, 0)
         self.tmp_amplitude = 1
 
         if p1[0] == "Transposition":
-            self.sliderTranspo = self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeTranspo, 1)
+            self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeTranspo, 1)
         else:
             self.sliderP1 = self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeP1, 1)
 
         if p2[0] == "Transposition":
-            self.sliderTranspo = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeTranspo, 2)
+            self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeTranspo, 2)
         else:
             self.sliderP2 = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeP2, 2)
 
         if p3[0] == "Transposition":
-            self.sliderTranspo = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeTranspo, 3)
+            self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeTranspo, 3)
         else:
             self.sliderP3 = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeP3, 3)
 
@@ -1174,7 +1191,8 @@ class GenericPanel(BasePanel):
         if not vars.constants["IS_MAC"]:
             self.sizer.AddSpacer(2)
 
-        self.SetSizerAndFit(self.sizer)
+        self.SetSizer(self.sizer)
+        self.Layout()
 
     def changeChannel(self, evt):
         ch = int(self.cbChannel.GetValue())
@@ -1182,14 +1200,17 @@ class GenericPanel(BasePanel):
         self.channel = ch
 
     def changeP1(self, x):
+        self.updateSliderTitle(1, x)
         self.synth.set(1, x)
-    
+
     def changeP2(self, x):
+        self.updateSliderTitle(2, x)
         self.synth.set(2, x)
-    
+
     def changeP3(self, x):
+        self.updateSliderTitle(3, x)
         self.synth.set(3, x)
-    
+
     def changeTranspo(self, x):
         self.synth._transpo.value = x
 
@@ -1207,6 +1228,9 @@ class GenericPanel(BasePanel):
 
     def changeRelease(self, x):
         self.synth.amp.release = x
+
+    def changeExponent(self, x):
+        self.synth.amp.setExp(float(x))
 
     def changeAmp(self, x):
         self.synth._rawamp.value = x
@@ -1252,18 +1276,18 @@ class GenericPanel(BasePanel):
         self.Refresh()
 
     def MouseDownInfo(self, evt):
-        if self.synth.__doc__ != None:
+        if self.synth.__doc__ is not None:
             if vars.constants["IS_LINUX"]:
                 size = (850, 600)
             else:
                 size = (850, 600)
             lines = self.synth.__doc__.splitlines(True)
-            win = HelpFrame(self.GetTopLevelParent(), -1, title="Module info", size=size, 
-                            subtitle="Info about %s module." % self.name, lines=lines)
+            win = HelpFrame(self.GetTopLevelParent(), -1, title="Module info", size=size,
+                            subtitle=f"Info about {self.name} module.", lines=lines)
             win.CenterOnParent()
             win.Show(True)
         else:
-            wx.LogMessage("No info for %s module." % self.name)
+            wx.LogMessage(f"No info for {self.name} module.")
 
     def setMute(self, mute):
         if mute == 2:
@@ -1287,11 +1311,11 @@ class GenericPanel(BasePanel):
             self.sliderAmp.Disable()
         self.mute = mute
         self.Refresh()
-    
+
     def getLFOParams(self):
         lfo_params = []
         for i in range(len(self.buttons)):
-            if self.buttons[i] == None:
+            if self.buttons[i] is None:
                 lfo_params.append(get_lfo_init())
             else:
                 if self.lfo_frames[i].IsShown():
@@ -1301,7 +1325,7 @@ class GenericPanel(BasePanel):
                 else:
                     shown = False
                 params, ctl_params = self.lfo_frames[i].get()
-                lfo_params.append({"state": self.buttons[i].state, "params": params, 
+                lfo_params.append({"state": self.buttons[i].state, "params": params,
                                    "ctl_params": ctl_params, "shown": shown})
         return lfo_params
 
@@ -1332,6 +1356,8 @@ class GenericPanel(BasePanel):
                     ctl_params = lfo_conf["ctl_params"]
                 else:
                     ctl_params = [None] * len(self.lfo_frames[i].panel.sliders)
+                if len(lfo_conf["params"]) == 10:  # old zy
+                    lfo_conf["params"] = lfo_conf["params"][:5] + [1.] + lfo_conf["params"][5:]
                 self.lfo_frames[i].set(lfo_conf["params"], ctl_params)
 
     def generateUniform(self):
@@ -1346,14 +1372,14 @@ class GenericPanel(BasePanel):
                 if i == 5:
                     val = random.uniform(.25, 1.5)
                 elif i in [1, 2, 4]:
-                    val = random.uniform(0.0, 4.0)                
+                    val = random.uniform(0.0, 4.0)
                 else:
                     val = random.uniform(mini, maxi)
             slider.SetValue(val)
             slider.outFunction(val)
         for i, button in enumerate(self.buttons):
-            if button != None:
-                state = random.choice([0,0,0,1])
+            if button is not None:
+                state = random.choice([0, 0, 0, 1])
                 button.setState(state)
                 button.Refresh()
                 if state == 1:
@@ -1371,7 +1397,7 @@ class GenericPanel(BasePanel):
                                 val *= (maxi - mini)
                                 val += mini
                             elif j in [1, 2, 4]:
-                                val = random.uniform(0.0, 4.0)                
+                                val = random.uniform(0.0, 4.0)
                             else:
                                 val = random.uniform(mini, maxi)
                         slider.SetValue(val)
@@ -1397,8 +1423,8 @@ class GenericPanel(BasePanel):
             slider.SetValue(val)
             slider.outFunction(val)
         for i, button in enumerate(self.buttons):
-            if button != None:
-                state = random.choice([0,0,0,1])
+            if button is not None:
+                state = random.choice([0, 0, 0, 1])
                 button.setState(state)
                 button.Refresh()
                 if state == 1:
@@ -1418,7 +1444,7 @@ class GenericPanel(BasePanel):
                                 val *= (maxi - mini)
                                 val += mini
                             elif j in [1, 2, 4]:
-                                val = random.triangular(0.0, 4.0)                
+                                val = random.triangular(0.0, 4.0)
                             else:
                                 val = random.triangular(mini, maxi)
                         slider.SetValue(val)
@@ -1442,8 +1468,8 @@ class GenericPanel(BasePanel):
             slider.SetValue(val)
             slider.outFunction(val)
         for i, button in enumerate(self.buttons):
-            if button != None:
-                state = random.choice([0,0,0,1])
+            if button is not None:
+                state = random.choice([0, 0, 0, 1])
                 button.setState(state)
                 button.Refresh()
                 if state == 1:
@@ -1476,12 +1502,14 @@ class GenericPanel(BasePanel):
             if not slider.integer:
                 off = random.uniform(.96, 1.04)
                 val = slider.GetValue() * off
-                if val < mini: val = mini
-                elif val > maxi: val = maxi 
+                if val < mini:
+                    val = mini
+                elif val > maxi:
+                    val = maxi
                 slider.SetValue(val)
                 slider.outFunction(val)
         for i, button in enumerate(self.buttons):
-            if button != None:
+            if button is not None:
                 if button.state:
                     for j, slider in enumerate(self.lfo_frames[i].panel.sliders):
                         if j == 0:
@@ -1491,13 +1519,17 @@ class GenericPanel(BasePanel):
                         if slider.integer:
                             off = random.randint(-1, 1)
                             val = slider.GetValue() + off
-                            if val < mini: val = mini
-                            elif val > maxi: val = maxi 
+                            if val < mini:
+                                val = mini
+                            elif val > maxi:
+                                val = maxi
                         else:
                             off = random.uniform(.95, 1.05)
                             val = slider.GetValue() * off
-                            if val < mini: val = mini
-                            elif val > maxi: val = maxi 
+                            if val < mini:
+                                val = mini
+                            elif val > maxi:
+                                val = maxi
                         slider.SetValue(val)
                         slider.outFunction(val)
 
@@ -1543,21 +1575,22 @@ class LFOPanel(BasePanel):
         if not vars.constants["IS_WIN"]:
             ptsize = self.font.GetPointSize()
             self.font.SetPointSize(ptsize - 2)
-        for obj in [self.close, self.title]:
+        for obj in [self.close, self.title, self.minfo]:
             obj.SetFont(self.font)
             obj.SetForegroundColour(wx.WHITE)
 
         self.createAdsrKnobs()
 
-        self.sizer.AddSpacer(2)
-        self.sliderAmp = self.createSlider("Amplitude", .1, 0, 1, False, False, self.changeAmp, -1)
+        self.sizer.AddSpacer(1)
 
+        self.sliderAmp = self.createSlider("Amplitude", .1, 0, 1, False, False, self.changeAmp, -1)
         self.sliderP1 = self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeP1)
         self.sliderP2 = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeP2)
         self.sliderP3 = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeP3)
         self.sliderP4 = self.createSlider(p4[0], p4[1], p4[2], p4[3], p4[4], p4[5], self.changeP4)
-        self.SetSizerAndFit(self.sizer, wx.CENTER)
 
+        self.SetSizer(self.sizer)
+        self.Layout()
 
     def hoverInfo(self, evt):
         self.minfo.SetBackgroundColour("#CCCCCC")
@@ -1601,7 +1634,7 @@ class LFOPanel(BasePanel):
             self.synth._params[self.which].setSharp(x)
         else:
             self.synth._params[self.which].lfo.setSharp(x)
-    
+
     def changeDelay(self, x):
         if self.which == 0:
             self.synth.amp.delay = x
@@ -1613,28 +1646,33 @@ class LFOPanel(BasePanel):
             self.synth.amp.attack = x
         else:
             self.synth._params[self.which].lfo.amp.attack = x
-    
+
     def changeDecay(self, x):
         if self.which == 0:
             self.synth.amp.decay = x
         else:
             self.synth._params[self.which].lfo.amp.decay = x
-    
+
     def changeSustain(self, x):
         if self.which == 0:
             self.synth.amp.sustain = x
         else:
             self.synth._params[self.which].lfo.amp.sustain = x
-    
+
     def changeRelease(self, x):
         if self.which == 0:
             self.synth.amp.release = x
         else:
             self.synth._params[self.which].lfo.amp.release = x
-    
+
+    def changeExponent(self, x):
+        if self.which == 0:
+            self.synth.amp.exp = float(x)
+        else:
+            self.synth._params[self.which].lfo.amp.exp = float(x)
+
     def changeAmp(self, x):
         if self.which == 0:
             self.synth._params[self.which].setAmp(x)
         else:
             self.synth._params[self.which].lfo.setAmp(x)
-
