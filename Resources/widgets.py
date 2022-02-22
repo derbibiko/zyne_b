@@ -743,7 +743,7 @@ class ZB_ControlKnob(ZB_Base_Control):
         lendy = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
 
         if vars.constants["IS_WIN"]:
-            dc.SetPen(wx.Pen(self.knobInnerColour, width=2, style=wx.SOLID))
+            dc.SetPen(wx.Pen(self.knobInnerColour, width=(4 - self.FromDIP(1)), style=wx.SOLID))
         else:
             dc.SetPen(wx.Pen(self.knobInnerColour, width=0, style=wx.SOLID))
         dc.SetBrush(wx.Brush(self.knobInnerColour, wx.SOLID))

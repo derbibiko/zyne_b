@@ -147,7 +147,7 @@ class SamplingDialog(wx.Dialog):
 
 
 class ZyneFrame(wx.Frame):
-    def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 660)):
+    def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 700)):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
 
         self.SetSize(self.FromDIP(self.GetSize()))

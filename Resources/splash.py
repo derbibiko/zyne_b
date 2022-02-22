@@ -55,7 +55,10 @@ class ZyneSplashScreen(wx.Frame):
         self.Center(wx.BOTH)
         if vars.constants["IS_WIN"]:
             # win draws a border around shaped bmp, that's why fake shaped frame
-            self.SetPosition(self.FromDIP(wx.Point(570, 170)))
+            if self.FromDIP(1) == 1:
+                self.SetPosition((590, 170))
+            else:
+                self.SetPosition(self.FromDIP(wx.Point(570, 170)))
 
         wx.CallAfter(self.Show)
 
