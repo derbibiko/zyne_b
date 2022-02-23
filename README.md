@@ -58,11 +58,6 @@ If building pyo fails one can try to install the original pyo package via
 
 `python3 Zyne.py`
 
-### Linux notes ###
-
-If Zyne.py cannot start due to audio settings it could be useful to install jackd2 and start it
-via `jack_control start` first (but do not use it). In addition to set the Sample Rate 48kHz could fix an issue as well.
-
 
 ### How to create a macos App ###
 

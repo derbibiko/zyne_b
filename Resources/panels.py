@@ -13,6 +13,9 @@ from Resources.widgets import *
 from Resources.utils import toLog
 import wx.richtext as rt
 
+# is used mainly for dragging the LFOFrame on Linux (?) and hovering on Windows (?)
+from wx.lib.stattext import GenStaticText
+
 HEADTITLE_BACK_COLOUR = "#9999A0"
 
 WAVE_TITLES = {0: "Sine", 1: "Ramp", 2: "Sawtooth", 3: "Square", 4: "Triangle",
@@ -289,9 +292,9 @@ class LFOFrame(wx.Frame):
                     slider_idx += 1
 
 
-class LFOButtons(wx.StaticText):
-    def __init__(self, parent, label="LFO", synth=None, which=0, callback=None):
-        wx.StaticText.__init__(self, parent, -1, label=label, style=wx.ALIGN_CENTRE)
+class LFOButton(GenStaticText):
+    def __init__(self, parent, label=" LFO ", synth=None, which=0, callback=None):
+        GenStaticText.__init__(self, parent, -1, label=label, style=wx.ALIGN_CENTRE | wx.ST_NO_AUTORESIZE)
         self.parent = parent
         self.synth = synth
         self.which = which
@@ -306,16 +309,15 @@ class LFOButtons(wx.StaticText):
         self.font.SetFamily(wx.FONTFAMILY_TELETYPE)
         if not vars.constants["IS_WIN"]:
             self.font.SetWeight(wx.FONTWEIGHT_BOLD)
-
-        if vars.constants["IS_MAC"]:
             self.font.SetPointSize(psize - 3)
+
         self.SetFont(self.font)
 
         self.Bind(wx.EVT_ENTER_WINDOW, self.hover)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.leave)
         self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.Bind(wx.EVT_RIGHT_DOWN, self.MouseRightDown)
-        self.SetToolTip(wx.ToolTip("Click to enable, Right+Click to open controls"))
+        self.SetToolTip(wx.ToolTip("Click to enable, Right-Click to open controls"))
 
     def setState(self, state):
         self.state = state
@@ -718,6 +720,8 @@ class ServerPanel(wx.Panel):
             for module in modules:
                 synth = module.cbChannel.Enable(False)
             self.fsserver.start()
+            if self.keyboardShown:
+                self.GetTopLevelParent().keyboard.SetFocus()
         else:
             self.fsserver.stop()
             for popup in self.popups:
@@ -1011,7 +1015,7 @@ class BasePanel(wx.Panel):
         self.knobSizerTop.Add(self.knobSus, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobRel = ZyneB_ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
         self.knobSizerTop.Add(self.knobRel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
-        self.knobExp = ZyneB_ControlKnob(self, 0.001, 3.0, 1.0, label='Exponent', outFunction=self.changeExponent)
+        self.knobExp = ZyneB_ControlKnob(self, 0.001, 3.0, 1.0, label='Slope', outFunction=self.changeExponent)
         self.knobSizerTop.Add(self.knobExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.sizer.Add(self.knobSizerTop, 0, wx.CENTER, 0)
 
@@ -1056,7 +1060,7 @@ class BasePanel(wx.Panel):
         if self.from_lfo or integer:
             hsizer.Add(slider, 0, wx.CENTER | wx.ALL | wx.EXPAND, 0)
         else:
-            button = LFOButtons(self, synth=self.synth, which=i, callback=self.startLFO)
+            button = LFOButton(self, synth=self.synth, which=i, callback=self.startLFO)
             lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i, self)
             self.buttons[i] = button
             self.lfo_frames[i] = lfo_frame
@@ -1116,13 +1120,19 @@ class GenericPanel(BasePanel):
         self.titleSizer = wx.FlexGridSizer(1, 4, 5, 5)
         self.titleSizer.AddGrowableCol(2)
 
-        self.close = wx.StaticText(self.headPanel, id=-1, label="X")
+        if vars.constants["IS_WIN"]:
+            self.close = wx.StaticText(self.headPanel, -1, label=" X ")
+        else:
+            self.close = GenStaticText(self.headPanel, -1, label=" X ")
         self.close.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
         self.close.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.close.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.close.SetToolTip(wx.ToolTip("Delete module"))
 
-        self.info = wx.StaticText(self.headPanel, id=-1, label=" ? ")
+        if vars.constants["IS_WIN"]:
+            self.info = wx.StaticText(self.headPanel, -1, label=" ? ")
+        else:
+            self.info = GenStaticText(self.headPanel, -1, label=" ? ")
         self.info.Bind(wx.EVT_ENTER_WINDOW, self.hoverInfo)
         self.info.Bind(wx.EVT_LEAVE_WINDOW, self.leaveInfo)
         self.info.Bind(wx.EVT_LEFT_DOWN, self.MouseDownInfo)
@@ -1134,7 +1144,11 @@ class GenericPanel(BasePanel):
             self.title = wx.StaticText(self.headPanel, id=-1, label=title[:23].strip() + '..')
             self.title.SetToolTip(wx.ToolTip(title))
 
-        self.corner = wx.StaticText(self.headPanel, id=-1, label=" M|S ")
+        if vars.constants["IS_WIN"]:
+            self.corner = wx.StaticText(self.headPanel, -1, label=" M|S ")
+        else:
+            self.corner = GenStaticText(self.headPanel, -1, label=" M|S ")
+        # self.corner = wx.StaticText(self.headPanel, id=-1, label=" M|S ")
         self.corner.SetToolTip(wx.ToolTip("Mute / Solo. Click to toggle mute, Right+Click to toggle solo"))
         self.corner.Bind(wx.EVT_LEFT_DOWN, self.MouseDownCorner)
         self.corner.Bind(wx.EVT_RIGHT_DOWN, self.MouseRightDownCorner)
@@ -1547,19 +1561,28 @@ class LFOPanel(BasePanel):
         self.titleSizer = wx.FlexGridSizer(1, 3, 5, 5)
         self.titleSizer.AddGrowableCol(1)
 
-        self.close = wx.StaticText(self.headPanel, -1, label="X")
+        if vars.constants["IS_WIN"]:
+            self.close = wx.StaticText(self.headPanel, -1, label=" X ")
+        else:
+            self.close = GenStaticText(self.headPanel, -1, label=" X ")
         self.close.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
         self.close.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.close.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
         self.close.SetToolTip(wx.ToolTip("Close window"))
 
-        self.minfo = wx.StaticText(self.headPanel, -1, label=" ? ")
+        if vars.constants["IS_WIN"]:
+            self.minfo = wx.StaticText(self.headPanel, -1, label=" ? ")
+        else:
+            self.minfo = GenStaticText(self.headPanel, -1, label=" ? ")
         self.minfo.Bind(wx.EVT_ENTER_WINDOW, self.hoverInfo)
         self.minfo.Bind(wx.EVT_LEAVE_WINDOW, self.leaveInfo)
         self.minfo.Bind(wx.EVT_LEFT_DOWN, self.MouseDownInfo)
         self.minfo.SetToolTip(wx.ToolTip("Click to highlight parent module"))
 
-        self.title = wx.StaticText(self.headPanel, -1, label=title)
+        if vars.constants["IS_WIN"]:
+            self.title = wx.StaticText(self.headPanel, -1, label=title)
+        else:
+            self.title = GenStaticText(self.headPanel, -1, label=title)
         self.title.SetToolTip(wx.ToolTip("Move window"))
 
         self.titleSizer.AddMany([
@@ -1676,3 +1699,8 @@ class LFOPanel(BasePanel):
             self.synth._params[self.which].setAmp(x)
         else:
             self.synth._params[self.which].lfo.setAmp(x)
+
+
+class GraphicalEnvelop(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent, style=wx.BORDER_NONE)

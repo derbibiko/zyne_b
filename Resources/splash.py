@@ -81,12 +81,18 @@ class ZyneSplashScreen(wx.Frame):
         font.SetPointSize(ptsize + 4)
         if vars.constants["IS_WIN"]:
             font.SetFaceName("Consolas")
-        else:
+        elif vars.constants["IS_MAC"]:
             font.SetFaceName("Monaco")
+        else:
+            font.SetFaceName("Monospace")
+
         dc.SetFont(font)
         dc.DrawLabel("Zyne_B", wx.Rect(self.FromDIP(50), self.FromDIP(230), self.FromDIP(400), self.FromDIP(18)), wx.ALIGN_LEFT)
         dc.DrawLabel("Modular Soft Synthesizer", wx.Rect(self.FromDIP(70), self.FromDIP(250), self.FromDIP(400), self.FromDIP(18)), wx.ALIGN_LEFT)
-        font.SetPointSize(ptsize + 1)
+        if vars.constants["IS_LINUX"]:
+            font.SetPointSize(ptsize - 1)
+        else:
+            font.SetPointSize(ptsize + 1)
         dc.SetFont(font)
         dc.DrawLabel("Olivier Bélanger (ajaxsoundstudio)",
                      wx.Rect(self.FromDIP(0), self.FromDIP(305), self.FromDIP(400), self.FromDIP(15)), wx.ALIGN_CENTER)

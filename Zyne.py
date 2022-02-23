@@ -160,6 +160,7 @@ class ZyneFrame(wx.Frame):
         self.selectionBackgroundColour = wx.Colour("#999999")
 
         self.menubar = wx.MenuBar()
+
         self.fileMenu = wx.Menu()
         self.fileMenu.Append(vars.constants["ID"]["New"], 'New...\tCtrl+N', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onNew, id=vars.constants["ID"]["New"])
@@ -202,7 +203,9 @@ class ZyneFrame(wx.Frame):
         self.fileMenu.Append(vars.constants["ID"]["Quit"], 'Quit\tCtrl+Q', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onQuit, id=vars.constants["ID"]["Quit"])
         self.addMenu = wx.Menu()
+
         self.buildAddModuleMenu()
+
         self.genMenu = wx.Menu()
         self.genMenu.Append(vars.constants["ID"]["Uniform"], 'Generate uniform random values\tCtrl+G', kind=wx.ITEM_NORMAL)
         self.genMenu.Append(vars.constants["ID"]["Triangular"], 'Generate triangular random values\tCtrl+K', kind=wx.ITEM_NORMAL)
@@ -281,7 +284,6 @@ class ZyneFrame(wx.Frame):
         self.splitWindow.Unsplit(None)
 
         self.Bind(wx.EVT_SIZE, self.OnSize)
-        self.Bind(wx.EVT_ACTIVATE, self.OnActivate)
 
         if vars.constants["IS_WIN"]:
             self.SetMinSize(wx.Size(self.FromDIP(510), self.keyboard_height + self.FromDIP(50)))
@@ -492,10 +494,6 @@ class ZyneFrame(wx.Frame):
         self.panel.SetupScrolling(scroll_x=False, scroll_y=True)
         self.splitWindow.SetSashPosition(self.keyboard_height * -1, False)
         evt.Skip()
-
-    def OnActivate(self, evt):
-        if vars.vars["VIRTUAL"]:
-            wx.CallAfter(self.keyboard.SetFocus)
 
     def onMidiLearnModeFromLfoFrame(self):
         if self.serverPanel.onOff.GetValue():
