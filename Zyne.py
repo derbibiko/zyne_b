@@ -10,7 +10,6 @@ import Resources.tutorial as tutorial
 import Resources.variables as vars
 import wx.richtext as rt
 import wx.lib.scrolledpanel as scrolled
-from Resources.audio import get_output_devices, get_midi_input_devices
 from Resources.panels import *
 from Resources.preferences import PreferencesDialog
 from Resources.splash import ZyneSplashScreen
@@ -147,7 +146,7 @@ class SamplingDialog(wx.Dialog):
 
 
 class ZyneFrame(wx.Frame):
-    def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 700)):
+    def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 800)):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
 
         self.SetSize(self.FromDIP(self.GetSize()))
@@ -393,7 +392,7 @@ class ZyneFrame(wx.Frame):
                 del MODULES[mod]
         items = self.addMenu.GetMenuItems()
         for item in items:
-            self.addMenu.DeleteItem(item)
+            self.addMenu.Delete(item)
         audio.checkForCustomModules()
         self.buildAddModuleMenu()
         modules, params, lfo_params, ctl_params = self.getModulesAndParams()
@@ -541,13 +540,14 @@ class ZyneFrame(wx.Frame):
                         f.write(line)
 
     def onQuit(self, evt):
+        vars.vars["MIDIPITCH"] = None
+        self.serverPanel.shutdown()
         try:
-            self.serverPanel.keyboardFrame.Destroy()
+            self.serverPanel.keyboard.Destroy()
         except Exception as e:
             pass
         for win in wx.GetTopLevelWindows():
             win.Destroy()
-        self.serverPanel.shutdown()
         self.Destroy()
         sys.exit()
 
@@ -703,7 +703,7 @@ class ZyneFrame(wx.Frame):
                         self.serverPanel.shutdown()
                         self.serverPanel.boot()
             dlg2.Destroy()
-            self.serverPanel.reinitServer(0.05, vars.vars["AUDIO_HOST"], serverSettings, postProcSettings)
+            self.serverPanel.reinitServer(vars["SLIDERPORT"], vars.vars["AUDIO_HOST"], serverSettings, postProcSettings)
             vars.vars["MIDIPITCH"] = None
             vars.vars["MIDIVELOCITY"] = 0.707
             self.serverPanel.setAmpCallable()
@@ -896,7 +896,7 @@ class ZyneFrame(wx.Frame):
 class ZyneApp(wx.App):
     def OnInit(self):
         self.frame = ZyneFrame(None)
-        self.frame.SetPosition((50, 50))
+        self.frame.SetPosition((50, 35))
         return True
 
     def MacOpenFile(self, filename):

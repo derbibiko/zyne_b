@@ -568,6 +568,26 @@ class ServerPanel(wx.Panel):
 
         self.mainBox.Add(eqGainBox, 0, wx.CENTER | wx.BOTTOM)
 
+        self.ppRevTitle = ZB_HeadTitle(self, "8 Delay Lines FDN Reverberation", togcall=self.handleOnOffRev)
+        self.onOffRev = self.ppRevTitle.toggle
+        self.mainBox.Add(self.ppRevTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
+
+        revBox = wx.BoxSizer(wx.HORIZONTAL)
+        self.knobRevBal = ZB_ControlKnob(self, 0, 1, .5, label='Dry/Wet', outFunction=self.changeRevBal)
+        revBox.Add(self.knobRevBal, 0, wx.LEFT | wx.RIGHT, 2)
+        self.knobRevRefGain = ZB_ControlKnob(self, -40, 18, -3, label='Ref.Gain', outFunction=self.changeRevRefGain)
+        revBox.Add(self.knobRevRefGain, 0, wx.LEFT | wx.RIGHT, 2)
+        self.knobRevInPos = ZB_ControlKnob(self, 0., 1., .5, label='L/R Mix', outFunction=self.changeRevInPos)
+        revBox.Add(self.knobRevInPos, 0, wx.LEFT | wx.RIGHT, 2)
+        self.knobRevTime = ZB_ControlKnob(self, 0.01, 10, 1, label='Time', outFunction=self.changeRevTime)
+        revBox.Add(self.knobRevTime, 0, wx.LEFT | wx.RIGHT, 2)
+        self.knobRevRoomSize = ZB_ControlKnob(self, 0.25, 4.0, 1, label='Size', outFunction=self.changeRevRoomSize)
+        revBox.Add(self.knobRevRoomSize, 0, wx.LEFT | wx.RIGHT, 2)
+        self.knobRevCutOff = ZB_ControlKnob(self, 100, 10000, 5000, label='Cutoff', outFunction=self.changeRevCutOff)
+        revBox.Add(self.knobRevCutOff, 0, wx.LEFT | wx.RIGHT, 2)
+
+        self.mainBox.Add(revBox, 0, wx.CENTER)
+
         self.ppCompTitle = ZB_HeadTitle(self, "Dynamic Compressor", togcall=self.handleOnOffComp)
         self.onOffComp = self.ppCompTitle.toggle
         self.mainBox.Add(self.ppCompTitle, 0, wx.EXPAND | wx.BOTTOM, 4)
@@ -608,7 +628,8 @@ class ServerPanel(wx.Panel):
         self.popups = [self.popupDriver, self.popupInterface, self.popupSr, self.popupPoly, self.popupBit, self.popupFormat]
         self.popupsLearn = self.popups + [self.onOff, self.rec]
         self.widgets = [self.knobEqF1, self.knobEqF2, self.knobEqF3, self.knobEqA1, self.knobEqA2,
-                        self.knobEqA3, self.knobEqA4, self.knobComp1, self.knobComp2, self.knobComp3, self.knobComp4]
+                        self.knobEqA3, self.knobEqA4, self.knobComp1, self.knobComp2, self.knobComp3, self.knobComp4,
+                        self.knobRevInPos, self.knobRevTime, self.knobRevCutOff, self.knobRevBal, self.knobRevRoomSize, self.knobRevRefGain]
 
         self.menuIds = [vars.constants["ID"]["New"], vars.constants["ID"]["Open"], vars.constants["ID"]["MidiLearn"],
                         vars.constants["ID"]["Export"], vars.constants["ID"]["ExportChord"], vars.constants["ID"]["ExportTracks"],
@@ -724,6 +745,7 @@ class ServerPanel(wx.Panel):
                 self.GetTopLevelParent().keyboard.SetFocus()
         else:
             self.fsserver.stop()
+            self.fsserver._stRev.reset()
             for popup in self.popups:
                 if popup != self.popupDriver or vars.vars["AUDIO_HOST"] != "Jack":
                     popup.Enable()
@@ -767,6 +789,9 @@ class ServerPanel(wx.Panel):
                      self.knobEqF2.GetValue(), self.knobEqF3.GetValue(),
                      self.knobEqA1.GetValue(), self.knobEqA2.GetValue(),
                      self.knobEqA3.GetValue(), self.knobEqA4.GetValue()]
+        dic["Rev"] = [self.onOffRev.GetValue(),
+            self.knobRevBal.GetValue(), self.knobRevRefGain.GetValue(), self.knobRevInPos.GetValue(),
+            self.knobRevTime.GetValue(), self.knobRevRoomSize.GetValue(), self.knobRevCutOff.GetValue()]
         dic["Comp"] = [self.onOffComp.GetValue(), self.knobComp1.GetValue(),
                        self.knobComp2.GetValue(), self.knobComp3.GetValue(),
                        self.knobComp4.GetValue()]
@@ -789,6 +814,8 @@ class ServerPanel(wx.Panel):
     def setPostProcSettings(self, postProcSettings):
         eq = postProcSettings["EQ"]
         comp = postProcSettings["Comp"]
+        rev = postProcSettings.get("Rev", [False, 0.5, -3.0, 0.5, 1.0, 1.0, 5000.0])
+
         widgets = [self.onOffEq, self.knobEqF1, self.knobEqF2, self.knobEqF3,
                    self.knobEqA1, self.knobEqA2, self.knobEqA3, self.knobEqA4]
         for i, widget in enumerate(widgets):
@@ -801,6 +828,20 @@ class ServerPanel(wx.Panel):
             else:
                 widget.SetValue(eq[i])
                 widget.outFunction(eq[i])
+
+        widgets = [self.onOffRev, self.knobRevBal, self.knobRevRefGain, self.knobRevInPos,
+                   self.knobRevTime, self.knobRevRoomSize, self.knobRevCutOff]
+        for i, widget in enumerate(widgets):
+            if i == 0:
+                val = rev[i]
+                widget.SetValue(val)
+                evt = wx.CommandEvent(wx.EVT_CHECKBOX.typeId, widget.GetId())
+                evt.SetInt(val)
+                widget.ProcessEvent(evt)
+            else:
+                widget.SetValue(rev[i])
+                widget.outFunction(rev[i])
+
         widgets = [self.onOffComp, self.knobComp1, self.knobComp2, self.knobComp3, self.knobComp4]
         for i, widget in enumerate(widgets):
             if i == 0:
@@ -931,6 +972,31 @@ class ServerPanel(wx.Panel):
 
     def changeEqA4(self, x):
         self.fsserver.setEqGain(3, math.pow(10.0, x * 0.05))
+
+    # Reverb controls ###
+    def handleOnOffRev(self, evt):
+        if evt.GetInt() == 1:
+            self.fsserver.onOffRev(1)
+        else:
+            self.fsserver.onOffRev(0)
+
+    def changeRevInPos(self, x):
+        self.fsserver.setRevParam("inpos", x)
+
+    def changeRevTime(self, x):
+        self.fsserver.setRevParam("time", x)
+
+    def changeRevCutOff(self, x):
+        self.fsserver.setRevParam("cutoff", x)
+
+    def changeRevBal(self, x):
+        self.fsserver.setRevParam("bal", x)
+
+    def changeRevRoomSize(self, x):
+        self.fsserver.setRevParam("size", x)
+
+    def changeRevRefGain(self, x):
+        self.fsserver.setRevParam("refgain", x)
 
     # Compressor controls ###
     def handleOnOffComp(self, evt):

@@ -19,10 +19,16 @@ from .pyotools import PWM, VCO
 
 def get_output_devices():
     return pa_get_output_devices()
+
+
 def get_default_output():
     return pa_get_default_output()
+
+
 def get_midi_input_devices():
     return pm_get_input_devices()
+
+
 def get_midi_default_input():
     return pm_get_default_input()
 
@@ -30,12 +36,13 @@ def get_midi_default_input():
 class FSServer:
     def __init__(self):
         self.eqOn = False
+        self.revOn = False
         self.compOn = False
         self.eqFreq = [100, 500, 2000]
         self.eqGain = [1, 1, 1, 1]
         self.server = Server(duplex=0, audio=vars.vars["AUDIO_HOST"].lower())
         self.boot()
-    
+
     def scanning(self, ctlnum, midichnl):
         if vars.vars["LEARNINGSLIDER"] is not None:
             vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(ctlnum)
@@ -51,15 +58,16 @@ class FSServer:
 
     def stopMidiLearn(self):
         self.scan.reset()
-        delattr(self, 'scan')
+        if hasattr(self, o):
+            delattr(self, 'scan')
         self.stop()
         if vars.vars["LEARNINGSLIDER"] is not None:
             vars.vars["LEARNINGSLIDER"].setMidiCtlNumber(None)
             vars.vars["LEARNINGSLIDER"].Enable()
             vars.vars["LEARNINGSLIDER"] = None
-        time.sleep(.25)
+        time.sleep(.025)
         self.start()
-    
+
     def start(self):
         self.server.start()
         while not self.server.getIsStarted:
@@ -69,81 +77,74 @@ class FSServer:
         self.server.stop()
 
     def shutdown(self):
-        del self._modMix, self._outSig, self._outSigMix, self._fbEqAmps, self._fbEq
-        del self._outEq, self._outEqMix, self._compLevel, self._compDelay, self._outComp
+        for o in ["_outComp", "_compLevel", "_compDelay", "_outRevMix", "_outRev", "_stRev",
+                  "_outEqMix", "_outEq", "_fbEq", "_fbEqAmps", "_outSigMix", "_outSig", "_modMix"]:
+            if hasattr(self, o):
+                delattr(self, o)
         self.server.shutdown()
 
     def boot(self):
         self.server.boot()
+
         while not self.server.getIsBooted:
             time.sleep(0.01)
-        self._modMix = Sig([0,0])
+
+        self._modMix = Sig([0, 0])
         self._outSig = Sig(self._modMix).out()
         self._outSigMix = self._outSig.mix(1)
-        
+
         self._fbEqAmps = SigTo(self.eqGain, time=.1, init=self.eqGain)
-        self._fbEq = FourBand(self._outSig, freq1=self.eqFreq[0], 
-                            freq2=self.eqFreq[1], freq3=self.eqFreq[2], mul=self._fbEqAmps).stop()
+        self._fbEq = FourBand(self._outSig,
+                              freq1=self.eqFreq[0], freq2=self.eqFreq[1],
+                              freq3=self.eqFreq[2], mul=self._fbEqAmps).stop()
         self._outEq = Mix(self._fbEq, voices=2).stop()
         self._outEqMix = self._outEq.mix(1)
-        
-        self._compLevel = Compress(self._outSigMix, thresh=-3, ratio=2, risetime=.01, 
-                                    falltime=.1, lookahead=0, knee=0.5, outputAmp=True).stop()
+
+        self._stRev = STRev(self._outSig, inpos=[0.0, 1.0], revtime=2,
+                            cutoff=5000, bal=0.25, roomSize=1).stop()
+        self._outRev = self._stRev.mix(2).stop()
+        self._outRevMix = self._outRev.mix(1)
+
+        self._compLevel = Compress(self._outSigMix, thresh=-3, ratio=2, risetime=.01,
+                                   falltime=.1, lookahead=0, knee=0.5, outputAmp=True).stop()
         self._compDelay = Delay(self._outSig, delay=0.005).stop()
         self._outComp = self._compDelay * self._compLevel
         self._outComp.stop()
+
         vars.vars["MIDI_ACTIVE"] = self.server.getMidiActive()
 
     def reinit(self, audio):
         self.server.reinit(duplex=0, audio=audio.lower())
-    
+
     def setAmpCallable(self, callable):
         self.server._server.setAmpCallable(callable)
-    
+
     def recstart(self):
         self.server.recstart()
-    
+
     def recstop(self):
         self.server.recstop()
-    
+
     def setAmp(self, amp):
         self.server.amp = amp
-    
+
     def setOutputDevice(self, device):
         if vars.vars["AUDIO_HOST"] != "Jack":
             self.server.setOutputDevice(device)
-    
+
     def setMidiInputDevice(self, device):
         self.server.setMidiInputDevice(device)
-    
+
     def setSamplingRate(self, sr):
         self.server.setSamplingRate(sr)
-    
+
     def recordOptions(self, dur, filename, fileformat, sampletype):
         self.server.recordOptions(dur=dur, filename=filename, fileformat=fileformat, sampletype=sampletype)
-    
+
     def onOffEq(self, state):
-        if state == 1:
-            self.eqOn = True
-            self._outSig.play()
-            self._fbEq.play()
-            if not self.compOn:
-                self._outEq.out()
-            else:
-                self._outEq.play()
-                self._compLevel.input = self._outEqMix
-                self._compDelay.input = self._outEq
-        else:
-            self.eqOn = False
-            self._fbEq.stop()
-            self._outEq.stop()
-            if self.compOn:
-                self._compLevel.input = self._outSigMix
-                self._compDelay.input = self._outSig
-                self._outComp.out()
-            else:
-                self._outSig.out()
-    
+        self.eqOn = bool(state)
+        self.handlePostProcChain()
+
     def setEqFreq(self, which, freq):
         self.eqFreq[which] = freq
         if which == 0:
@@ -152,35 +153,37 @@ class FSServer:
             self._fbEq.freq2 = freq
         elif which == 2:
             self._fbEq.freq3 = freq
-    
+
     def setEqGain(self, which, gain):
         self.eqGain[which] = gain
         self._fbEqAmps.value = self.eqGain
-    
-    def onOffComp(self, state):
+
+    def onOffRev(self, state):
         if state == 1:
-            self.compOn = True
-            self._outSig.play()
-            if self.eqOn:
-                self._outEq.play()
-                self._compLevel.input = self._outEqMix
-                self._compDelay.input = self._outEq
-            else:
-                self._compLevel.input = self._outSigMix
-                self._compDelay.input = self._outSig
-            self._compLevel.play()
-            self._compDelay.play()
-            self._outComp.out()
+            self.revOn = True
         else:
-            self.compOn = False
-            self._compLevel.stop()
-            self._compDelay.stop()
-            self._outComp.stop()
-            if self.eqOn:
-                self._outEq.out()
-            else:
-                self._outSig.out()
-    
+            self._stRev.reset()
+            self.revOn = False
+        self.handlePostProcChain()
+
+    def setRevParam(self, param, value):
+        if param == "time":
+            self._stRev.revtime = value
+        elif param == "inpos":
+            self._stRev.inpos = [value / 2, 1 - value / 2]
+        elif param == "cutoff":
+            self._stRev.cutoff = value
+        elif param == "bal":
+            self._stRev.bal = value
+        elif param == "size":
+            self._stRev.roomSize = value
+        elif param == "refgain":
+            self._stRev.firstRefGain = value
+
+    def onOffComp(self, state):
+        self.compOn = bool(state)
+        self.handlePostProcChain()
+
     def setCompParam(self, param, value):
         if param == "thresh":
             self._compLevel.thresh = value
@@ -191,11 +194,82 @@ class FSServer:
         elif param == "falltime":
             self._compLevel.falltime = value
 
+    def handlePostProcChain(self):
+
+        if not self.eqOn:
+            self._fbEq.stop()
+            self._outEq.stop()
+        if not self.revOn:
+            self._stRev.stop()
+            self._outRev.stop()
+        if not self.compOn:
+            self._compLevel.stop()
+            self._compDelay.stop()
+        self._outSig.play()
+
+        if not self.eqOn and not self.revOn and not self.compOn:
+            self._outSig.out()
+
+        elif self.eqOn and not self.revOn and not self.compOn:
+            self._fbEq.play()
+            self._outEq.out()
+
+        elif not self.eqOn and self.revOn and not self.compOn:
+            self._stRev.input = self._outSig
+            self._stRev.play()
+            self._outRev.out()
+
+        elif not self.eqOn and not self.revOn and self.compOn:
+            self._compLevel.input = self._outSigMix
+            self._compDelay.input = self._outSig
+            self._compLevel.play()
+            self._compDelay.play()
+            self._outComp.out()
+
+        elif self.eqOn and self.revOn and not self.compOn:
+            self._fbEq.play()
+            self._outEq.play()
+            self._stRev.input = self._outEq
+            self._stRev.play()
+            self._outRev.out()
+
+        elif self.eqOn and self.revOn and self.compOn:
+            self._fbEq.play()
+            self._outEq.play()
+            self._stRev.input = self._outEq
+            self._stRev.play()
+            self._outRev.play()
+            self._compLevel.input = self._outRevMix
+            self._compDelay.input = self._outRev
+            self._compLevel.play()
+            self._compDelay.play()
+            self._outComp.out()
+
+        elif not self.eqOn and self.revOn and self.compOn:
+            self._stRev.input = self._outSig
+            self._stRev.play()
+            self._outRev.play()
+            self._compLevel.input = self._outRevMix
+            self._compDelay.input = self._outRev
+            self._compLevel.play()
+            self._compDelay.play()
+            self._outComp.out()
+
+        elif self.eqOn and not self.revOn and self.compOn:
+            self._fbEq.play()
+            self._outEq.play()
+            self._compLevel.input = self._outEqMix
+            self._compDelay.input = self._outEq
+            self._compLevel.play()
+            self._compDelay.play()
+            self._outComp.out()
+
+
 class CtlBind:
     def __init__(self):
         self.last_midi_val = 0.0
         self.lfo_last_midi_vals = [0.0, 0.0, 0.0, 0.0]
-    
+
     def valToWidget(self):
         val = self.midictl.get()
         if val != self.last_midi_val:
@@ -203,7 +277,7 @@ class CtlBind:
             if self.widget.log:
                 val = toExp(val, self.widget.getMinValue(), self.widget.getMaxValue())
             self.widget.setValue(val)
-    
+
     def valToWidget0(self):
         val = self.lfo_midictl_0.get()
         is_log = self.lfo_widget_0.log
@@ -213,7 +287,7 @@ class CtlBind:
                 val = toExp(val, self.lfo_widget_0.getMinValue(), self.lfo_widget_0.getMaxValue())
             self.lfo_widget_0.setValue(val)
             self.lfo_widget_0.outFunction(val)
-    
+
     def valToWidget1(self):
         val = self.lfo_midictl_1.get()
         is_log = self.lfo_widget_1.log
@@ -223,7 +297,7 @@ class CtlBind:
                 val = toExp(val, self.lfo_widget_1.getMinValue(), self.lfo_widget_1.getMaxValue())
             self.lfo_widget_1.setValue(val)
             self.lfo_widget_1.outFunction(val)
-    
+
     def valToWidget2(self):
         val = self.lfo_midictl_2.get()
         is_log = self.lfo_widget_2.log
@@ -233,7 +307,7 @@ class CtlBind:
                 val = toExp(val, self.lfo_widget_2.getMinValue(), self.lfo_widget_2.getMaxValue())
             self.lfo_widget_2.setValue(val)
             self.lfo_widget_2.outFunction(val)
-    
+
     def valToWidget3(self):
         val = self.lfo_midictl_3.get()
         is_log = self.lfo_widget_3.log
@@ -243,7 +317,7 @@ class CtlBind:
                 val = toExp(val, self.lfo_widget_3.getMinValue(), self.lfo_widget_3.getMaxValue())
             self.lfo_widget_3.setValue(val)
             self.lfo_widget_3.outFunction(val)
-    
+
     def assignMidiCtl(self, ctl, widget):
         if not vars.vars["MIDI_ACTIVE"]:
             return
@@ -256,7 +330,7 @@ class CtlBind:
         else:
             self.midictl = Midictl(ctl, mini, maxi, value)
         self.trigFunc = TrigFunc(self._midi_metro, self.valToWidget)
-    
+
     def assignLfoMidiCtl(self, ctl, widget, i):
         if not vars.vars["MIDI_ACTIVE"]:
             return
@@ -322,7 +396,7 @@ class LFOSynth(CtlBind):
         self.freq = Randi(min=1-self.jitter, max=1+self.jitter, freq=1, mul=self.speed)
         self.lfo = LFO(freq=self.freq, sharp=.9, type=3).stop()
         self.sigout = Sig(self.lfo * self.amp).stop()
-    
+
     def play(self):
         self.rawamp.play()
         self.amp.play()
@@ -331,7 +405,7 @@ class LFOSynth(CtlBind):
         self.freq.play()
         self.lfo.play()
         self.sigout.play()
-    
+
     def stop(self):
         self.rawamp.stop()
         self.amp.stop()
@@ -340,13 +414,13 @@ class LFOSynth(CtlBind):
         self.freq.stop()
         self.lfo.stop()
         self.sigout.stop()
-    
+
     def sig(self):
         return self.sigout
-    
+
     def setSpeed(self, x):
         self.speed.value = x
-    
+
     def setType(self, x):
         self.lfo_type = int((x - 1) % 8)
         if self.lfo_type == 7:
@@ -354,7 +428,7 @@ class LFOSynth(CtlBind):
         else:
             self.lfo.sharp = self.last_sharp
         self.lfo.type = self.lfo_type
-    
+
     def setJitter(self, x):
         self.jitter.value = x
 
@@ -362,7 +436,7 @@ class LFOSynth(CtlBind):
         if self.lfo_type != 7:
             self.lfo.sharp = x
         self.last_sharp = x
-    
+
     def setAmp(self, x):
         self.rawamp.value = x
 
@@ -386,10 +460,10 @@ class Param(CtlBind):
             self.slider = SigTo(self.init, vars.vars["SLIDERPORT"], self.init, add=self.lfo.sig())
             self.out = Clip(self.slider, self.mini, self.maxi)
             setattr(self.parent, "p%d" % i, self.out)
-    
+
     def set(self, x):
         self.slider.value = x
-    
+
     def start_lfo(self, x):
         if x == 0:
             self.lfo.stop()
@@ -432,18 +506,18 @@ class ParamTranspo:
         self.parent = parent
         self._midi_metro = midi_metro
         self.last_midi_val = 0.0
-    
+
     def valToWidget(self):
         val = self.midictl.get()
         if val != self.last_midi_val:
             self.last_midi_val = val
             self.widget.setValue(val)
-    
+
     def assignMidiCtl(self, ctl, widget):
         self.widget = widget
         self.midictl = Midictl(ctl, -36, 36, widget.GetValue())
         self.trigFunc = TrigFunc(self._midi_metro, self.valToWidget)
-    
+
     def __del__(self):
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]
@@ -482,11 +556,11 @@ class BaseSynth:
                 break
         self._midi_metro = Metro(.1).play()
         self._rawamp = SigTo(1, vars.vars["SLIDERPORT"], 1)
-        if vars.vars["MIDIPITCH"] != None:
+        if vars.vars["MIDIPITCH"] is not None:
             if self.with_transpo:
                 self._note = Sig(vars.vars["MIDIPITCH"])
                 self._transpo = Sig(value=0)
-                self.pitch = Snap(self._note+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
+                self.pitch = Snap(self._note+self._transpo, choice=list(range(12)), scale=self.scaling)
             elif mode == 1:
                 if type(vars.vars["MIDIPITCH"]) is list:
                     _tmp_hz = [midiToHz(x) for x in vars.vars["MIDIPITCH"]]
@@ -503,41 +577,43 @@ class BaseSynth:
                 self.pitch = Sig(vars.vars["MIDIPITCH"])
             self._firsttrig = Trig().play()
             self._secondtrig = Trig().play(delay=vars.vars["NOTEONDUR"])
-            self._trigamp = Counter(Mix([self._firsttrig,self._secondtrig]), min=0, max=2, dir=1)
+            self._trigamp = Counter(Mix([self._firsttrig, self._secondtrig]), min=0, max=2, dir=1)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1, 
-                                mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig())
+            self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
+                                   mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig())
             self.trig = Trig().play()
         elif vars.vars["VIRTUAL"]:
             self._virtualpit = Sig([0.0]*vars.vars["POLY"])
             self._trigamp = Sig([0.0]*vars.vars["POLY"])
             if self.with_transpo:
                 self._transpo = Sig(value=0)
-                self.pitch = Snap(self._virtualpit+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
+                self.pitch = Snap(self._virtualpit+self._transpo, choice=list(range(12)), scale=self.scaling)
             else:
-                self.pitch = Snap(self._virtualpit, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
+                self.pitch = Snap(self._virtualpit, choice=list(range(12)), scale=self.scaling)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1, 
+            self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                    mul=self._rawamp, add=self._lfo_amp.sig())
             self.trig = Thresh(self._trigamp)
         else:
             if self.with_transpo:
-                self._note = Notein(poly=vars.vars["POLY"], scale=0, channel=self.channel, first=self.first, last=self.last)
+                self._note = Notein(poly=vars.vars["POLY"], scale=0, channel=self.channel,
+                                    first=self.first, last=self.last)
                 self._transpo = Sig(value=0)
-                self.pitch = Snap(self._note["pitch"]+self._transpo, choice=[0,1,2,3,4,5,6,7,8,9,10,11], scale=self.scaling)
+                self.pitch = Snap(self._note["pitch"]+self._transpo, choice=list(range(12)), scale=self.scaling)
             else:
-                self._note = Notein(poly=vars.vars["POLY"], scale=self.scaling, channel=self.channel, first=self.first, last=self.last)
+                self._note = Notein(poly=vars.vars["POLY"], scale=self.scaling, channel=self.channel,
+                                    first=self.first, last=self.last)
                 self.pitch = self._note["pitch"]
             self._trigamp = self._note["velocity"]
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1, 
+            self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                    mul=self._rawamp, add=self._lfo_amp.sig())
             self.trig = Thresh(self._trigamp)
 
         self._panner = Panner(self, self._trigamp, self._midi_metro)
         self.panL = self._panner.amp_L
         self.panR = self._panner.amp_R
-    
+
         self._params = [self._lfo_amp, None, None, None, self._panner]
         for i, conf in enumerate(config):
             i1 = i + 1
@@ -569,8 +645,8 @@ class CustomFM:
 class FmSynth(BaseSynth):
     """
     Simple frequency modulation synthesis.
-    
-    With frequency modulation, the timbre of a simple waveform is changed by 
+
+    With frequency modulation, the timbre of a simple waveform is changed by
     frequency modulating it with a modulating frequency that is also in the audio
     range, resulting in a more complex waveform and a different-sounding tone.
 
@@ -579,7 +655,7 @@ class FmSynth(BaseSynth):
         FM Ratio : Ratio between carrier frequency and modulation frequency.
         FM Index : Represents the number of sidebands on each side of the carrier frequency.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -587,7 +663,7 @@ class FmSynth(BaseSynth):
     def __init__(self, config):
         BaseSynth.__init__(self, config,  mode=1)
         self.indexLine = self.amp * self.p2
-        self.indexrnd = Randi(min=.95, max=1.05, freq=[random.uniform(.5,2) for i in range(4)])
+        self.indexrnd = Randi(min=.95, max=1.05, freq=[random.uniform(.5, 2) for i in range(4)])
         self.norm_amp = self.amp * 0.1
         self.leftamp = self.norm_amp*self.panL
         self.rightamp = self.norm_amp*self.panR
@@ -595,7 +671,7 @@ class FmSynth(BaseSynth):
         self.fm2 = CustomFM(self.pitch*.997, self.p1, self.indexLine*self.indexrnd[1], mul=self.rightamp)
         self.fm3 = CustomFM(self.pitch*.995, self.p1, self.indexLine*self.indexrnd[2], mul=self.leftamp)
         self.fm4 = CustomFM(self.pitch*1.002, self.p1, self.indexLine*self.indexrnd[3], mul=self.rightamp)
-        
+
         #self.fm1 = FM(carrier=self.pitch, ratio=self.p1, index=self.indexLine*self.indexrnd[0], mul=self.leftamp)
         #self.fm2 = FM(carrier=self.pitch*.997, ratio=self.p1, index=self.indexLine*self.indexrnd[1], mul=self.rightamp)
         #self.fm3 = FM(carrier=self.pitch*.995, ratio=self.p1, index=self.indexLine*self.indexrnd[2], mul=self.leftamp)
@@ -609,7 +685,7 @@ class FmSynth(BaseSynth):
 class AddSynth(BaseSynth):
     """
     Additive synthesis.
-    
+
     Additive synthesis created by the addition of four looped sine waves.
 
     Parameters:
@@ -617,15 +693,15 @@ class AddSynth(BaseSynth):
         Transposition : Transposition, in semitones, of the pitches played on the keyboard.
         Spread : Spreading factor of the sine wave frequencies.
         Feedback : Amount of output signal sent back in the waveform calculation.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
     """
     def __init__(self, config):
         BaseSynth.__init__(self, config, mode=1)
-        self.fac = Pow(list(range(1,6)), self.p2, mul=[random.uniform(.995,1.005) for i in range(4)])
-        self.feedrnd = Randi(min=.15, max=.25, freq=[random.uniform(.5,2) for i in range(4)])
+        self.fac = Pow(list(range(1, 6)), self.p2, mul=[random.uniform(.995, 1.005) for i in range(4)])
+        self.feedrnd = Randi(min=.15, max=.25, freq=[random.uniform(.5, 2) for i in range(4)])
         self.norm_amp = self.amp * 0.1
         self.leftamp = self.norm_amp*self.panL
         self.rightamp = self.norm_amp*self.panR
@@ -639,8 +715,8 @@ class AddSynth(BaseSynth):
 class WindSynth(BaseSynth):
     """
     Wind synthesis.
-    
-    Simulation of the whistling of the wind with a white noise filtered by four 
+
+    Simulation of the whistling of the wind with a white noise filtered by four
     bandpass filters.
 
     Parameters:
@@ -648,7 +724,7 @@ class WindSynth(BaseSynth):
         Rand frequency : Speed of filter's frequency variations.
         Rand depth : Depth of filter's frequency variations.
         Filter Q : Inverse of the filter's bandwidth. Amplitude of the whistling.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -660,7 +736,7 @@ class WindSynth(BaseSynth):
         self.leftamp = self.norm_amp*self.panL
         self.rightamp = self.norm_amp*self.panR
         self.noise = Noise(mul=self.amp*self.norm_amp)
-        self.dev = Randi(min=0.-self.p2, max=self.p2, freq=self.p1*[random.uniform(.75,1.25) for i in range(4)], add=1)
+        self.dev = Randi(min=0.-self.p2, max=self.p2, freq=self.p1*[random.uniform(.75, 1.25) for i in range(4)], add=1)
         self.filt1 = Biquadx(self.noise, freq=self.clpit*self.dev[0], q=self.p3, type=2, stages=2, mul=self.leftamp).mix()
         self.filt2 = Biquadx(self.noise, freq=self.clpit*self.dev[1], q=self.p3, type=2, stages=2, mul=self.rightamp).mix()
         self.filt3 = Biquadx(self.noise, freq=self.clpit*self.dev[2], q=self.p3, type=2, stages=2, mul=self.leftamp).mix()
@@ -671,8 +747,8 @@ class WindSynth(BaseSynth):
 class SquareMod(BaseSynth):
     """
     Square waveform modulation.
-    
-    A square waveform, with control over the number of harmonics, which is modulated 
+
+    A square waveform, with control over the number of harmonics, which is modulated
     in amplitude by itself.
 
     Parameters:
@@ -680,7 +756,7 @@ class SquareMod(BaseSynth):
         Harmonics : Number of harmonics of the waveform.
         LFO frequency : Speed of the LFO modulating the amplitude.
         LFO Amplitude : Depth of the LFO modulating the amplitude.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -699,7 +775,7 @@ class SquareMod(BaseSynth):
         self.osc3 = Osc(table=self.table, freq=self.pitch*.998, mul=self.leftamp).mix()
         self.osc4 = Osc(table=self.table, freq=self.pitch*1.003, mul=self.rightamp).mix()
         self.out = Mix([self.osc1, self.osc2, self.osc3, self.osc4], voices=2)
-    
+
     def changeOrder(self):
         order = int(self.p1.get())
         self.table.order = order
@@ -708,8 +784,8 @@ class SquareMod(BaseSynth):
 class SawMod(BaseSynth):
     """
     Sawtooth waveform modulation.
-    
-    A sawtooth waveform, with control over the number of harmonics, which is 
+
+    A sawtooth waveform, with control over the number of harmonics, which is
     modulated in amplitude by itself.
 
     Parameters:
@@ -717,7 +793,7 @@ class SawMod(BaseSynth):
         Harmonics : Number of harmonics of the waveform.
         LFO frequency : Speed of the LFO modulating the amplitude.
         LFO Amplitude : Depth of the LFO modulating the amplitude.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -736,7 +812,7 @@ class SawMod(BaseSynth):
         self.osc3 = Osc(table=self.table, freq=self.pitch*.998, mul=self.leftamp).mix()
         self.osc4 = Osc(table=self.table, freq=self.pitch*1.004, mul=self.rightamp).mix()
         self.out = Mix([self.osc1, self.osc2, self.osc3, self.osc4], voices=2)
-    
+
     def changeOrder(self):
         order = int(self.p1.get())
         self.table.order = order
@@ -745,17 +821,17 @@ class SawMod(BaseSynth):
 class PulsarSynth(BaseSynth):
     """
     Pulsar synthesis.
-    
-    Pulsar synthesis is a method of electronic music synthesis based on the generation of 
-    trains of sonic particles. Pulsar synthesis can produce either rhythms or tones as it 
+
+    Pulsar synthesis is a method of electronic music synthesis based on the generation of
+    trains of sonic particles. Pulsar synthesis can produce either rhythms or tones as it
     criss‐crosses perceptual time spans.
-    
+
     Parameters:
 
         Harmonics : Number of harmonics of the waveform table.
         Transposition : Transposition, in semitones, of the pitches played on the keyboard.
         LFO Frequency : Speed of the LFO modulating the ratio waveform / silence.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -775,7 +851,7 @@ class PulsarSynth(BaseSynth):
         self.pulse3 = Pulsar(table=self.table, env=self.env, freq=self.pitch*.997, frac=self.lfo, mul=self.leftamp).mix()
         self.pulse4 = Pulsar(table=self.table, env=self.env, freq=self.pitch*1.002, frac=self.lfo, mul=self.rightamp).mix()
         self.out = Mix([self.pulse1, self.pulse2, self.pulse3, self.pulse4], voices=2)
-    
+
     def changeOrder(self):
         order = int(self.p1.get())
         self.table.order = order
@@ -784,17 +860,17 @@ class PulsarSynth(BaseSynth):
 class Ross(BaseSynth):
     """
     Rossler attractor.
-    
-    The Rossler attractor is a system of three non-linear ordinary differential equations. 
-    These differential equations define a continuous-time dynamical system that exhibits 
+
+    The Rossler attractor is a system of three non-linear ordinary differential equations.
+    These differential equations define a continuous-time dynamical system that exhibits
     chaotic dynamics associated with the fractal properties of the attractor.
-    
+
     Parameters:
 
         Chaos : Intensity of the chaotic behavior.
         Chorus depth : Depth of the deviation between the left and right channels.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -802,7 +878,7 @@ class Ross(BaseSynth):
     def __init__(self, config):
         BaseSynth.__init__(self, config, mode=1)
         self.rosspit = Clip(self.pitch / 5000. + 0.25, min=0., max=1.)
-        self.deviation = Randi(min=0.-self.p2, max=self.p2, freq=[random.uniform(2,4) for i in range(2)], add=1)
+        self.deviation = Randi(min=0.-self.p2, max=self.p2, freq=[random.uniform(2, 4) for i in range(2)], add=1)
         self.norm_amp = self.amp * 0.3
         self.leftamp = self.norm_amp*self.panL
         self.rightamp = self.norm_amp*self.panR
@@ -818,19 +894,19 @@ class Ross(BaseSynth):
 class Wave(BaseSynth):
     """
     Bandlimited waveform synthesis.
-    
-    Simple waveform synthesis with different waveform shapes. The number of harmonic of the 
-    waveforms is limited depending on the frequency played on the keyboard and the sampling 
+
+    Simple waveform synthesis with different waveform shapes. The number of harmonic of the
+    waveforms is limited depending on the frequency played on the keyboard and the sampling
     rate to avoid aliasing. Waveform shapes are:
     0 = Ramp (saw up), 1 = Sawtooth, 2 = Square, 3 = Triangle
     4 = Pulse, 5 = Bipolar pulse, 6 = Sample and Hold, 7 = Modulated sine
-    
+
     Parameters:
 
         Waveform : Waveform shape.
         Transposition : Transposition, in semitones, of the pitches played on the keyboard.
         Sharpness : The sharpness factor allows more or less harmonics in the waveform.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -847,7 +923,7 @@ class Wave(BaseSynth):
         self.wav3 = LFO(freq=self.pitch*1.002, sharp=self.p3, type=0, mul=self.leftamp)
         self.wav4 = LFO(freq=self.pitch*1.0045, sharp=self.p3, type=0, mul=self.rightamp)
         self.out = Mix([self.wav1.mix(), self.wav2.mix(), self.wav3.mix(), self.wav4.mix()], voices=2)
-    
+
     def changeWave(self):
         typ = int(self.p1.get())
         self.wav1.type = typ
@@ -859,52 +935,54 @@ class Wave(BaseSynth):
 class PluckedString(BaseSynth):
     """
     Simple plucked string synthesis model.
-    
+
     A Resonator network is feed with a burst of noise to simulate the behavior of a
     plucked string.
-    
+
     Parameters:
 
         Transposition : Transposition, in semitones, of the pitches played on the keyboard.
         Duration : Length, in seconds, of the string resonance.
         Chorus depth : Depth of the frequency deviation between the left and right channels.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
     """
     def __init__(self, config):
         BaseSynth.__init__(self, config, mode=1)
-        self.deviation = Randi(min=0.-self.p3, max=self.p3, freq=[random.uniform(2,4) for i in range(2)], add=1)
-        self.table = CosTable([(0,0),(50,1),(300,0),(8191,0)])
+        self.deviation = Randi(min=0.-self.p3, max=self.p3, freq=[random.uniform(2, 4) for i in range(2)], add=1)
+        self.table = CosTable([(0, 0), (50, 1), (300, 0), (8191, 0)])
         self.impulse = TrigEnv(self.trig, table=self.table, dur=.1)
         self.noise = Biquad(Noise(self.impulse), freq=2500)
         self.leftamp = self.amp*self.panL
         self.rightamp = self.amp*self.panR
-        self.wave1 = Waveguide(self.noise, freq=self.pitch*self.deviation[0], dur=self.p2, minfreq=.5, mul=self.leftamp).mix()
-        self.wave2 = Waveguide(self.noise, freq=self.pitch*self.deviation[1], dur=self.p2, minfreq=.5, mul=self.rightamp).mix()
+        self.wave1 = Waveguide(self.noise, freq=self.pitch*self.deviation[0],
+                               dur=self.p2, minfreq=.5, mul=self.leftamp).mix()
+        self.wave2 = Waveguide(self.noise, freq=self.pitch*self.deviation[1],
+                               dur=self.p2, minfreq=.5, mul=self.rightamp).mix()
         self.out = Mix([self.wave1, self.wave2], voices=2)
 
 
 class Reson(BaseSynth):
     """
     Stereo resonators.
-    
+
     A Resonator network feeded with a white noise.
-    
+
     Parameters:
 
         Transposition : Transposition, in semitones, of the pitches played on the keyboard.
         Chorus depth : Depth of the frequency deviation between the left and right channels.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
     """
     def __init__(self, config):
         BaseSynth.__init__(self, config, mode=1)
-        self.deviation = Randi(min=0.-self.p2, max=self.p2, freq=[random.uniform(2,4) for i in range(4)], add=1)
+        self.deviation = Randi(min=0.-self.p2, max=self.p2, freq=[random.uniform(2, 4) for i in range(4)], add=1)
         self.excite = Noise(.02)
         self.leftamp = self.amp*self.panL
         self.rightamp = self.amp*self.panR
@@ -918,18 +996,18 @@ class Reson(BaseSynth):
 class CrossFmSynth(BaseSynth):
     """
     Cross frequency modulation synthesis.
-    
-    Frequency modulation synthesis where the output of both oscillators modulates the 
-    frequency of the other one. 
+
+    Frequency modulation synthesis where the output of both oscillators modulates the
+    frequency of the other one.
 
     Parameters:
 
         FM Ratio : Ratio between carrier frequency and modulation frequency.
-        FM Index 1 : This value multiplied by the carrier frequency gives the carrier 
+        FM Index 1 : This value multiplied by the carrier frequency gives the carrier
                      amplitude for modulating the modulation oscillator frequency.
-        FM Index 2 : This value multiplied by the modulation frequency gives the modulation 
+        FM Index 2 : This value multiplied by the modulation frequency gives the modulation
                      amplitude for modulating the carrier oscillator frequency.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -937,21 +1015,21 @@ class CrossFmSynth(BaseSynth):
     def __init__(self, config):
         BaseSynth.__init__(self, config,  mode=1)
         self.indexLine = self.amp * self.p2
-        self.indexrnd = Randi(min=.95, max=1.05, freq=[random.uniform(.5,2) for i in range(4)])
+        self.indexrnd = Randi(min=.95, max=1.05, freq=[random.uniform(.5, 2) for i in range(4)])
         self.indexLine2 = self.amp * self.p3
-        self.indexrnd2 = Randi(min=.95, max=1.05, freq=[random.uniform(.5,2) for i in range(4)])
+        self.indexrnd2 = Randi(min=.95, max=1.05, freq=[random.uniform(.5, 2) for i in range(4)])
         self.norm_amp = self.amp * 0.1
         self.leftamp = self.norm_amp*self.panL
         self.rightamp = self.norm_amp*self.panR
         self.ratio = 1 / self.p1
-        self.fm1 = CrossFM(carrier=self.pitch, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[0], 
-                            ind2=self.indexLine2*self.indexrnd2[0], mul=self.leftamp).mix()
-        self.fm2 = CrossFM(carrier=self.pitch*.997, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[1], 
-                            ind2=self.indexLine2*self.indexrnd2[1], mul=self.rightamp).mix()
-        self.fm3 = CrossFM(carrier=self.pitch*.995, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[2], 
-                            ind2=self.indexLine2*self.indexrnd2[2], mul=self.leftamp).mix()
-        self.fm4 = CrossFM(carrier=self.pitch*1.002, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[3], 
-                            ind2=self.indexLine2*self.indexrnd2[3], mul=self.rightamp).mix()
+        self.fm1 = CrossFM(carrier=self.pitch, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[0],
+                           ind2=self.indexLine2*self.indexrnd2[0], mul=self.leftamp).mix()
+        self.fm2 = CrossFM(carrier=self.pitch*.997, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[1],
+                           ind2=self.indexLine2*self.indexrnd2[1], mul=self.rightamp).mix()
+        self.fm3 = CrossFM(carrier=self.pitch*.995, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[2],
+                           ind2=self.indexLine2*self.indexrnd2[2], mul=self.leftamp).mix()
+        self.fm4 = CrossFM(carrier=self.pitch*1.002, ratio=self.ratio, ind1=self.indexLine*self.indexrnd[3],
+                           ind2=self.indexLine2*self.indexrnd2[3], mul=self.rightamp).mix()
         self.filt1 = Biquad(self.fm1+self.fm3, freq=5000, q=1, type=0)
         self.filt2 = Biquad(self.fm2+self.fm4, freq=5000, q=1, type=0)
         self.out = Mix([self.filt1, self.filt2], voices=2)
@@ -960,16 +1038,16 @@ class CrossFmSynth(BaseSynth):
 class OTReson(BaseSynth):
     """
     Out of tune waveguide model with a recursive allpass network.
-    
-    A waveguide model consisting of a delay-line with a 3-stages recursive allpass filter 
+
+    A waveguide model consisting of a delay-line with a 3-stages recursive allpass filter
     which made the resonances of the waveguide out of tune.
-    
+
     Parameters:
 
         Transposition : Transposition, in semitones, of the pitches played on the keyboard.
         Detune : Control the depth of the allpass delay-line filter, i.e. the depth of the detuning.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -989,23 +1067,23 @@ class OTReson(BaseSynth):
 class InfiniteRev(BaseSynth):
     """
     Infinite reverb.
-    
+
     An infinite reverb feeded by a short impulse of a looped sine. The impulse frequencies
     is controled by the pitches played on the keyboard.
-    
+
     Parameters:
 
         Transposition : Transposition, in semitones, applied on the sinusoidal impulse.
         Brightness : Amount of feedback of the looped sine.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
     """
     def __init__(self, config):
         BaseSynth.__init__(self, config, mode=1)
-        self.table = CosTable([(0,0), (4000,1), (8191,0)])
+        self.table = CosTable([(0, 0), (4000, 1), (8191, 0)])
         self.feedtrig = Ceil(self.amp)
         self.feedadsr = MidiAdsr(self.feedtrig, .0001, 0.0, 1.0, 4.0)
         self.env = TrigEnv(self.trig, self.table, dur=.25, mul=.2)
@@ -1024,15 +1102,15 @@ class InfiniteRev(BaseSynth):
 class Degradation(BaseSynth):
     """
     Signal quality reducer.
-    
+
     Reduces the sampling rate and/or bit-depth of a chorused complex waveform oscillator.
-    
+
     Parameters:
 
         Bit Depth : Signal quantization in bits.
         SR Scale : Sampling rate multiplier.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -1058,15 +1136,15 @@ class Degradation(BaseSynth):
 class PulseWidthModulation(BaseSynth):
     """
     Signal quality reducer.
-    
+
     Reduces the sampling rate and/or bit-depth of a chorused complex waveform oscillator.
-    
+
     Parameters:
 
         Bit Depth : Signal quantization in bits.
         SR Scale : Sampling rate multiplier.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -1100,15 +1178,15 @@ class PulseWidthModulation(BaseSynth):
 class VoltageControlledOsc(BaseSynth):
     """
     Signal quality reducer.
-    
+
     Reduces the sampling rate and/or bit-depth of a chorused complex waveform oscillator.
-    
+
     Parameters:
 
         Bit Depth : Signal quantization in bits.
         SR Scale : Sampling rate multiplier.
         Lowpass Cutoff : Cutoff frequency of the lowpass filter.
-    
+
     ____________________________________________________________________________
     Author : Olivier Bélanger - 2011
     ____________________________________________________________________________
@@ -1138,5 +1216,6 @@ def checkForCustomModules():
                     vars.vars["EXTERNAL_MODULES"].update(MODULES)
                 except Exception as e:
                     print(f'The following error occurred when loading "{file}":\n{e}')
+
 
 checkForCustomModules()
