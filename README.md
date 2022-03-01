@@ -2,6 +2,8 @@
 
 Zyne_B version 1.0.1 is a flexible modular synthesizer (written in Python3) using pyo as its audio engine. 
 
+![Screenshot](zyne_b.png)
+
 Zyne_B is a git fork of the **extremely outstanding** work of **Olivier Bélanger**.
 The original Zyne code is hosted at [https://github.com/belangeo/zyne](https://github.com/belangeo/zyne) and
 pyo code at [https://github.com/belangeo/pyo](https://github.com/belangeo/pyo).
