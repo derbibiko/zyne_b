@@ -338,7 +338,6 @@ class ZyneFrame(wx.Frame):
             for j, param in enumerate(params):
                 slider = self.modules[-1].sliders[j]
                 slider.SetValue(param)
-                slider.outFunction(param)
             self.modules[-1].reinitLFOS(lfo_params, ctl_binding=False)
             self.refresh()
 
@@ -730,8 +729,7 @@ class ZyneFrame(wx.Frame):
                 paramset = paramset[:5] + [1.] + paramset[5:]
             for j, param in enumerate(paramset):
                 slider = self.modules[i].sliders[j]
-                slider.SetValue(param)
-                slider.outFunction(param)
+                wx.CallAfter(slider.SetValue, param)
 
         slider_idx = 0
         for i, ctl_paramset in enumerate(ctl_params):

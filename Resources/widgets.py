@@ -113,8 +113,6 @@ class ZB_Base_Control(wx.Panel):
         self.Bind(wx.EVT_CHAR, self.onChar)
         self.Bind(wx.EVT_KILL_FOCUS, self.LooseFocus)
 
-        self.handleNewValue()
-
     def onChar(self, event):
         if self.selected:
             old_val = self.GetValue()
@@ -220,13 +218,13 @@ class ZB_Base_Control(wx.Panel):
         return [self.minvalue, self.maxvalue]
 
     def handleNewValue(self):
-        if self.outFunction:
-            self.outFunction(self.GetValue())
+        val = self.GetValue()
+        if self.outFunction is not None:
+            self.outFunction(val)
 
         if self.integer:
-            self.display_value = str(self.GetValue())
+            self.display_value = str(val)
         else:
-            val = self.GetValue()
             absval = abs(val)
             if absval >= 1000:
                 self.display_value = "%.0f" % val
@@ -264,15 +262,14 @@ class ZB_Base_Control(wx.Panel):
             self.value = int(self.value)
         if self.powoftwo:
             self.value = powOfTwo(self.value)
-        self.handleNewValue()
         self.clampPos()
+        self.handleNewValue()
         wx.CallAfter(self.setFocusToKeyboard)
         wx.CallAfter(self.Refresh)
 
     def GetValue(self):
         if self.log:
             t = tFromValue(self.value, self.minvalue, self.maxvalue)
-            # := val = toExp(t, self.minvalue, self.maxvalue)
             val = 10**(t * self.toexp_c1 + self.toexp_c0)
         else:
             val = self.value
@@ -708,7 +705,7 @@ class ZB_ControlKnob(ZB_Base_Control):
             dc = wx.GCDC(wx.BufferedPaintDC(self))
             dc.GetGraphicsContext().SetAntialiasMode(True)
         else:
-            dc = wx.BufferedPaintDC(self)
+            dc = wx.PaintDC(self)
 
         dc.SetBrush(wx.Brush(self.backgroundColour, wx.SOLID))
         dc.SetTextForeground(self.foregroundColour)

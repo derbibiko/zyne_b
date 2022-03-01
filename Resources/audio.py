@@ -58,7 +58,7 @@ class FSServer:
 
     def stopMidiLearn(self):
         self.scan.reset()
-        if hasattr(self, o):
+        if hasattr(self, 'scan'):
             delattr(self, 'scan')
         self.stop()
         if vars.vars["LEARNINGSLIDER"] is not None:
@@ -70,8 +70,6 @@ class FSServer:
 
     def start(self):
         self.server.start()
-        while not self.server.getIsStarted:
-            time.sleep(0.01)
 
     def stop(self):
         self.server.stop()
@@ -85,9 +83,6 @@ class FSServer:
 
     def boot(self):
         self.server.boot()
-
-        while not self.server.getIsBooted:
-            time.sleep(0.01)
 
         self._modMix = Sig([0, 0])
         self._outSig = Sig(self._modMix).out()
@@ -286,7 +281,6 @@ class CtlBind:
             if is_log:
                 val = toExp(val, self.lfo_widget_0.getMinValue(), self.lfo_widget_0.getMaxValue())
             self.lfo_widget_0.setValue(val)
-            self.lfo_widget_0.outFunction(val)
 
     def valToWidget1(self):
         val = self.lfo_midictl_1.get()
@@ -296,7 +290,6 @@ class CtlBind:
             if is_log:
                 val = toExp(val, self.lfo_widget_1.getMinValue(), self.lfo_widget_1.getMaxValue())
             self.lfo_widget_1.setValue(val)
-            self.lfo_widget_1.outFunction(val)
 
     def valToWidget2(self):
         val = self.lfo_midictl_2.get()
@@ -306,7 +299,6 @@ class CtlBind:
             if is_log:
                 val = toExp(val, self.lfo_widget_2.getMinValue(), self.lfo_widget_2.getMaxValue())
             self.lfo_widget_2.setValue(val)
-            self.lfo_widget_2.outFunction(val)
 
     def valToWidget3(self):
         val = self.lfo_midictl_3.get()
@@ -316,7 +308,6 @@ class CtlBind:
             if is_log:
                 val = toExp(val, self.lfo_widget_3.getMinValue(), self.lfo_widget_3.getMaxValue())
             self.lfo_widget_3.setValue(val)
-            self.lfo_widget_3.outFunction(val)
 
     def assignMidiCtl(self, ctl, widget):
         if not vars.vars["MIDI_ACTIVE"]:

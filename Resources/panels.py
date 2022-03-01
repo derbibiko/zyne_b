@@ -270,7 +270,6 @@ class LFOFrame(wx.Frame):
         for i, p in enumerate(params):
             slider = self.panel.sliders[i]
             slider.SetValue(p)
-            slider.outFunction(p)
         slider_idx = 0
         for i, ctl_param in enumerate(ctl_params):
             slider = self.panel.sliders[i]
@@ -739,12 +738,11 @@ class ServerPanel(wx.Panel):
                 if menuItem is not None:
                     menuItem.Enable(False)
             for module in modules:
-                synth = module.cbChannel.Enable(False)
-            self.fsserver.start()
+                module.cbChannel.Enable(False)
+            self.start()
             if self.keyboardShown:
                 self.GetTopLevelParent().keyboard.SetFocus()
         else:
-            self.fsserver.stop()
             self.fsserver._stRev.reset()
             for popup in self.popups:
                 if popup != self.popupDriver or vars.vars["AUDIO_HOST"] != "Jack":
@@ -754,8 +752,9 @@ class ServerPanel(wx.Panel):
                 if menuItem is not None:
                     menuItem.Enable(True)
             for module in modules:
-                synth = module.cbChannel.Enable(True)
+                module.cbChannel.Enable(True)
             self.meter.setRms(*[0 for i in range(self.meter.numSliders)])
+            self.setDriverSetting()
 
     def handleRec(self, evt):
         if evt.GetInt() == 1:
@@ -808,7 +807,6 @@ class ServerPanel(wx.Panel):
             popup.ProcessEvent(evt)
         amp = serverSettings[4]
         self.sliderAmp.SetValue(amp)
-        self.sliderAmp.outFunction(amp)
         self.resetVirtualKeyboard()
 
     def setPostProcSettings(self, postProcSettings):
@@ -827,7 +825,6 @@ class ServerPanel(wx.Panel):
                 widget.ProcessEvent(evt)
             else:
                 widget.SetValue(eq[i])
-                widget.outFunction(eq[i])
 
         widgets = [self.onOffRev, self.knobRevBal, self.knobRevRefGain, self.knobRevInPos,
                    self.knobRevTime, self.knobRevRoomSize, self.knobRevCutOff]
@@ -840,7 +837,6 @@ class ServerPanel(wx.Panel):
                 widget.ProcessEvent(evt)
             else:
                 widget.SetValue(rev[i])
-                widget.outFunction(rev[i])
 
         widgets = [self.onOffComp, self.knobComp1, self.knobComp2, self.knobComp3, self.knobComp4]
         for i, widget in enumerate(widgets):
@@ -852,7 +848,6 @@ class ServerPanel(wx.Panel):
                 widget.ProcessEvent(evt)
             else:
                 widget.SetValue(comp[i])
-                widget.outFunction(comp[i])
 
     def setDriverSetting(self, func=None, val=0):
         mainframe = self.GetTopLevelParent()
@@ -1456,7 +1451,6 @@ class GenericPanel(BasePanel):
                 else:
                     val = random.uniform(mini, maxi)
             slider.SetValue(val)
-            slider.outFunction(val)
         for i, button in enumerate(self.buttons):
             if button is not None:
                 state = random.choice([0, 0, 0, 1])
@@ -1481,7 +1475,6 @@ class GenericPanel(BasePanel):
                             else:
                                 val = random.uniform(mini, maxi)
                         slider.SetValue(val)
-                        slider.outFunction(val)
 
     def generateTriangular(self):
         for i, slider in enumerate(self.sliders):
@@ -1501,7 +1494,6 @@ class GenericPanel(BasePanel):
                 else:
                     val = random.triangular(mini, maxi)
             slider.SetValue(val)
-            slider.outFunction(val)
         for i, button in enumerate(self.buttons):
             if button is not None:
                 state = random.choice([0, 0, 0, 1])
@@ -1528,7 +1520,6 @@ class GenericPanel(BasePanel):
                             else:
                                 val = random.triangular(mini, maxi)
                         slider.SetValue(val)
-                        slider.outFunction(val)
 
     def generateMinimum(self):
         for i, slider in enumerate(self.sliders):
@@ -1546,7 +1537,6 @@ class GenericPanel(BasePanel):
                 else:
                     val = min([random.uniform(mini, maxi) for k in range(4)])
             slider.SetValue(val)
-            slider.outFunction(val)
         for i, button in enumerate(self.buttons):
             if button is not None:
                 state = random.choice([0, 0, 0, 1])
@@ -1571,7 +1561,6 @@ class GenericPanel(BasePanel):
                             else:
                                 val = min([random.uniform(mini, maxi) for k in range(4)])
                         slider.SetValue(val)
-                        slider.outFunction(val)
 
     def jitterize(self):
         for i, slider in enumerate(self.sliders):
@@ -1587,7 +1576,6 @@ class GenericPanel(BasePanel):
                 elif val > maxi:
                     val = maxi
                 slider.SetValue(val)
-                slider.outFunction(val)
         for i, button in enumerate(self.buttons):
             if button is not None:
                 if button.state:
@@ -1611,7 +1599,6 @@ class GenericPanel(BasePanel):
                             elif val > maxi:
                                 val = maxi
                         slider.SetValue(val)
-                        slider.outFunction(val)
 
 
 class LFOPanel(BasePanel):
@@ -1672,7 +1659,7 @@ class LFOPanel(BasePanel):
 
         self.sizer.AddSpacer(1)
 
-        self.sliderAmp = self.createSlider("Amplitude", .1, 0, 1, False, False, self.changeAmp, -1)
+        self.sliderAmp = self.createSlider("Amplitude", .1, 0, 1, False, False, self.changeAmp)
         self.sliderP1 = self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeP1)
         self.sliderP2 = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeP2)
         self.sliderP3 = self.createSlider(p3[0], p3[1], p3[2], p3[3], p3[4], p3[5], self.changeP3)
