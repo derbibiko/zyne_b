@@ -1,6 +1,8 @@
-# Zyne_B #
+# Zyne_B
 
 Zyne_B version 1.0.1 is a flexible modular synthesizer (written in Python3) using pyo as its audio engine. 
+
+[![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
 ![Screenshot](zyne_b.png)
 
@@ -14,6 +16,14 @@ synthesis engines and provides a simple API to create your own custom modules.
 Tutorial on how to create a custom Zyne module:
 [Tutorial](https://github.com/belangeo/zyne/blob/wiki/CustomModule.md)
 
+This work is licensed under a
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License][cc-by-nc-sa].
+
+[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
+
+[cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
+[cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
+[cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
 ## Installation ##
 
