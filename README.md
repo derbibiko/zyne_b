@@ -68,5 +68,5 @@ If the compilation of pyo fails, you can try to install the original pyo package
 
 ## Contact ##
 
-For questions and comments please mail to `mail (at) bibiko.de`
+For questions and comments please mail to `mail (at) bibiko.de` or use the [issue tracker](https://github.com/derbibiko/zyne_b/issues/new).
 
