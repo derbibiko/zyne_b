@@ -753,7 +753,7 @@ class ServerPanel(wx.Panel):
                     menuItem.Enable(True)
             for module in modules:
                 module.cbChannel.Enable(True)
-            self.meter.setRms(*[0 for i in range(self.meter.numSliders)])
+            wx.CallAfter(self.meter.setRms, *[0 for i in range(self.meter.numSliders)])
             self.setDriverSetting()
 
     def handleRec(self, evt):

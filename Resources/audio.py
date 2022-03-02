@@ -40,6 +40,7 @@ class FSServer:
         self.compOn = False
         self.eqFreq = [100, 500, 2000]
         self.eqGain = [1, 1, 1, 1]
+        self.wasMidiActive = False
         self.server = Server(duplex=0, audio=vars.vars["AUDIO_HOST"].lower())
         self.boot()
 
@@ -107,6 +108,13 @@ class FSServer:
         self._outComp.stop()
 
         vars.vars["MIDI_ACTIVE"] = self.server.getMidiActive()
+
+        if vars.constants["IS_MAC"] and self.server._audio not in ["offline"]:
+            if self.wasMidiActive and vars.vars["MIDI_ACTIVE"] == 0:
+                wx.MessageBox("Lost MIDI interface")
+
+        if vars.vars["MIDI_ACTIVE"] == 1:
+            self.wasMidiActive = True
 
     def reinit(self, audio):
         self.server.reinit(duplex=0, audio=audio.lower())
