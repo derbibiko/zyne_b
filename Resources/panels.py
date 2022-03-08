@@ -1692,12 +1692,12 @@ class LFOPanel(BasePanel):
             self.synth._params[self.which].setType(x)
         else:
             self.synth._params[self.which].lfo.setType(int(x))
-            try:
-                t = WAVE_TITLES[int(x)]
-            except Exception as e:
-                t = ""
-            self.labels[2].SetLabel(f"Waveform  -  {t}")
-            wx.CallAfter(self.Refresh)
+        try:
+            t = WAVE_TITLES[int(x)]
+        except Exception as e:
+            t = ""
+        wx.CallAfter(self.labels[2].SetLabel, f"Waveform  -  {t}")
+        wx.CallAfter(self.Refresh)
 
     def changeP3(self, x):
         if self.which == 0:
