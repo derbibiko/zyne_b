@@ -109,6 +109,11 @@ MODULES = {
                     "p2": ["Shape", 0.5, 0, 1, False, False],
                     "p3": ["Lowpass Cutoff", 10000, 100, 15000, False, True]
                    },
+            "Sampler": { "title": "Sampler", "synth": ZB_Sampler,
+                    "p1": ["Loop Start Time (normalized)", 0., 0., 1., False, False],
+                    "p2": ["Loop Duration (normalized)", 0., 0., 1., False, False],
+                    "p3": ["Pitch", 1., 0., 4., False, False],
+            }
 }
 
 LFO_CONFIG = {"p1": ["Speed", 4, .01, 1000, False, True],
@@ -131,6 +136,23 @@ class MyFileDropTarget(wx.FileDropTarget):
 
     def OnDropFiles(self, x, y, filename):
         self.window.GetTopLevelParent().openfile(filename[0])
+        return True
+
+
+class MySamplerDropTarget(wx.FileDropTarget):
+    def __init__(self, window):
+        wx.FileDropTarget.__init__(self)
+        self.window = window
+
+    def OnDropFiles(self, x, y, filename):
+        loaded = self.window.synth.loadSamples(filename[0])
+        if not loaded:
+            wx.MessageBox(f'No sound files found in\n{filename[0]}.')
+            return False
+        s = os.path.split(self.window.synth.path)[1]
+        s = s.replace('_', ' ')
+        self.window.pathText.SetLabel(s)
+        self.window.sizer.Layout()
         return True
 
 
@@ -718,14 +740,24 @@ class ServerPanel(wx.Panel):
             elif vel == 0 and pit in self.virtualNotePressed.keys():
                 voice = self.virtualNotePressed[pit]
                 del self.virtualNotePressed[pit]
-            modules = self.GetTopLevelParent().modules
-            ch = note[2]
-            for module in modules:
+            for module in self.GetTopLevelParent().modules:
                 synth = module.synth
-                if synth.channel == 0 or synth.channel == ch:
+                if (synth.channel == 0 or synth.channel == note[2]) \
+                        and pit >= synth.first \
+                        and pit <= synth.last \
+                        and (note[1] == 0 or
+                            (note[1] >= synth.firstVel and note[1] <= synth.lastVel)):
                     synth._virtualpit[voice].setValue(pit)
                     synth._trigamp[voice].setValue(vel)
+                    if hasattr(synth, 'isSampler'):
+                        if vel > 0:
+                            synth.playloop(voice, (pit, vel))
+                        else:
+                            print('stop', pit, vel)
+                            synth.stoploop(voice, (pit, vel))
+
         except Exception as e:
+            print('keyboard reset due to error', e)
             self.keyboard.reset()
 
     def handleAudio(self, evt):
@@ -737,8 +769,6 @@ class ServerPanel(wx.Panel):
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(False)
-            for module in modules:
-                module.cbChannel.Enable(False)
             self.start()
             if self.keyboardShown:
                 self.GetTopLevelParent().keyboard.SetFocus()
@@ -751,8 +781,6 @@ class ServerPanel(wx.Panel):
                 menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(True)
-            for module in modules:
-                module.cbChannel.Enable(True)
             wx.CallAfter(self.meter.setRms, *[0 for i in range(self.meter.numSliders)])
             self.setDriverSetting()
 
@@ -789,8 +817,8 @@ class ServerPanel(wx.Panel):
                      self.knobEqA1.GetValue(), self.knobEqA2.GetValue(),
                      self.knobEqA3.GetValue(), self.knobEqA4.GetValue()]
         dic["Rev"] = [self.onOffRev.GetValue(),
-            self.knobRevBal.GetValue(), self.knobRevRefGain.GetValue(), self.knobRevInPos.GetValue(),
-            self.knobRevTime.GetValue(), self.knobRevRoomSize.GetValue(), self.knobRevCutOff.GetValue()]
+                      self.knobRevBal.GetValue(), self.knobRevRefGain.GetValue(), self.knobRevInPos.GetValue(),
+                      self.knobRevTime.GetValue(), self.knobRevRoomSize.GetValue(), self.knobRevCutOff.GetValue()]
         dic["Comp"] = [self.onOffComp.GetValue(), self.knobComp1.GetValue(),
                        self.knobComp2.GetValue(), self.knobComp3.GetValue(),
                        self.knobComp4.GetValue()]
@@ -1068,6 +1096,8 @@ class BasePanel(wx.Panel):
         self.knobSizerTop = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
         self.knobSizerTop.Add(self.knobDel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        if hasattr(self.synth, 'isSampler'):
+            self.knobDel.Hide()
         self.knobAtt = ZyneB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
         self.knobSizerTop.Add(self.knobAtt, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobDec = ZyneB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
@@ -1078,6 +1108,7 @@ class BasePanel(wx.Panel):
         self.knobSizerTop.Add(self.knobRel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobExp = ZyneB_ControlKnob(self, 0.001, 3.0, 1.0, label='Slope', outFunction=self.changeExponent)
         self.knobSizerTop.Add(self.knobExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobSizerTop.Layout()
         self.sizer.Add(self.knobSizerTop, 0, wx.CENTER, 0)
 
         self.knobSizerBottom = wx.BoxSizer(wx.HORIZONTAL)
@@ -1089,20 +1120,148 @@ class BasePanel(wx.Panel):
 
     def createTriggerSettings(self):
 
-        self.triggerSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.triggerSizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.cbChannel = wx.ComboBox(self, value="0", size=self.FromDIP(wx.Size(40, -1)),
-                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL"],
-                                     style=wx.CB_DROPDOWN | wx.CB_READONLY, name="channel")
-        self.cbChannel.Bind(wx.EVT_COMBOBOX, self.changeChannel)
-        self.triggerSizer.Add(self.cbChannel, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+        self.row1Sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.chSizer = wx.BoxSizer(wx.VERTICAL)
+        self.chText = wx.StaticText(self, id=-1, label="Channel")
+        self.chSizer.Add(self.chText, 0, wx.LEFT, 4)
+        fontText, psizeText = self.chText.GetFont(), self.chText.GetFont().GetPointSize()
+        fontText.SetPointSize(psizeText-2)
+        if not vars.constants["IS_LINUX"]:
+            self.chText.SetFont(fontText)
+        self.cbChannel = wx.Choice(self, size=self.FromDIP(wx.Size(78, -1)), name="channel",
+                                   choices=vars.constants["VAR_CHOICES"]["CHANNEL"])
+        self.cbChannel.SetMinSize(self.FromDIP(wx.Size(78, -1)))
+        self.cbChannel.Bind(wx.EVT_CHOICE, self.changeChannel)
+        self.chSizer.Add(self.cbChannel, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
 
         font, psize = self.cbChannel.GetFont(), self.cbChannel.GetFont().GetPointSize()
         font.SetPointSize(psize-2)
-        if not vars.constants["IS_WIN"]:
+        if not vars.constants["IS_LINUX"]:
             self.cbChannel.SetFont(font)
+        self.row1Sizer.Add(self.chSizer)
 
-        self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT, self.FromDIP(1))
+        self.firstVelSizer = wx.BoxSizer(wx.VERTICAL)
+        self.firstVelText = wx.StaticText(self, id=-1, label="First Velocity")
+        self.firstVelSizer.Add(self.firstVelText, 0, wx.LEFT, 4)
+        if not vars.constants["IS_LINUX"]:
+            self.firstVelText.SetFont(fontText)
+        self.cbFirstVel = wx.Choice(self, size=self.FromDIP(wx.Size(78, -1)), name="firstvel",
+                                    choices=list(map(str, range(128))))
+        self.cbFirstVel.SetMinSize(self.FromDIP(wx.Size(78, -1)))
+        self.cbFirstVel.Bind(wx.EVT_CHOICE, self.changeFirstVel)
+        self.firstVelSizer.Add(self.cbFirstVel, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+        if not vars.constants["IS_LINUX"]:
+            self.cbFirstVel.SetFont(font)
+        self.row1Sizer.Add(self.firstVelSizer)
+
+        self.lastVelSizer = wx.BoxSizer(wx.VERTICAL)
+        self.lastVelText = wx.StaticText(self, id=-1, label="Last Velocity")
+        self.lastVelSizer.Add(self.lastVelText, 0, wx.LEFT, 4)
+        if not vars.constants["IS_LINUX"]:
+            self.lastVelText.SetFont(fontText)
+        self.cbLastVel = wx.Choice(self, size=self.FromDIP(wx.Size(78, -1)), name="lastvel",
+                                   choices=list(map(str, range(128))))
+        self.cbLastVel.SetMinSize(self.FromDIP(wx.Size(78, -1)))
+        self.cbLastVel.Bind(wx.EVT_CHOICE, self.changeLastVel)
+        self.lastVelSizer.Add(self.cbLastVel, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+        if not vars.constants["IS_LINUX"]:
+            self.cbLastVel.SetFont(font)
+        self.row1Sizer.Add(self.lastVelSizer)
+
+        self.triggerSizer.Add(self.row1Sizer)
+
+        self.row2Sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.firstPitchSizer = wx.BoxSizer(wx.VERTICAL)
+        self.firstPitchText = wx.StaticText(self, id=-1, label="First Key Pitch")
+        self.firstPitchSizer.Add(self.firstPitchText, 0, wx.LEFT, 4)
+        if not vars.constants["IS_LINUX"]:
+            self.firstPitchText.SetFont(fontText)
+        self.cbFirstPitch = wx.Choice(self, size=self.FromDIP(wx.Size(78, -1)), name="firstpitch",
+                                      choices=list(map(lambda x: f"{vars.constants['KEY_NAMES'][x % 12]}{x // 12 - 2} ({x})", range(128))))
+        self.cbFirstPitch.SetMinSize(self.FromDIP(wx.Size(78, -1)))
+        self.cbFirstPitch.Bind(wx.EVT_CHOICE, self.changeFirstKeyPitch)
+        self.firstPitchSizer.Add(self.cbFirstPitch, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+        if not vars.constants["IS_LINUX"]:
+            self.cbFirstPitch.SetFont(font)
+        self.row2Sizer.Add(self.firstPitchSizer)
+
+        self.firstSizer = wx.BoxSizer(wx.VERTICAL)
+        self.firstText = wx.StaticText(self, id=-1, label="First Key")
+        self.firstSizer.Add(self.firstText, 0, wx.LEFT, 4)
+        if not vars.constants["IS_LINUX"]:
+            self.firstText.SetFont(fontText)
+        self.cbFirst = wx.Choice(self, size=self.FromDIP(wx.Size(78, -1)), name="first",
+                                 choices=list(map(lambda x: f"{vars.constants['KEY_NAMES'][x % 12]}{x // 12 - 2} ({x})", range(128))))
+        self.cbFirst.SetMinSize(self.FromDIP(wx.Size(78, -1)))
+        self.cbFirst.Bind(wx.EVT_CHOICE, self.changeFirst)
+        self.firstSizer.Add(self.cbFirst, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+        if not vars.constants["IS_LINUX"]:
+            self.cbFirst.SetFont(font)
+        self.row2Sizer.Add(self.firstSizer)
+
+        self.lastSizer = wx.BoxSizer(wx.VERTICAL)
+        self.lastText = wx.StaticText(self, id=-1, label="Last Key")
+        self.lastSizer.Add(self.lastText, 0, wx.LEFT, 4)
+        if not vars.constants["IS_LINUX"]:
+            self.lastText.SetFont(fontText)
+        self.cbLast = wx.Choice(self, size=self.FromDIP(wx.Size(78, -1)), name="last",
+                                choices=list(map(lambda x: f"{vars.constants['KEY_NAMES'][x % 12]}{x // 12 - 2} ({x})", range(128))))
+        self.cbLast.SetMinSize(self.FromDIP(wx.Size(78, -1)))
+        self.cbLast.Bind(wx.EVT_CHOICE, self.changeLast)
+        self.lastSizer.Add(self.cbLast, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+        if not vars.constants["IS_LINUX"]:
+            self.cbLast.SetFont(font)
+        self.row2Sizer.Add(self.lastSizer)
+
+        self.triggerSizer.Add(self.row2Sizer)
+
+        if hasattr(self.synth, 'isSampler'):
+            self.row3Sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+            self.loopmodeSizer = wx.BoxSizer(wx.VERTICAL)
+            self.loopmodeText = wx.StaticText(self, id=-1, label="Loop Mode")
+            self.loopmodeSizer.Add(self.loopmodeText, 0, wx.LEFT, 4)
+            if not vars.constants["IS_LINUX"]:
+                self.loopmodeText.SetFont(fontText)
+            self.cbLoopmode = wx.Choice(self, size=self.FromDIP(wx.Size(137, -1)), name="loopmode",
+                                        choices=["No Loop", "Loop forwards", "Loop backwards", "Loop forth and back"])
+            self.cbLoopmode.SetMinSize(self.FromDIP(wx.Size(137, -1)))
+            self.cbLoopmode.Bind(wx.EVT_CHOICE, self.changeLoopmode)
+            self.loopmodeSizer.Add(self.cbLoopmode, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+            if not vars.constants["IS_LINUX"]:
+                self.cbLoopmode.SetFont(font)
+            self.row3Sizer.Add(self.loopmodeSizer)
+
+            self.xfadeSizer = wx.BoxSizer(wx.VERTICAL)
+            self.xfadeText = wx.StaticText(self, id=-1, label="X-Fade duration (%)")
+            self.xfadeSizer.Add(self.xfadeText, 0, wx.LEFT, 4)
+            if not vars.constants["IS_LINUX"]:
+                self.xfadeText.SetFont(fontText)
+            self.cbXFade = wx.Choice(self, size=self.FromDIP(wx.Size(97, -1)), name="xfade",
+                                     choices=list(map(str, range(51))))
+            self.cbXFade.SetMinSize(self.FromDIP(wx.Size(97, -1)))
+            self.cbXFade.Bind(wx.EVT_CHOICE, self.changeXFade)
+            self.xfadeSizer.Add(self.cbXFade, 0, wx.LEFT | wx.RIGHT, self.FromDIP(5))
+            if not vars.constants["IS_LINUX"]:
+                self.cbXFade.SetFont(font)
+            self.row3Sizer.Add(self.xfadeSizer)
+
+            self.triggerSizer.Add(self.row3Sizer)
+
+            s = os.path.split(self.synth.path)[1]
+            s = s.replace('_', ' ')
+            self.pathText = wx.StaticText(self, id=-1, label=s)
+            self.triggerSizer.Add(self.pathText, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 4)
+
+            dropTarget = MySamplerDropTarget(self)
+            self.SetDropTarget(dropTarget)
+
+        self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT | wx.TOP, self.FromDIP(2))
+        self.sizer.Layout()
 
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
         height = 14 if vars.constants["IS_MAC"] else 16
@@ -1171,6 +1330,13 @@ class GenericPanel(BasePanel):
         self.buttons = [None, None, None, None, None]
         self.lfo_frames = [None, None, None, None, None]
         self.channel = 0
+        self.first = 0
+        self.last = 127
+        self.firstkey_pitch = 0
+        self.loopmode = 0
+        self.xfade = 0
+        self.firstVel = 0
+        self.lastVel = 127
 
         if slider_title_dicts is not None:
             self.slider_title_dicts = slider_title_dicts
@@ -1269,10 +1435,103 @@ class GenericPanel(BasePanel):
         self.SetSizer(self.sizer)
         self.Layout()
 
+    def changeLoopmode(self, evt):
+        self.SetLoopmode(evt.GetSelection())
+
+    def SetLoopmode(self, x):
+        if hasattr(self.synth, 'isSampler'):
+            self.synth.SetLoopmode(x)
+            self.loopmode = x
+            self.cbLoopmode.SetSelection(x)
+            self.cbLoopmode.Refresh()
+
+    def changeXFade(self, evt):
+        self.SetXFade(evt.GetSelection())
+
+    def SetXFade(self, x):
+        if hasattr(self.synth, 'isSampler'):
+            self.synth.SetXFade(x)
+            self.xfade = x
+            self.cbXFade.SetSelection(x)
+            self.cbXFade.Refresh()
+
+    def changeFirstVel(self, evt):
+        self.SetFirstVel(evt.GetString())
+
+    def SetFirstVel(self, x_):
+        x = int(x_)
+        self.synth.SetFirstVel(x)
+        self.firstVel = x
+        self.cbFirstVel.SetSelection(x)
+        self.cbFirstVel.Refresh()
+
+        self.cbLastVel.Clear()
+        self.cbLastVel.Append(list(map(str, range(self.firstVel, 128))))
+        self.cbLastVel.SetSelection(self.lastVel - self.firstVel)
+        self.cbLastVel.Refresh()
+
+    def changeLastVel(self, evt):
+        self.SetLastVel(evt.GetString())
+
+    def SetLastVel(self, x_):
+        x = int(x_)
+        self.synth.SetLastVel(x)
+        self.lastVel = x
+        self.cbLastVel.SetSelection(self.lastVel - self.firstVel)
+        self.cbLastVel.Refresh()
+
+        self.cbFirstVel.Clear()
+        self.cbFirstVel.Append(list(map(str, range(self.lastVel + 1))))
+        self.cbFirstVel.SetSelection(self.firstVel)
+        self.cbFirstVel.Refresh()
+
     def changeChannel(self, evt):
-        ch = int(self.cbChannel.GetValue())
+        self.SetChannel(evt.GetString())
+
+    def SetChannel(self, ch_):
+        ch = int(ch_)
         self.synth.SetChannel(ch)
         self.channel = ch
+        self.cbChannel.SetSelection(ch)
+        self.cbChannel.Refresh()
+
+    def changeFirst(self, evt):
+        self.SetFirst(evt.GetString().split('(')[1][:-1])
+
+    def SetFirst(self, x_):
+        x = int(x_)
+        self.synth.SetFirst(x)
+        self.first = x
+        self.cbLast.Clear()
+        self.cbLast.Append(list(map(lambda x: f"{vars.constants['KEY_NAMES'][x % 12]}{x // 12 - 2} ({x})", range(self.first, 128))))
+        self.cbLast.SetSelection(self.last - self.first)
+        self.cbLast.Refresh()
+
+    def changeLast(self, evt):
+        self.SetLast(evt.GetString().split('(')[1][:-1])
+
+    def SetLast(self, x_):
+        x = int(x_)
+        self.synth.SetLast(x)
+        self.last = x
+        self.cbLast.SetSelection(self.last - self.first)
+        self.cbLast.Refresh()
+        self.cbFirst.Clear()
+        self.cbFirst.Append(list(map(lambda x: f"{vars.constants['KEY_NAMES'][x % 12]}{x // 12 - 2} ({x})", range(self.last + 1))))
+        self.cbFirst.SetSelection(self.first)
+        self.cbFirst.Refresh()
+
+    def changeFirstKeyPitch(self, evt):
+        self.SetFirstKeyPitch(evt.GetString().split('(')[1][:-1])
+
+    def SetFirstKeyPitch(self, x_):
+        x = int(x_)
+        old = self.synth.firstkey_pitch
+        self.synth.SetFirstKeyPitch(x)
+        self.synth._transpo.value = self.synth._transpo.value - old + x - self.first
+        self.firstkey_pitch = x
+        self.cbFirstPitch.SetSelection(x)
+        self.cbFirstPitch.Refresh()
 
     def changeP1(self, x):
         self.updateSliderTitle(1, x)
@@ -1287,7 +1546,7 @@ class GenericPanel(BasePanel):
         self.synth.set(3, x)
 
     def changeTranspo(self, x):
-        self.synth._transpo.value = x
+        self.synth._transpo.value = x + self.synth.firstkey_pitch
 
     def changeDelay(self, x):
         self.synth.amp.delay = x

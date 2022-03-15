@@ -544,23 +544,24 @@ class BaseSynth:
         self.module_path = vars.vars["CUSTOM_MODULES_PATH"]
         self.export_path = vars.vars["EXPORT_PATH"]
         self.scaling = {1: 1, 2: 2, 3: 0}[mode]
-        self.with_transpo = False
         self.channel = 0
         self.first = 0
         self.last = 127
         self.centralKey = 60
-        for conf in config:
-            if conf[0] == "Transposition":
-                self.with_transpo = True
-                break
+        self.firstkey_pitch = 0
+        self.firstVel = 0
+        self.lastVel = 127
+        self.loopmode = 0
+        self.xfade = 0
+
         self._midi_metro = Metro(.1).play()
         self._rawamp = SigTo(1, vars.vars["SLIDERPORT"], 1)
+
         if vars.vars["MIDIPITCH"] is not None:
-            if self.with_transpo:
-                self._note = Sig(vars.vars["MIDIPITCH"])
-                self._transpo = Sig(value=0)
-                self.pitch = Snap(self._note+self._transpo, choice=list(range(12)), scale=self.scaling)
-            elif mode == 1:
+            self._note = Sig(vars.vars["MIDIPITCH"])
+            self._transpo = Sig(value=0)
+            self.pitch = Snap(self._note+self._transpo, choice=list(range(12)), scale=self.scaling)
+            if mode == 1:
                 if type(vars.vars["MIDIPITCH"]) is list:
                     _tmp_hz = [midiToHz(x) for x in vars.vars["MIDIPITCH"]]
                 else:
@@ -581,29 +582,25 @@ class BaseSynth:
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                    mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig())
             self.trig = Trig().play()
+
         elif vars.vars["VIRTUAL"]:
             self._virtualpit = Sig([0.0]*vars.vars["POLY"])
             self._trigamp = Sig([0.0]*vars.vars["POLY"])
-            if self.with_transpo:
-                self._transpo = Sig(value=0)
-                self.pitch = Snap(self._virtualpit+self._transpo, choice=list(range(12)), scale=self.scaling)
-            else:
-                self.pitch = Snap(self._virtualpit, choice=list(range(12)), scale=self.scaling)
+            self._transpo = Sig(value=0)
+            self.pitch = Snap(self._virtualpit+self._transpo, choice=list(range(12)), scale=self.scaling)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                    mul=self._rawamp, add=self._lfo_amp.sig())
-            self.trig = Thresh(self._trigamp)
+            if not hasattr(self, 'isSampler'):
+                self.trig = Thresh(self._trigamp)
+
         else:
-            if self.with_transpo:
-                self._note = Notein(poly=vars.vars["POLY"], scale=0, channel=self.channel,
-                                    first=self.first, last=self.last)
-                self._transpo = Sig(value=0)
-                self.pitch = Snap(self._note["pitch"]+self._transpo, choice=list(range(12)), scale=self.scaling)
-            else:
-                self._note = Notein(poly=vars.vars["POLY"], scale=self.scaling, channel=self.channel,
-                                    first=self.first, last=self.last)
-                self.pitch = self._note["pitch"]
-            self._trigamp = self._note["velocity"]
+            self._note = Notein(poly=vars.vars["POLY"], scale=0, channel=self.channel,
+                                first=self.first, last=self.last)
+            self._transpo = Sig(value=0)
+            self.pitch = Snap(self._note["pitch"]+self._transpo, choice=list(range(12)), scale=self.scaling)
+            self._velrange = Between(self._note["velocity"], min=self.firstVel/127, max=self.lastVel/127+0.01)
+            self._trigamp = self._note["velocity"] * self._velrange
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                    mul=self._rawamp, add=self._lfo_amp.sig())
@@ -624,8 +621,49 @@ class BaseSynth:
     def set(self, which, x):
         self._params[which].set(x)
 
-    def SetChannel(self, ch):
+    def SetChannel(self, ch_):
+        ch = int(ch_)
         self.channel = ch
+        try:
+            self._note.channel = ch
+        except Exception:
+            pass
+
+    def SetFirst(self, x_):
+        x = int(x_)
+        self.first = x
+        try:
+            self._note.first = x
+        except Exception:
+            pass
+
+    def SetLast(self, x_):
+        x = int(x_)
+        self.last = x
+        try:
+            self._note.last = x
+        except Exception:
+            pass
+
+    def SetFirstKeyPitch(self, x_):
+        x = int(x_)
+        self.firstkey_pitch = x
+
+    def SetFirstVel(self, x_):
+        x = int(x_)
+        self.firstVel = x
+        try:
+            self._velrange.min = x/127
+        except Exception:
+            pass
+
+    def SetLastVel(self, x_):
+        x = int(x_)
+        self.lastVel = x
+        try:
+            self._velrange.max = x/127 + 0.01
+        except Exception:
+            pass
 
     def __del__(self):
         for key in list(self.__dict__.keys()):
@@ -1199,6 +1237,142 @@ class VoltageControlledOsc(BaseSynth):
         self.filt2 = Biquad(self.src, freq=self.p3, mul=self.rightamp).mix()
         self.mix = Mix([self.filt1, self.filt2], voices=2)
         self.out = DCBlock(self.mix)
+
+
+class ZB_Sampler(BaseSynth):
+    """
+    Sampler and Looper.
+
+    Parameters:
+
+    ____________________________________________________________________________
+    Author : Hans-Jörg Bibiko - 2022
+    ____________________________________________________________________________
+    """
+    def __init__(self, config):
+        self.isSampler = True
+
+        BaseSynth.__init__(self, config, mode=1)
+
+        self.loops = {}
+        self.path = "/Users/bibiko/Music/Zyne_B/Samples/Plucked_String"
+        self.path = "No Samples - Drop Folder or Double-Click"
+
+        self.loopmode = 0
+        self.starttime = 0.
+        self.duration = 0.
+        self.xfade = 0
+        self.samplerpitch = 1.
+        self.out = 0.
+
+    def stoploop(self, voice, note=None):
+        if note is None:
+            t = self._note["pitch"] + self._transpo
+            pit = int(t.get(all=True)[voice])
+        else:
+            pit, vel = note
+            pit += self._transpo.value
+        if pit in self.loops:
+            if self.loops[pit].isPlaying():
+                self.loops[pit].stop()
+                if hasattr(self.loops[pit].mul, 'setInput'):
+                    self.loops[pit].mul.setInput(Sig(0.), 0.0)
+
+    def playloop(self, voice, note=None):
+        if note is None:
+            t = self._note["pitch"] + self._transpo
+            pit = int(t.get(all=True)[voice])
+            vel = self._trigamp.get(all=True)[voice]
+        else:
+            pit, vel = note
+            pit += self._transpo.value
+        if pit in self.loops:
+            o = self.loops[pit]
+            o.reset()
+            o.start = self.starttime
+            if self.duration == 0:
+                o.dur = o.table.getDur()
+            else:
+                o.dur = self.duration
+            if self.loopmode == 0:
+                o.xfade = 0
+            else:
+                o.xfade = self.xfade
+            o.mode = self.loopmode
+            o.pitch = self.samplerpitch
+            env = MidiAdsr(Sig(vel), attack=self.amp.attack, decay=self.amp.decay,
+                           sustain=self.amp.sustain, release=self.amp.release, mul=self._rawamp,
+                           add=self._lfo_amp.sig() * 2.0)
+            env.setExp(self.amp.exp)
+            o.setStopDelay(self.amp.release)
+            o.mul = env
+            o.play()
+
+    def set(self, which, x):
+        if which == 1:
+            self.starttime = x
+            for o in self.loops.values():
+                o.start = o.table.getDur() * x
+        elif which == 2:
+            self.duration = x
+            for o in self.loops.values():
+                if x > 0:
+                    o.dur = o.table.getDur() * x
+                else:
+                    o.dur = o.table.getDur()
+        elif which == 3:
+            self.samplerpitch = x
+            for o in self.loops.values():
+                o.pitch = x
+
+    def SetLoopmode(self, x):
+        self.loopmode = int(x)
+        if x > 0:
+            for o in self.loops.values():
+                o.mode = x
+        else:
+            for o in self.loops.values():
+                o.mode = x
+                o.xfade = 0.
+                self.xfade = 0.
+
+    def SetXFade(self, x):
+        self.xfade = int(x)
+        if self.loopmode > 0:
+            for o in self.loops.values():
+                o.xfade = x
+        else:
+            for o in self.loops.values():
+                o.xfade = 0.
+                self.xfade = 0.
+
+    def loadSamples(self, foldername):
+
+        if not os.path.isdir(foldername):
+            return False
+
+        self.path = foldername
+
+        for f in [f for f in os.listdir(self.path) if f[-4:].lower() in [".wav", ".aif"]]:
+            try:
+                key_index = int(f.split('_')[0])
+            except Exception:
+                continue
+            if key_index >= 0 and key_index < 128:
+                self.loops[key_index] = Looper(table=SndTable(os.path.join(self.path, f)),
+                                               xfadeshape=0, startfromloop=True).stop()
+
+        if len(self.loops.keys()) == 0:
+            return False
+
+        if hasattr(self, '_note'):
+            self.ton = TrigFunc(self._note['trigon'], self.playloop, arg=list(range(vars.vars["POLY"])))
+            self.toff = TrigFunc(self._note['trigoff'], self.stoploop, arg=list(range(vars.vars["POLY"])))
+
+        self.outL = Mix([o for o in self.loops.values()], voices=0, mul=Sig(self._panner.amp_L)).out(0)
+        self.outR = Mix([o for o in self.loops.values()], voices=1, mul=Sig(self._panner.amp_R)).out(1)
+        self.out = Mix([self.outL, self.outR], voices=2)
+        return True
 
 
 def checkForCustomModules():

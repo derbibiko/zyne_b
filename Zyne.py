@@ -327,6 +327,18 @@ class ZyneFrame(wx.Frame):
             module = self.modules[self.selected]
             name = module.name
             mute = module.mute
+            channel = module.channel
+            firstVel = module.firstVel
+            lastVel = module.lastVel
+            first = module.first
+            last = module.last
+            firstkey_pitch = module.firstkey_pitch
+            loopmode = module.loopmode
+            xfade = module.xfade
+            if hasattr(self.modules[-1].synth, 'isSampler'):
+                samplerpath = module.synth.path
+            else:
+                samplerpath = ""
             params = [slider.GetValue() for slider in module.sliders]
             lfo_params = module.getLFOParams()
             dic = MODULES[name]
@@ -335,6 +347,21 @@ class ZyneFrame(wx.Frame):
                                              dic["p1"], dic["p2"], dic["p3"], titleDic))
             self.addModule(self.modules[-1])
             self.modules[-1].setMute(mute)
+            self.modules[-1].SetChannel(channel)
+            self.modules[-1].SetFirstVel(firstVel)
+            self.modules[-1].SetLastVel(lastVel)
+            self.modules[-1].SetFirst(first)
+            self.modules[-1].SetLast(last)
+            self.modules[-1].SetFirstKeyPitch(firstkey_pitch)
+            self.modules[-1].SetLoopmode(loopmode)
+            self.modules[-1].SetXFade(xfade)
+            if hasattr(self.modules[-1].synth, 'isSampler'):
+                if self.modules[-1].synth.loadSamples(samplerpath):
+                    s = os.path.split(self.modules[-1].synth.path)[1]
+                    s = s.replace('_', ' ')
+                    self.modules[-1].pathText.SetLabel(s)
+                    self.modules[-1].sizer.Layout()
+
             for j, param in enumerate(params):
                 wx.CallAfter(self.modules[-1].sliders[j].SetValue, param)
             self.modules[-1].reinitLFOS(lfo_params, ctl_binding=False)
@@ -709,20 +736,37 @@ class ZyneFrame(wx.Frame):
         dlg.Destroy()
 
     def getModulesAndParams(self):
-        modules = [(module.name, module.mute) for module in self.modules]
+        modules = [(module.name, module.mute, module.channel, module.firstVel, module.lastVel,
+                    module.first, module.last, module.firstkey_pitch, module.loopmode,
+                    module.xfade, module.synth.path if hasattr(module.synth, 'isSampler') else "") for module in self.modules]
         params = [[slider.GetValue() for slider in module.sliders] for module in self.modules]
         lfo_params = [module.getLFOParams() for module in self.modules]
         ctl_params = [[slider.midictlnumber for slider in module.sliders] for module in self.modules]
         return modules, params, lfo_params, ctl_params
 
     def setModulesAndParams(self, modules, params, lfo_params, ctl_params, from_export=False):
-        for name, mute in modules:
+        for name, mute, channel, firstVel, lastVel, first, last, firstkey_pitch, loopmode, xfade, samplerpath in modules:
             dic = MODULES[name]
             titleDic = dic.get("slider_title_dicts", None)
             self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
                                              dic["p1"], dic["p2"], dic["p3"], titleDic))
             self.addModule(self.modules[-1])
             self.modules[-1].setMute(mute)
+            self.modules[-1].SetChannel(channel)
+            self.modules[-1].SetFirstVel(firstVel)
+            self.modules[-1].SetLastVel(lastVel)
+            self.modules[-1].SetFirst(first)
+            self.modules[-1].SetLast(last)
+            self.modules[-1].SetFirstKeyPitch(firstkey_pitch)
+            self.modules[-1].SetLoopmode(loopmode)
+            self.modules[-1].SetXFade(xfade)
+            if hasattr(self.modules[-1].synth, 'isSampler'):
+                if self.modules[-1].synth.loadSamples(samplerpath):
+                    s = os.path.split(self.modules[-1].synth.path)[1]
+                    s = s.replace('_', ' ')
+                    self.modules[-1].pathText.SetLabel(s)
+                    self.modules[-1].sizer.Layout()
+
         for i, paramset in enumerate(params):
             if len(paramset) == 10:  # old zy
                 paramset = paramset[:5] + [1.] + paramset[5:]
@@ -810,6 +854,9 @@ class ZyneFrame(wx.Frame):
             self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - {fn}")
             if not fn.endswith(vars.constants["DEFAULT_ZY_NAME"]):
                 self.setServerPanelFooter()
+            if len(dic["modules"]) and len(dic["modules"][0]) == 2:  # update old set
+                for m in dic["modules"]:
+                    m.extend([0, 0, 127, 0, 127, 0, 0, 0])
             wx.CallAfter(self.setModulesAndParams,
                          dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])
         except Exception as e:
@@ -824,10 +871,18 @@ class ZyneFrame(wx.Frame):
         self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
                                          dic["p1"], dic["p2"], dic["p3"], titleDic))
         self.addModule(self.modules[-1])
+        self.modules[-1].SetChannel(0)
+        self.modules[-1].SetFirstVel(0)
+        self.modules[-1].SetLastVel(127)
+        self.modules[-1].SetFirst(0)
+        self.modules[-1].SetLast(127)
+        self.modules[-1].SetFirstKeyPitch(0)
+        self.modules[-1].SetLoopmode(0)
+        self.modules[-1].SetXFade(0)
+
         wx.CallAfter(self.SetFocus)
 
     def addModule(self, mod):
-        mod.cbChannel.Enable(not self.serverPanel.onOff.GetValue())
         self.refreshOutputSignal()
         self.panel.sizer.Add(mod, 0, wx.ALL, 1)
         wx.CallAfter(self.OnSize, wx.CommandEvent())

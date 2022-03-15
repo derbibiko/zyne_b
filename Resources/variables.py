@@ -68,6 +68,9 @@ constants["VAR_CHOICES"] = {
     "CHANNEL": list(map(str, range(16))),
 }
 
+constants["KEY_NAMES"] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#',
+    'G', 'G#', 'A', 'A#', 'B']
+
 vars = dict()
 vars["AUDIO_HOST"] = "Portaudio"
 vars["AUTO_OPEN"] = "Default"

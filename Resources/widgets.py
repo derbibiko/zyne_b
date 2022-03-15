@@ -979,6 +979,7 @@ class ZB_Keyboard_Control(wx.Panel):
         wx.Panel.__init__(self, parent, id=id, style=wx.SIMPLE_BORDER)
 
         self.keyboard = keyboard
+        self.keyboard.channel = 1
         self.parent = parent
 
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
