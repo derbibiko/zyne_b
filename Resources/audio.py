@@ -541,6 +541,7 @@ class Stereofy:
 
 class BaseSynth:
     def __init__(self, config,  mode=1):
+        self.isSampler = False
         self.module_path = vars.vars["CUSTOM_MODULES_PATH"]
         self.export_path = vars.vars["EXPORT_PATH"]
         self.scaling = {1: 1, 2: 2, 3: 0}[mode]
@@ -591,7 +592,7 @@ class BaseSynth:
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                    mul=self._rawamp, add=self._lfo_amp.sig())
-            if not hasattr(self, 'isSampler'):
+            if not self.isSampler:
                 self.trig = Thresh(self._trigamp)
 
         else:
@@ -1250,12 +1251,9 @@ class ZB_Sampler(BaseSynth):
     ____________________________________________________________________________
     """
     def __init__(self, config):
-        self.isSampler = True
-
         BaseSynth.__init__(self, config, mode=1)
-
+        self.isSampler = True
         self.loops = {}
-        self.path = "/Users/bibiko/Music/Zyne_B/Samples/Plucked_String"
         self.path = "No Samples - Drop Folder or Double-Click"
 
         self.loopmode = 0

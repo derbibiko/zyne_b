@@ -749,12 +749,11 @@ class ServerPanel(wx.Panel):
                             (note[1] >= synth.firstVel and note[1] <= synth.lastVel)):
                     synth._virtualpit[voice].setValue(pit)
                     synth._trigamp[voice].setValue(vel)
-                    if hasattr(synth, 'isSampler'):
+                    if synth.isSampler:
                         if vel > 0:
                             synth.playloop(voice, (pit, vel))
                         else:
-                            print('stop', pit, vel)
-                            synth.stoploop(voice, (pit, vel))
+                            synth.stoploop(voice, (pit, 0))
 
         except Exception as e:
             print('keyboard reset due to error', e)
@@ -1096,7 +1095,7 @@ class BasePanel(wx.Panel):
         self.knobSizerTop = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
         self.knobSizerTop.Add(self.knobDel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
-        if hasattr(self.synth, 'isSampler'):
+        if self.synth.isSampler:
             self.knobDel.Hide()
         self.knobAtt = ZyneB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
         self.knobSizerTop.Add(self.knobAtt, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
@@ -1219,7 +1218,7 @@ class BasePanel(wx.Panel):
 
         self.triggerSizer.Add(self.row2Sizer)
 
-        if hasattr(self.synth, 'isSampler'):
+        if self.synth.isSampler:
             self.row3Sizer = wx.BoxSizer(wx.HORIZONTAL)
 
             self.loopmodeSizer = wx.BoxSizer(wx.VERTICAL)
@@ -1439,7 +1438,7 @@ class GenericPanel(BasePanel):
         self.SetLoopmode(evt.GetSelection())
 
     def SetLoopmode(self, x):
-        if hasattr(self.synth, 'isSampler'):
+        if self.synth.isSampler:
             self.synth.SetLoopmode(x)
             self.loopmode = x
             self.cbLoopmode.SetSelection(x)
@@ -1449,7 +1448,7 @@ class GenericPanel(BasePanel):
         self.SetXFade(evt.GetSelection())
 
     def SetXFade(self, x):
-        if hasattr(self.synth, 'isSampler'):
+        if self.synth.isSampler:
             self.synth.SetXFade(x)
             self.xfade = x
             self.cbXFade.SetSelection(x)

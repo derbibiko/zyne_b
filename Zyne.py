@@ -335,7 +335,7 @@ class ZyneFrame(wx.Frame):
             firstkey_pitch = module.firstkey_pitch
             loopmode = module.loopmode
             xfade = module.xfade
-            if hasattr(self.modules[-1].synth, 'isSampler'):
+            if self.modules[-1].synth.isSampler:
                 samplerpath = module.synth.path
             else:
                 samplerpath = ""
@@ -355,7 +355,7 @@ class ZyneFrame(wx.Frame):
             self.modules[-1].SetFirstKeyPitch(firstkey_pitch)
             self.modules[-1].SetLoopmode(loopmode)
             self.modules[-1].SetXFade(xfade)
-            if hasattr(self.modules[-1].synth, 'isSampler'):
+            if self.modules[-1].synth.isSampler:
                 if self.modules[-1].synth.loadSamples(samplerpath):
                     s = os.path.split(self.modules[-1].synth.path)[1]
                     s = s.replace('_', ' ')
@@ -738,7 +738,7 @@ class ZyneFrame(wx.Frame):
     def getModulesAndParams(self):
         modules = [(module.name, module.mute, module.channel, module.firstVel, module.lastVel,
                     module.first, module.last, module.firstkey_pitch, module.loopmode,
-                    module.xfade, module.synth.path if hasattr(module.synth, 'isSampler') else "") for module in self.modules]
+                    module.xfade, module.synth.path if module.synth.isSampler else "") for module in self.modules]
         params = [[slider.GetValue() for slider in module.sliders] for module in self.modules]
         lfo_params = [module.getLFOParams() for module in self.modules]
         ctl_params = [[slider.midictlnumber for slider in module.sliders] for module in self.modules]
@@ -760,7 +760,7 @@ class ZyneFrame(wx.Frame):
             self.modules[-1].SetFirstKeyPitch(firstkey_pitch)
             self.modules[-1].SetLoopmode(loopmode)
             self.modules[-1].SetXFade(xfade)
-            if hasattr(self.modules[-1].synth, 'isSampler'):
+            if self.modules[-1].synth.isSampler:
                 if self.modules[-1].synth.loadSamples(samplerpath):
                     s = os.path.split(self.modules[-1].synth.path)[1]
                     s = s.replace('_', ' ')
@@ -856,7 +856,7 @@ class ZyneFrame(wx.Frame):
                 self.setServerPanelFooter()
             if len(dic["modules"]) and len(dic["modules"][0]) == 2:  # update old set
                 for m in dic["modules"]:
-                    m.extend([0, 0, 127, 0, 127, 0, 0, 0])
+                    m.extend([0, 0, 127, 0, 127, 0, 0, 0, ""])
             wx.CallAfter(self.setModulesAndParams,
                          dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])
         except Exception as e:
