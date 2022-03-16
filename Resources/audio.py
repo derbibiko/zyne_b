@@ -1254,7 +1254,7 @@ class ZB_Sampler(BaseSynth):
         BaseSynth.__init__(self, config, mode=1)
         self.isSampler = True
         self.loops = {}
-        self.path = "No Samples - Drop Folder or Double-Click"
+        self.path = ""
 
         self.loopmode = 0
         self.starttime = 0.
@@ -1350,6 +1350,7 @@ class ZB_Sampler(BaseSynth):
             return False
 
         self.path = foldername
+        self.loops = {}
 
         for f in [f for f in os.listdir(self.path) if f[-4:].lower() in [".wav", ".aif"]]:
             try:

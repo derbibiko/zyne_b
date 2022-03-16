@@ -145,14 +145,7 @@ class MySamplerDropTarget(wx.FileDropTarget):
         self.window = window
 
     def OnDropFiles(self, x, y, filename):
-        loaded = self.window.synth.loadSamples(filename[0])
-        if not loaded:
-            wx.MessageBox(f'No sound files found in\n{filename[0]}.')
-            return False
-        s = os.path.split(self.window.synth.path)[1]
-        s = s.replace('_', ' ')
-        self.window.pathText.SetLabel(s)
-        self.window.sizer.Layout()
+        self.window.SetSamples(filename[0])
         return True
 
 
@@ -1091,6 +1084,35 @@ class BasePanel(wx.Panel):
                 self.labels[idx].SetLabel(prefix)
             wx.CallAfter(self.labels[idx].Refresh)
 
+    def SetSamples(self, path):
+        defaultLabel = "No Samples - Drop Folder or Double-Click"
+        fontSizeDelta = 2
+        if self.synth.isSampler:
+            s = ""
+            if len(path) > 0:
+                loaded = self.synth.loadSamples(path)
+                print(loaded, s)
+                if loaded:
+                    s = os.path.split(self.synth.path)[1]
+            if len(s) > 0:
+                if self.pathText.GetLabel() == defaultLabel:
+                    psize = self.pathText.GetFont().GetPointSize()
+                    font = wx.Font(psize + fontSizeDelta, wx.FONTFAMILY_DEFAULT, wx.NORMAL, wx.NORMAL)
+                    self.pathText.SetFont(font)
+                s = s.replace('_', ' ')
+            else:
+                s = defaultLabel
+                psize = self.pathText.GetFont().GetPointSize()
+                font = wx.Font(psize - fontSizeDelta, wx.FONTFAMILY_DEFAULT, wx.ITALIC, wx.NORMAL)
+                self.pathText.SetFont(font)
+            if len(s) > 40:
+                self.pathText.SetLabel(s[:40].strip() + '..')
+                self.pathText.SetToolTip(wx.ToolTip(s))
+            else:
+                self.pathText.SetLabel(s)
+            self.sizer.Fit(self)
+            self.sizer.Layout()
+
     def createAdsrKnobs(self):
         self.knobSizerTop = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
@@ -1251,9 +1273,9 @@ class BasePanel(wx.Panel):
 
             self.triggerSizer.Add(self.row3Sizer)
 
-            s = os.path.split(self.synth.path)[1]
-            s = s.replace('_', ' ')
-            self.pathText = wx.StaticText(self, id=-1, label=s)
+            self.pathText = wx.StaticText(self, id=-1, label="")
+            self.SetSamples("")
+            self.pathText.Bind(wx.EVT_LEFT_DCLICK, self.openSamples)
             self.triggerSizer.Add(self.pathText, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 4)
 
             dropTarget = MySamplerDropTarget(self)
@@ -1317,6 +1339,14 @@ class BasePanel(wx.Panel):
             if but is not None:
                 but.SetBackgroundColour(col)
         self.Refresh()
+
+    def openSamples(self, evt):
+        dlg = wx.DirDialog(self, "Choose Folder with Samples...", style=wx.FD_OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            if path != "":
+                self.SetSamples(path)
+        dlg.Destroy()
 
 
 class GenericPanel(BasePanel):

@@ -355,12 +355,7 @@ class ZyneFrame(wx.Frame):
             self.modules[-1].SetFirstKeyPitch(firstkey_pitch)
             self.modules[-1].SetLoopmode(loopmode)
             self.modules[-1].SetXFade(xfade)
-            if self.modules[-1].synth.isSampler:
-                if self.modules[-1].synth.loadSamples(samplerpath):
-                    s = os.path.split(self.modules[-1].synth.path)[1]
-                    s = s.replace('_', ' ')
-                    self.modules[-1].pathText.SetLabel(s)
-                    self.modules[-1].sizer.Layout()
+            self.modules[-1].SetSamples(samplerpath)
 
             for j, param in enumerate(params):
                 wx.CallAfter(self.modules[-1].sliders[j].SetValue, param)
@@ -760,12 +755,7 @@ class ZyneFrame(wx.Frame):
             self.modules[-1].SetFirstKeyPitch(firstkey_pitch)
             self.modules[-1].SetLoopmode(loopmode)
             self.modules[-1].SetXFade(xfade)
-            if self.modules[-1].synth.isSampler:
-                if self.modules[-1].synth.loadSamples(samplerpath):
-                    s = os.path.split(self.modules[-1].synth.path)[1]
-                    s = s.replace('_', ' ')
-                    self.modules[-1].pathText.SetLabel(s)
-                    self.modules[-1].sizer.Layout()
+            self.modules[-1].SetSamples(samplerpath)
 
         for i, paramset in enumerate(params):
             if len(paramset) == 10:  # old zy
