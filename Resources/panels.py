@@ -1091,9 +1091,9 @@ class BasePanel(wx.Panel):
             s = ""
             if len(path) > 0:
                 loaded = self.synth.loadSamples(path)
-                print(loaded, s)
                 if loaded:
                     s = os.path.split(self.synth.path)[1]
+                    self.GetTopLevelParent().refreshOutputSignal()
             if len(s) > 0:
                 if self.pathText.GetLabel() == defaultLabel:
                     psize = self.pathText.GetFont().GetPointSize()
@@ -1117,8 +1117,6 @@ class BasePanel(wx.Panel):
         self.knobSizerTop = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
         self.knobSizerTop.Add(self.knobDel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
-        if self.synth.isSampler:
-            self.knobDel.Hide()
         self.knobAtt = ZyneB_ControlKnob(self, 0.001, 60.0, 0.001, log=True, label='Attack', outFunction=self.changeAttack)
         self.knobSizerTop.Add(self.knobAtt, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobDec = ZyneB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)

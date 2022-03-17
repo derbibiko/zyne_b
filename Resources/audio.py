@@ -592,8 +592,7 @@ class BaseSynth:
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                    mul=self._rawamp, add=self._lfo_amp.sig())
-            if not self.isSampler:
-                self.trig = Thresh(self._trigamp)
+            self.trig = Thresh(self._trigamp)
 
         else:
             self._note = Notein(poly=vars.vars["POLY"], scale=0, channel=self.channel,
@@ -1271,10 +1270,9 @@ class ZB_Sampler(BaseSynth):
             pit, vel = note
             pit += self._transpo.value
         if pit in self.loops:
-            if self.loops[pit].isPlaying():
-                self.loops[pit].stop()
-                if hasattr(self.loops[pit].mul, 'setInput'):
-                    self.loops[pit].mul.setInput(Sig(0.), 0.0)
+            self.loops[pit].stop()
+            if hasattr(self.loops[pit].mul, 'setInput'):
+                self.loops[pit].mul.setInput(Sig(0.), 0.0)
 
     def playloop(self, voice, note=None):
         if note is None:
@@ -1298,13 +1296,13 @@ class ZB_Sampler(BaseSynth):
                 o.xfade = self.xfade
             o.mode = self.loopmode
             o.pitch = self.samplerpitch
-            env = MidiAdsr(Sig(vel), attack=self.amp.attack, decay=self.amp.decay,
+            env = MidiDelAdsr([Sig(vel), Sig(vel)], delay=self.amp.delay, attack=self.amp.attack, decay=self.amp.decay,
                            sustain=self.amp.sustain, release=self.amp.release, mul=self._rawamp,
-                           add=self._lfo_amp.sig() * 2.0)
+                           add=[self._lfo_amp.sig() * 4.0, self._lfo_amp.sig() * 4.0])
             env.setExp(self.amp.exp)
-            o.setStopDelay(self.amp.release)
             o.mul = env
-            o.play()
+            o.play(delay=self.amp.delay)
+            o.setStopDelay(self.amp.release)
 
     def set(self, which, x):
         if which == 1:
@@ -1368,9 +1366,9 @@ class ZB_Sampler(BaseSynth):
             self.ton = TrigFunc(self._note['trigon'], self.playloop, arg=list(range(vars.vars["POLY"])))
             self.toff = TrigFunc(self._note['trigoff'], self.stoploop, arg=list(range(vars.vars["POLY"])))
 
-        self.outL = Mix([o for o in self.loops.values()], voices=0, mul=Sig(self._panner.amp_L)).out(0)
-        self.outR = Mix([o for o in self.loops.values()], voices=1, mul=Sig(self._panner.amp_R)).out(1)
-        self.out = Mix([self.outL, self.outR], voices=2)
+        self.out = Mix([o for o in self.loops.values()], voices=2,
+                       mul=[Sig(self._panner.amp_L), Sig(self._panner.amp_R)]).out()
+
         return True
 
 
