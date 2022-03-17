@@ -723,7 +723,7 @@ class ZyneFrame(wx.Frame):
                         self.serverPanel.shutdown()
                         self.serverPanel.boot()
             dlg2.Destroy()
-            self.serverPanel.reinitServer(vars["SLIDERPORT"], vars.vars["AUDIO_HOST"], serverSettings, postProcSettings)
+            self.serverPanel.reinitServer(vars.vars["SLIDERPORT"], vars.vars["AUDIO_HOST"], serverSettings, postProcSettings)
             vars.vars["MIDIPITCH"] = None
             vars.vars["MIDIVELOCITY"] = 0.707
             self.serverPanel.setAmpCallable()
@@ -869,6 +869,7 @@ class ZyneFrame(wx.Frame):
         self.modules[-1].SetFirstKeyPitch(0)
         self.modules[-1].SetLoopmode(0)
         self.modules[-1].SetXFade(0)
+        self.modules[-1].SetSamples("")
 
         wx.CallAfter(self.SetFocus)
 
