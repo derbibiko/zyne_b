@@ -453,21 +453,21 @@ class Param(CtlBind):
         rng = (self.maxi - self.mini)
         if self.is_int:
             self.slider = Sig(self.init)
-            setattr(self.parent, "p%d" % i, self.slider)
+            setattr(self.parent, f"p{i}", self.slider)
         else:
             self.lfo = LFOSynth(rng, lfo_trigger, midi_metro)
             self.slider = SigTo(self.init, vars.vars["SLIDERPORT"], self.init, add=self.lfo.sig())
             self.out = Clip(self.slider, self.mini, self.maxi)
-            setattr(self.parent, "p%d" % i, self.out)
+            setattr(self.parent, f"p{i}", self.out)
 
     def set(self, x):
         self.slider.value = x
 
     def start_lfo(self, x):
-        if x == 0:
-            self.lfo.stop()
-        else:
+        if x:
             self.lfo.play()
+        else:
+            self.lfo.stop()
 
     def __del__(self):
         for key in list(self.__dict__.keys()):
@@ -621,47 +621,41 @@ class BaseSynth:
     def set(self, which, x):
         self._params[which].set(x)
 
-    def SetChannel(self, ch_):
-        ch = int(ch_)
-        self.channel = ch
+    def SetChannel(self, ch):
+        self.channel = int(ch)
         try:
-            self._note.channel = ch
+            self._note.channel = self.channel
         except Exception:
             pass
 
-    def SetFirst(self, x_):
-        x = int(x_)
-        self.first = x
+    def SetFirst(self, x):
+        self.first = int(x)
         try:
-            self._note.first = x
+            self._note.first = self.first
         except Exception:
             pass
 
-    def SetLast(self, x_):
-        x = int(x_)
-        self.last = x
+    def SetLast(self, x):
+        self.last = int(x)
         try:
-            self._note.last = x
+            self._note.last = self.last
         except Exception:
             pass
 
-    def SetFirstKeyPitch(self, x_):
-        x = int(x_)
-        self.firstkey_pitch = x
+    def SetFirstKeyPitch(self, x):
+        self.firstkey_pitch = int(x)
 
-    def SetFirstVel(self, x_):
-        x = int(x_)
-        self.firstVel = x
+    def SetFirstVel(self, x):
+        self.firstVel = int(x)
         try:
-            self._velrange.min = x/127
+            self._velrange.min = self.firstVel/127
         except Exception:
             pass
 
-    def SetLastVel(self, x_):
-        x = int(x_)
-        self.lastVel = x
+    def SetLastVel(self, x):
+        self.lastVel = int(x)
         try:
-            self._velrange.max = x/127 + 0.01
+            self._velrange.max = self.lastVel/127 + 0.01
         except Exception:
             pass
 
@@ -1250,7 +1244,7 @@ class ZB_Sampler(BaseSynth):
     ____________________________________________________________________________
     """
     def __init__(self, config):
-        BaseSynth.__init__(self, config, mode=1)
+        BaseSynth.__init__(self, config, mode=3)
         self.isSampler = True
         self.loops = {}
         self.path = ""
@@ -1262,47 +1256,40 @@ class ZB_Sampler(BaseSynth):
         self.samplerpitch = 1.
         self.out = 0.
 
-    def stoploop(self, voice, note=None):
-        if note is None:
-            t = self._note["pitch"] + self._transpo
-            pit = int(t.get(all=True)[voice])
-        else:
-            pit, vel = note
-            pit += self._transpo.value
+    def stoploop(self, voice):
+        pit = int(self.pitch.get(all=True)[voice])
         if pit in self.loops:
             self.loops[pit].stop()
             if hasattr(self.loops[pit].mul, 'setInput'):
-                self.loops[pit].mul.setInput(Sig(0.), 0.0)
+                self.loops[pit].mul.setInput(Sig(0.), 0.)
 
-    def playloop(self, voice, note=None):
-        if note is None:
-            t = self._note["pitch"] + self._transpo
-            pit = int(t.get(all=True)[voice])
-            vel = self._trigamp.get(all=True)[voice]
-        else:
-            pit, vel = note
-            pit += self._transpo.value
+    def playloop(self, voice):
+        pit = int(self.pitch.get(all=True)[voice])
+        vel = self._trigamp.get(all=True)[voice]
+        if vel == 0.:
+            self.stoploop(voice)
+            return
         if pit in self.loops:
             o = self.loops[pit]
             o.reset()
-            o.start = self.starttime
+            o.start = o.table.getDur() * self.starttime
             if self.duration == 0:
                 o.dur = o.table.getDur()
             else:
-                o.dur = self.duration
+                o.dur = o.table.getDur() * self.duration
             if self.loopmode == 0:
-                o.xfade = 0
+                o.xfade = [0, 0]
             else:
-                o.xfade = self.xfade
+                o.xfade = [self.xfade, self.xfade]
             o.mode = self.loopmode
             o.pitch = self.samplerpitch
             env = MidiDelAdsr([Sig(vel), Sig(vel)], delay=self.amp.delay, attack=self.amp.attack, decay=self.amp.decay,
-                           sustain=self.amp.sustain, release=self.amp.release, mul=self._rawamp,
-                           add=[self._lfo_amp.sig() * 4.0, self._lfo_amp.sig() * 4.0])
+                           sustain=self.amp.sustain, release=self.amp.release, mul=self._rawamp * 0.5,
+                           add=[self._lfo_amp.sig()] * 2)
             env.setExp(self.amp.exp)
             o.mul = env
             o.play(delay=self.amp.delay)
-            o.setStopDelay(self.amp.release)
+            o.setStopDelay(self.amp.release + .001)
 
     def set(self, which, x):
         if which == 1:
@@ -1362,14 +1349,20 @@ class ZB_Sampler(BaseSynth):
         if len(self.loops.keys()) == 0:
             return False
 
-        if hasattr(self, '_note'):
-            self.ton = TrigFunc(self._note['trigon'], self.playloop, arg=list(range(vars.vars["POLY"])))
-            self.toff = TrigFunc(self._note['trigoff'], self.stoploop, arg=list(range(vars.vars["POLY"])))
+        self.ton = TrigFunc(Change(self._trigamp), self.playloop, arg=list(range(vars.vars["POLY"])))
 
         self.out = Mix([o for o in self.loops.values()], voices=2,
                        mul=[Sig(self._panner.amp_L), Sig(self._panner.amp_R)]).out()
 
         return True
+
+    def __del__(self):
+        if hasattr(self, 'loops'):
+            for o in self.loops.values():
+                o.setStopDelay(0.)
+                o.stop()
+        for key in list(self.__dict__.keys()):
+            del self.__dict__[key]
 
 
 def checkForCustomModules():

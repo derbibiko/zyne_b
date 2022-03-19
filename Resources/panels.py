@@ -112,7 +112,7 @@ MODULES = {
             "Sampler": { "title": "Sampler", "synth": ZB_Sampler,
                     "p1": ["Loop Start Time (normalized)", 0., 0., 1., False, False],
                     "p2": ["Loop Duration (normalized)", 0., 0., 1., False, False],
-                    "p3": ["Pitch", 1., 0., 4., False, False],
+                    "p3": ["Pitch", 1., 0., 4., False, False]
             }
 }
 
@@ -742,11 +742,6 @@ class ServerPanel(wx.Panel):
                             (note[1] >= synth.firstVel and note[1] <= synth.lastVel)):
                     synth._virtualpit[voice].setValue(pit)
                     synth._trigamp[voice].setValue(vel)
-                    if synth.isSampler:
-                        if vel > 0:
-                            synth.playloop(voice, (pit, vel))
-                        else:
-                            synth.stoploop(voice, (pit, 0))
 
         except Exception as e:
             print('keyboard reset due to error', e)
@@ -1094,6 +1089,7 @@ class BasePanel(wx.Panel):
                 if loaded:
                     s = os.path.split(self.synth.path)[1]
                     self.GetTopLevelParent().refreshOutputSignal()
+                    self.reinitLFOS(self.getLFOParams(), True)
             if len(s) > 0:
                 if self.pathText.GetLabel() == defaultLabel:
                     psize = self.pathText.GetFont().GetPointSize()
@@ -1296,7 +1292,7 @@ class BasePanel(wx.Panel):
         hsizer.AddGrowableCol(0)
         slider = ZyneB_ControlSlider(self, minValue, maxValue, value, log=log,
                                      integer=integer, outFunction=callback, label=label)
-        if self.from_lfo or integer:
+        if self.from_lfo or integer or self.synth.isSampler:
             hsizer.Add(slider, 0, wx.CENTER | wx.ALL | wx.EXPAND, 0)
         else:
             button = LFOButton(self, synth=self.synth, which=i, callback=self.startLFO)
@@ -1364,6 +1360,7 @@ class GenericPanel(BasePanel):
         self.xfade = 0
         self.firstVel = 0
         self.lastVel = 127
+        self.path = ""
 
         if slider_title_dicts is not None:
             self.slider_title_dicts = slider_title_dicts
@@ -1693,10 +1690,10 @@ class GenericPanel(BasePanel):
     def startLFO(self, which, x):
         self.lfo_sliders[which]["state"] = x
         if which == 0:
-            if not x:
-                self.synth._lfo_amp.stop()
-            else:
+            if x:
                 self.synth._lfo_amp.play()
+            else:
+                self.synth._lfo_amp.stop()
         else:
             self.synth._params[which].start_lfo(x)
 
