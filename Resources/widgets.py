@@ -56,10 +56,9 @@ class ZB_Base_Control(wx.Panel):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(200, 16),
                  log=False, powoftwo=False, integer=False,
-                 outFunction=None, label=""):
+                 outFunction=None, label="", isrange=False, displayFunction=None):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
                           style=wx.NO_BORDER | wx.WANTS_CHARS | wx.EXPAND)
-
         self.parent = parent
         self.pos = self.FromDIP(wx.Point(pos))
         self.size = self.FromDIP(wx.Size(size))
@@ -73,6 +72,8 @@ class ZB_Base_Control(wx.Panel):
         self.SetBackgroundColour(self.backgroundColour)
         self.SetForegroundColour(self.foregroundColour)
         self.outFunction = outFunction
+        self.displayFunction = displayFunction
+        self.isRange = isrange
         self.integer = integer
         self.log = log
         self.powoftwo = powoftwo
@@ -99,8 +100,12 @@ class ZB_Base_Control(wx.Panel):
             self.SetValue(init)
             self.init = init
         else:
-            self.SetValue(minvalue)
-            self.init = minvalue
+            if self.isRange:
+                self.SetValue((minvalue, maxvalue))
+                self.init = (minvalue, maxvalue)
+            else:
+                self.SetValue(minvalue)
+                self.init = minvalue
 
         self.clampPos()
 
@@ -221,19 +226,24 @@ class ZB_Base_Control(wx.Panel):
         val = self.GetValue()
         if self.outFunction is not None:
             self.outFunction(val)
-
-        if self.integer:
-            self.display_value = str(val)
+        if self.displayFunction is not None:
+            self.display_value = self.displayFunction(val)
         else:
-            absval = abs(val)
-            if absval >= 1000:
-                self.display_value = "%.0f" % val
-            elif absval >= 100:
-                self.display_value = "%.1f" % val
-            elif absval >= 10:
-                self.display_value = "%.2f" % val
-            elif absval < 10:
-                self.display_value = "%.3f" % val
+            if self.integer:
+                if self.isRange:
+                    self.display_value = f"{int(self.value[0])},{int(self.value[1])}"
+                else:
+                    self.display_value = str(val)
+            else:
+                absval = abs(val)
+                if absval >= 1000:
+                    self.display_value = "%.0f" % val
+                elif absval >= 100:
+                    self.display_value = "%.1f" % val
+                elif absval >= 10:
+                    self.display_value = "%.2f" % val
+                elif absval < 10:
+                    self.display_value = "%.3f" % val
         self.setFocusToKeyboard()
 
     def setFocusToKeyboard(self):
@@ -247,20 +257,33 @@ class ZB_Base_Control(wx.Panel):
 
     def SetValue(self, value, keepSelected=False):
         self.selected = keepSelected
+        if self.isRange:
+            self.first, self.last = value
         if self.HasCapture():
             self.ReleaseMouse()
-        if self.powoftwo:
+        if self.powoftwo and not self.isRange:
             value = powOfTwoToInt(value)
-        value = clamp(value, self.minvalue, self.maxvalue)
+        if not self.isRange:
+            value = clamp(value, self.minvalue, self.maxvalue)
         if self.log:
             t = toLog(value, self.minvalue, self.maxvalue)
             self.value = interpFloat(t, self.minvalue, self.maxvalue)
         else:
-            t = tFromValue(value, self.minvalue, self.maxvalue)
-            self.value = interpFloat(t, self.minvalue, self.maxvalue)
+            if self.isRange:
+                t1 = tFromValue(self.first, self.minvalue, self.maxvalue)
+                v1 = interpFloat(t1, self.minvalue, self.maxvalue)
+                t2 = tFromValue(self.last, self.minvalue, self.maxvalue)
+                v2 = interpFloat(t2, self.minvalue, self.maxvalue)
+                self.value = (v1, v2)
+            else:
+                t = tFromValue(value, self.minvalue, self.maxvalue)
+                self.value = interpFloat(t, self.minvalue, self.maxvalue)
         if self.integer:
-            self.value = int(self.value)
-        if self.powoftwo:
+            if self.isRange:
+                self.value = (int(self.value[0]), int(self.value[1]))
+            else:
+                self.value = int(self.value)
+        if self.powoftwo and not self.isRange:
             self.value = powOfTwo(self.value)
         self.clampPos()
         self.handleNewValue()
@@ -269,12 +292,20 @@ class ZB_Base_Control(wx.Panel):
 
     def GetValue(self):
         if self.log:
-            t = tFromValue(self.value, self.minvalue, self.maxvalue)
-            val = 10**(t * self.toexp_c1 + self.toexp_c0)
+            if self.isRange:
+                t1 = tFromValue(self.value[0], self.minvalue, self.maxvalue)
+                t2 = tFromValue(self.value[1], self.minvalue, self.maxvalue)
+                val = (10**(t1 * self.toexp_c1 + self.toexp_c0), 10**(t2 * self.toexp_c1 + self.toexp_c0))
+            else:
+                t = tFromValue(self.value, self.minvalue, self.maxvalue)
+                val = 10**(t * self.toexp_c1 + self.toexp_c0)
         else:
             val = self.value
         if self.integer:
-            val = int(val)
+            if self.isRange:
+                self.value = (int(self.value[0]), int(self.value[1]))
+            else:
+                val = int(val)
         return val
 
     def valToWidget(self):
@@ -583,7 +614,7 @@ class ZB_ControlKnob(ZB_Base_Control):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(44, 74),
                  log=False, integer=False,
-                 outFunction=None, label=''):
+                 outFunction=None, label='', isrange=False, displayFunction=None):
 
         self.knobCenterPosX = int(size[0] / 2)
         self.knobRadius = 14
@@ -599,8 +630,10 @@ class ZB_ControlKnob(ZB_Base_Control):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos=pos, size=size,
                          log=log, integer=integer,
-                         outFunction=outFunction, label=label)
+                         outFunction=outFunction, label=label, isrange=isrange,
+                         displayFunction=displayFunction)
         self.parent = parent
+        self.rangeIndex = -1
         self.SetMinSize(self.GetSize())
         self.knobRadius = self.FromDIP(self.knobRadius)
         self.knobCenterPosX = self.FromDIP(self.knobCenterPosX)
@@ -630,12 +663,18 @@ class ZB_ControlKnob(ZB_Base_Control):
                 self.oldValue = self.value
                 self.CaptureMouse()
                 self.selected = False
+                if self.isRange:
+                    if self.ScreenToClient(self.clickPos)[0] < self.knobCenterPosX:
+                        self.rangeIndex = 0
+                    else:
+                        self.rangeIndex = 1
             self.Refresh()
         evt.Skip()
 
     def MouseUp(self, evt):
         if self.HasCapture():
             self.ReleaseMouse()
+        self.rangeIndex = -1
 
     def DoubleClick(self, event):
         if self._enable:
@@ -693,7 +732,18 @@ class ZB_ControlKnob(ZB_Base_Control):
                 offX = self.clickPos[0] - pos[0]  # slow changes, right +, left -
                 off = 0.005 * offY * (self.maxvalue - self.minvalue) - \
                     0.001 * offX * (self.maxvalue - self.minvalue)
-                self.value = clamp(self.oldValue + off, self.minvalue, self.maxvalue)
+                if self.isRange:
+                    if self.rangeIndex == 0:
+                        self.first = clamp(self.oldValue[0] + off, self.minvalue, self.last)
+                        if self.integer:
+                            self.first = int(self.first)
+                    else:
+                        self.last = clamp(self.oldValue[1] + off, self.first, self.maxvalue)
+                        if self.integer:
+                            self.last = int(self.last)
+                    self.value = (self.first, self.last)
+                else:
+                    self.value = clamp(self.oldValue + off, self.minvalue, self.maxvalue)
                 self.handleNewValue()
                 self.selected = False
                 self.Refresh()
@@ -734,10 +784,20 @@ class ZB_ControlKnob(ZB_Base_Control):
             dc.DrawRoundedRectangle(recval, self.fromdip4)
 
         # Draw knob
-        ph = interpFloat(tFromValue(self.value, self.minvalue, self.maxvalue),
-                         self.knobStartAngle, self.knobEndAngle)
-        lendx = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
-        lendy = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
+        if self.isRange:
+            ph = interpFloat(tFromValue(self.value[0], self.minvalue, self.maxvalue),
+                             self.knobStartAngle, self.knobEndAngle)
+            lendx1 = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
+            lendy1 = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
+            ph = interpFloat(tFromValue(self.value[1], self.minvalue, self.maxvalue),
+                             self.knobStartAngle, self.knobEndAngle)
+            lendx2 = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
+            lendy2 = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
+        else:
+            ph = interpFloat(tFromValue(self.value, self.minvalue, self.maxvalue),
+                             self.knobStartAngle, self.knobEndAngle)
+            lendx = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
+            lendy = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
 
         if vars.constants["IS_WIN"]:
             dc.SetPen(wx.Pen(self.knobInnerColour, width=(4 - self.FromDIP(1)), style=wx.SOLID))
@@ -746,11 +806,29 @@ class ZB_ControlKnob(ZB_Base_Control):
         dc.SetBrush(wx.Brush(self.knobInnerColour, wx.SOLID))
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius - self.fromdip3)
 
-        dc.SetPen(wx.Pen(self.knobColour, width=self.fromdip4, style=wx.SOLID))
-        dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
+        if self.isRange:
+            dc.SetPen(wx.Pen(self.knobColour, width=self.fromdip4, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx1, lendy1)
 
-        dc.SetPen(wx.Pen(self.backgroundColour, width=self.fromdip2, style=wx.SOLID))
-        dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
+            dc.SetPen(wx.Pen(self.backgroundColour, width=1, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY - self.knobRadius, self.knobCenterPosX, self.knobCenterPosY + self.knobRadius)
+
+            dc.SetPen(wx.Pen(self.backgroundColour, width=self.fromdip2, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx1, lendy1)
+
+            dc.SetPen(wx.Pen(self.knobColour, width=self.fromdip4, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx2, lendy2)
+
+            dc.SetPen(wx.Pen(self.backgroundColour, width=self.fromdip2, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx2, lendy2)
+
+            dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.fromdip2)
+        else:
+            dc.SetPen(wx.Pen(self.knobColour, width=self.fromdip4, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
+
+            dc.SetPen(wx.Pen(self.backgroundColour, width=self.fromdip2, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx, lendy)
 
         dc.SetPen(wx.Pen(self.foregroundColour, width=self.fromdip1, style=wx.SOLID))
         dc.SetBrush(wx.Brush(self.knobColour, wx.TRANSPARENT))
@@ -814,6 +892,19 @@ class ZyneB_ControlKnob(ZB_ControlKnob):
             evt.StopPropagation()
         else:
             ZB_ControlKnob.MouseDown(self, evt)
+
+
+class ZB_ControlRangeKnob(ZB_ControlKnob):
+    def __init__(self, parent, minvalue, maxvalue, init=None,
+                 pos=(0, 0), size=(44, 74),
+                 log=False, integer=False,
+                 outFunction=None, label='', isrange=True, displayFunction=None):
+        super().__init__(parent, minvalue, maxvalue, init,
+                         pos=pos, size=size,
+                         log=False, integer=integer,
+                         outFunction=outFunction, label=label, isrange=isrange,
+                         displayFunction=displayFunction)
+        self.parent = parent
 
 
 class ZB_VuMeter(wx.Panel):
@@ -1024,8 +1115,8 @@ class ZB_Keyboard_Control(wx.Panel):
         self.modeText = wx.StaticText(self, id=-1, label="Key Mode")
         self.modeText.SetFont(font)
         sizer.Add(self.modeText, 0, wx.LEFT, 4)
-        self.cbKeymode = wx.ComboBox(self, value="Hold", size=popsize,
-                                     choices=["Normal", "Hold", "Single Key Hold"],
+        self.cbKeymode = wx.ComboBox(self, value="Dynamic", size=popsize,
+                                     choices=["Dynamic", "Hold", "Single Key Hold"],
                                      style=wx.CB_DROPDOWN | wx.CB_READONLY)
         self.cbKeymode.Bind(wx.EVT_COMBOBOX, self.changeKeymode)
         self.cbKeymode.SetFont(font)
@@ -1078,7 +1169,7 @@ class ZB_Keyboard(wx.Panel):
         self.octave = 0
         self.w1 = self.FromDIP(15)
         self.w2 = int(self.w1 / 2) + 1
-        self.hold = 1
+        self.hold = 0
         self.keyPressed = None
         self.channel = 0
         self.c_key_idx = 35

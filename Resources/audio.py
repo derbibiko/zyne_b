@@ -1344,7 +1344,7 @@ class ZB_Sampler(BaseSynth):
                 continue
             if key_index >= 0 and key_index < 128:
                 self.loops[key_index] = Looper(table=SndTable(os.path.join(self.path, f)),
-                                               xfadeshape=0, startfromloop=True).stop()
+                                               xfadeshape=0, startfromloop=True, autosmooth=True).stop()
 
         if len(self.loops.keys()) == 0:
             return False

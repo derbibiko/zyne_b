@@ -8,7 +8,7 @@ Usage:
 python SimpleSampler.py path_to_sound_folder
 
 """
-from pyo import *
+from pyo64 import *
 import os, sys
 
 if len(sys.argv) < 2:
