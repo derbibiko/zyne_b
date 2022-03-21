@@ -1140,12 +1140,12 @@ class BasePanel(wx.Panel):
         if self.synth.isSampler:
             self.row0Sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-            self.trigLoopmode = ZB_ControlKnob(self, 0, 4, 0, size=(106, 74), label='Loop Mode',
+            self.trigLoopmode = ZB_ControlKnob(self, 0, 4, 0, size=(116, 74), label='Loop Mode',
                                               integer=True, outFunction=self.SetLoopmode,
                                               displayFunction=self.SetLoopmodeDisplay)
             self.row0Sizer.Add(self.trigLoopmode, 0, wx.LEFT | wx.RIGHT, self.FromDIP(12))
 
-            self.trigXfade = ZB_ControlKnob(self, 0, 50, 10, size=(106, 74), label='X-Fade (%)',
+            self.trigXfade = ZB_ControlKnob(self, 0, 50, 10, size=(116, 74), label='X-Fade (%)',
                                                     integer=False, outFunction=self.SetXFade)
             self.row0Sizer.Add(self.trigXfade, 0, wx.LEFT | wx.RIGHT , self.FromDIP(12))
 
@@ -1162,19 +1162,19 @@ class BasePanel(wx.Panel):
 
         self.row1Sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.trigChannel = ZB_ControlKnob(self, 0, 15, 0, size=(50, 74), label='Channel',
+        self.trigChannel = ZB_ControlKnob(self, 0, 15, 0, size=(58, 74), label='Channel',
                                           integer=True, outFunction=self.SetChannel)
         self.row1Sizer.Add(self.trigChannel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
-        self.trigVelRange = ZB_ControlRangeKnob(self, 1, 127, (1, 127), size=(50, 74), label='Vel Range',
+        self.trigVelRange = ZB_ControlRangeKnob(self, 1, 127, (1, 127), size=(58, 74), label='Vel Range',
                                                 integer=True, outFunction=self.SetVelRange)
         self.row1Sizer.Add(self.trigVelRange, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
-        self.trigKeyRange = ZB_ControlRangeKnob(self, 0, 127, (0, 127), size=(50, 74), label='Key Range',
+        self.trigKeyRange = ZB_ControlRangeKnob(self, 0, 127, (0, 127), size=(58, 74), label='Key Range',
                                                 integer=True, outFunction=self.SetKeyRange)
         self.row1Sizer.Add(self.trigKeyRange, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
-        self.trigFirstKey = ZB_ControlKnob(self, 0, 127, 0, size=(50, 74), label='First Key',
+        self.trigFirstKey = ZB_ControlKnob(self, 0, 127, 0, size=(58, 74), label='First Key',
                                           integer=True, outFunction=self.SetFirstKeyPitch)
         self.row1Sizer.Add(self.trigFirstKey, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
