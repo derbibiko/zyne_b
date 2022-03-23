@@ -189,7 +189,7 @@ class ZyneFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.onRetrig, id=vars.constants["ID"]["Retrig"])
         if wx.Platform != "__WXMAC__":
             self.fileMenu.AppendSeparator()
-        self.fileMenu.Append(vars.constants["ID"]["Prefs"], 'Preferences...\tCtrl+,', 'Open Cecilia preferences pane', kind=wx.ITEM_NORMAL)
+        self.fileMenu.Append(vars.constants["ID"]["Prefs"], 'Preferences...\tCtrl+,', 'Open Zyne_B preferences pane', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onPreferences, id=vars.constants["ID"]["Prefs"])
         self.fileMenu.AppendSeparator()
         self.fileMenu.Append(vars.constants["ID"]["Run"], 'Run\tCtrl+R', kind=wx.ITEM_NORMAL)
@@ -310,14 +310,17 @@ class ZyneFrame(wx.Frame):
         else:
             self.selected = (self.selected + 1) % num
         if old is not None:
-            self.modules[old].setBackgroundColour(vars.constants["BACKCOLOUR"])
-        self.modules[self.selected].setBackgroundColour(self.selectionBackgroundColour)
+            self.modules[old].headPanel.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
+            self.modules[old].headPanel.Refresh()
+        self.modules[self.selected].headPanel.SetBackgroundColour(vars.constants["HIGHLIGHT_COLOUR"])
+        self.modules[self.selected].headPanel.Refresh()
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(True)
 
     def clearSelection(self, evt):
         if self.selected is not None:
-            self.modules[self.selected].setBackgroundColour(vars.constants["BACKCOLOUR"])
+            self.modules[self.selected].headPanel.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
+            self.modules[self.selected].headPanel.Refresh()
         self.selected = None
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(False)
@@ -362,8 +365,10 @@ class ZyneFrame(wx.Frame):
 
             old = self.selected
             self.selected = len(self.modules) - 1
-            self.modules[old].setBackgroundColour(vars.constants["BACKCOLOUR"])
-            self.modules[self.selected].setBackgroundColour(self.selectionBackgroundColour)
+            self.modules[old].headPanel.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
+            self.modules[old].headPanel.Refresh()
+            self.modules[self.selected].headPanel.SetBackgroundColour(vars.constants["HIGHLIGHT_COLOUR"])
+            self.modules[self.selected].headPanel.Refresh()
 
             wx.CallAfter(self.SetFocus)
 
@@ -380,6 +385,8 @@ class ZyneFrame(wx.Frame):
             evt.SetInt(0)
             self.serverPanel.onOff.SetValue(False)
         else:
+            if self.selected is not None:
+                self.clearSelection(evt)
             evt.SetInt(1)
             self.serverPanel.onOff.SetValue(True)
         self.serverPanel.onOff.ProcessWindowEvent(evt)
@@ -447,17 +454,14 @@ class ZyneFrame(wx.Frame):
             self.Bind(wx.EVT_MENU, self.updateAddModuleMenu, id=vars.constants["ID"]["UpdateModules"])
 
     def openMidiLearnHelp(self, evt):
-        if vars.constants["IS_LINUX"]:
-            size = (750, 500)
-        else:
-            size = (750, 500)
+        size = (750, 500)
         lines = []
         lines.append("To assign midi controllers to module's sliders, user can use the midi learn mode.\n")
         lines.append("First, hit Shift+Ctrl+M (Shift+Cmd+M on Mac) to start midi learn mode, the server panel will change its background colour.\n")
         lines.append("When in midi learn mode, click on a slider and play with the midi controller you want to assign, the controller number will appear at both end of the slider.\n")
         lines.append("To remove a midi assignation, click a second time on the selected slider without playing with a midi controller.\n")
         lines.append("Finally, hit Shift+Ctrl+M (Shift+Cmd+M on Mac) again to leave midi learn mode. Next time you start the server, you will be able to control the sliders with your midi controller.\n\n")
-        lines.append("Midi assignations are saved within the .zy file and will be automatically assigned at future launches of the synth.\n")
+        lines.append(f"Midi assignations are saved within the {vars.constants['ZYNE_B_FILE_EXT']} file and will be automatically assigned at future launches of the synth.\n")
         win = HelpFrame(self, -1, title="Midi Learn Help", size=size, subtitle="How to use the midi learn mode.", lines=lines, from_module=False)
         win.CenterOnParent()
         win.Show(True)
@@ -591,7 +595,7 @@ class ZyneFrame(wx.Frame):
         if self.openedFile != "":
             filename = os.path.split(self.openedFile)[1]
         else:
-            filename = "zynesynth.zy"
+            filename = f"zynesynth{vars.constants['ZYNE_B_FILE_EXT']}"
         dlg = wx.FileDialog(self, "Save file as...", defaultFile=filename, style=wx.FD_SAVE)
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
@@ -605,7 +609,7 @@ class ZyneFrame(wx.Frame):
     def onOpen(self, evt):
         if self.serverPanel.onOff.GetValue():
             return
-        wildcard = "Zyne files (*.zy)|*.zy"
+        wildcard = f"Zyne files (*{vars.constants['ZYNE_B_FILE_EXT']})|*{vars.constants['ZYNE_B_FILE_EXT']}"
         dlg = wx.FileDialog(self, "Choose Zyne Synth file...", wildcard=wildcard, style=wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
@@ -749,9 +753,10 @@ class ZyneFrame(wx.Frame):
             self.modules[-1].trigVelRange.SetValue((firstVel, lastVel))
             self.modules[-1].trigKeyRange.SetValue((first, last))
             self.modules[-1].trigFirstKey.SetValue(firstkey_pitch)
-            self.modules[-1].SetLoopmode(loopmode)
-            self.modules[-1].SetXFade(xfade)
-            self.modules[-1].SetSamples(samplerpath)
+            if self.modules[-1].synth.isSampler:
+                self.modules[-1].trigLoopmode.SetValue(loopmode)
+                self.modules[-1].trigXfade.SetValue(xfade)
+                self.modules[-1].SetSamples(samplerpath)
 
         for i, paramset in enumerate(params):
             if len(paramset) == 10:  # old zy
@@ -805,6 +810,8 @@ class ZyneFrame(wx.Frame):
             "ctl_params": ctl_params,
             "output_driver": out_drv, "midi_interface": midi_itf
         }
+        if not filename.endswith(vars.constants["ZYNE_B_FILE_EXT"]):
+            filename = f"{filename}{vars.constants['ZYNE_B_FILE_EXT']}"
         with open(filename, "w") as f:
             f.write(json.dumps(dic))
         self.openedFile = filename

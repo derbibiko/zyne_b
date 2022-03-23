@@ -20,7 +20,6 @@ if "phoenix" in wx.version():
     wx.Image_HSVtoRGB = wx.Image.HSVtoRGB
 
 
-HEADTITLE_BACK_COLOUR = "#9999A0"
 BACKGROUND_COLOUR = "#EBEBEB"
 CHAR_SET = set("0123456789.-")
 
@@ -29,7 +28,7 @@ class ZB_HeadTitle(wx.Panel):
     def __init__(self, parent, title, font=None, togcall=None):
         wx.Panel.__init__(self, parent, -1)
         self.parent = parent
-        self.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
         mainsizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer = wx.BoxSizer(wx.VERTICAL)
         if togcall is not None:
@@ -85,7 +84,7 @@ class ZB_Base_Control(wx.Panel):
         self._enable = True
         self.midictl = None
         self.midictlnumber = None
-        self.last_midi_val = 0
+        self.last_midi_val = -1
         self.label = label
         self.new = ""
         self.value = 0
@@ -137,18 +136,28 @@ class ZB_Base_Control(wx.Panel):
 
             elif event.GetKeyCode() in [wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER]:
                 try:
-                    self.SetValue(float(self.new))
+                    if self.isRange:
+                        n = self.new.split(',')
+                        self.SetValue(map(float, (n[0], n[1])))
+                    else:
+                        self.SetValue(float(self.new))
                 except Exception:
-                    self.SetValue(float(old_val))
+                    if self.isRange:
+                        self.SetValue(old_val)
+                    else:
+                        self.SetValue(float(old_val))
                 evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
                 wx.PostEvent(self.GetEventHandler(), evt)
 
             elif event.GetKeyCode() == wx.WXK_ESCAPE:
-                self.SetValue(float(old_val))
+                if self.isRange:
+                    self.SetValue(old_val)
+                else:
+                    self.SetValue(float(old_val))
                 evt = wx.FocusEvent(wx.EVT_KILL_FOCUS.evtType[0], self.GetId())
                 wx.PostEvent(self.GetEventHandler(), evt)
 
-            elif event.GetKeyCode() in [wx.WXK_LEFT, wx.WXK_DOWN]:
+            elif not self.isRange and event.GetKeyCode() in [wx.WXK_LEFT, wx.WXK_DOWN]:
                 if event.GetKeyCode() == wx.WXK_DOWN and not self.integer:
                     new_val = old_val - 0.01
                 else:
@@ -163,7 +172,7 @@ class ZB_Base_Control(wx.Panel):
                     self.SetValue(float(old_val))
                     self.selected = False
 
-            elif event.GetKeyCode() in [wx.WXK_RIGHT, wx.WXK_UP]:
+            elif not self.isRange and event.GetKeyCode() in [wx.WXK_RIGHT, wx.WXK_UP]:
                 if event.GetKeyCode() == wx.WXK_UP and not self.integer:
                     new_val = old_val + 0.01
                 else:
@@ -181,7 +190,7 @@ class ZB_Base_Control(wx.Panel):
             elif event.GetKeyCode() < 256:
                 char = chr(event.GetKeyCode())
 
-            if char in CHAR_SET:
+            if char in CHAR_SET or (self.isRange and char == ','):
                 self.new += char
             if not self.selected:
                 wx.GetTopLevelWindows()[0].Raise()
@@ -259,6 +268,10 @@ class ZB_Base_Control(wx.Panel):
         self.selected = keepSelected
         if self.isRange:
             self.first, self.last = value
+            if self.first > self.last:
+                self.first, self.last = self.last, self.first
+            self.first = clamp(self.first, self.minvalue, self.last)
+            self.last = clamp(self.last, self.first, self.maxvalue)
         if self.HasCapture():
             self.ReleaseMouse()
         if self.powoftwo and not self.isRange:
@@ -314,9 +327,8 @@ class ZB_Base_Control(wx.Panel):
             if val != self.last_midi_val:
                 self.last_midi_val = val
                 if self.log:
-                    # := val = toExp(val, self.minvalue, self.maxvalue)
                     val = 10**(val * self.toexp_c1 + self.toexp_c0)
-                self.SetValue(val)
+                self.setValue(val)
 
     def clampPos(self):
         pass
@@ -807,11 +819,11 @@ class ZB_ControlKnob(ZB_Base_Control):
         dc.DrawCircle(self.knobCenterPosX, self.knobCenterPosY, self.knobRadius - self.fromdip3)
 
         if self.isRange:
-            dc.SetPen(wx.Pen(self.knobColour, width=self.fromdip4, style=wx.SOLID))
-            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx1, lendy1)
-
             dc.SetPen(wx.Pen(self.backgroundColour, width=1, style=wx.SOLID))
             dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY - self.knobRadius, self.knobCenterPosX, self.knobCenterPosY + self.knobRadius)
+
+            dc.SetPen(wx.Pen(self.knobColour, width=self.fromdip4, style=wx.SOLID))
+            dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx1, lendy1)
 
             dc.SetPen(wx.Pen(self.backgroundColour, width=self.fromdip2, style=wx.SOLID))
             dc.DrawLine(self.knobCenterPosX, self.knobCenterPosY, lendx1, lendy1)

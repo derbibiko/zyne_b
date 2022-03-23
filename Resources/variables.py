@@ -13,7 +13,11 @@ constants["IS_LINUX"] = bool(constants["PLATFORM"].startswith("linux"))
 constants["OSX_BUILD_WITH_JACK_SUPPORT"] = False
 constants["WIN_TITLE"] = "Zyne_B"
 constants["PREF_FILE_NAME"] = ".Zyne_Brc"
-constants["DEFAULT_ZY_NAME"] = "default.zy"
+constants["ZYNE_B_FILE_EXT"] = ".zy"
+constants["DEFAULT_ZY_NAME"] = f"default{constants['ZYNE_B_FILE_EXT']}"
+
+constants["HEADTITLE_BACKGROUND_COLOUR"] = "#9999A0"
+constants["HIGHLIGHT_COLOUR"] = "#2B60C8"
 
 # Change working directory if App is running 'frozen' (by e.g. pyinstaller)
 if getattr(sys, 'frozen', False):

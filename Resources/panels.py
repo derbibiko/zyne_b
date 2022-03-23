@@ -16,7 +16,6 @@ import wx.richtext as rt
 # is used mainly for dragging the LFOFrame on Linux (?) and hovering on Windows (?)
 from wx.lib.stattext import GenStaticText
 
-HEADTITLE_BACK_COLOUR = "#9999A0"
 
 WAVE_TITLES = {0: "Sine", 1: "Ramp", 2: "Sawtooth", 3: "Square", 4: "Triangle",
                5: "Pulse", 6: "Bipolar Pulse", 7: "Sample and Hold"}
@@ -648,7 +647,8 @@ class ServerPanel(wx.Panel):
         self.menuIds = [vars.constants["ID"]["New"], vars.constants["ID"]["Open"], vars.constants["ID"]["MidiLearn"],
                         vars.constants["ID"]["Export"], vars.constants["ID"]["ExportChord"], vars.constants["ID"]["ExportTracks"],
                         vars.constants["ID"]["ExportChordTracks"], vars.constants["ID"]["Quit"],
-                        vars.constants["ID"]["UpdateModules"], vars.constants["ID"]["CheckoutModules"]]
+                        vars.constants["ID"]["UpdateModules"], vars.constants["ID"]["CheckoutModules"],
+                        vars.constants["ID"]["Select"], vars.constants["ID"]["DeSelect"]]
 
     def start(self):
         self.fsserver.start()
@@ -748,15 +748,26 @@ class ServerPanel(wx.Panel):
             self.keyboard.reset()
 
     def handleAudio(self, evt):
-        modules = self.GetTopLevelParent().modules
+        mainframe = self.GetTopLevelParent()
+        modules = mainframe.modules
         if evt.GetInt() == 1:
+            hasModule = False
             for popup in self.popups:
                 popup.Disable()
             for menuId in self.menuIds:
-                menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
+                menuItem = mainframe.menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(False)
+            for module in mainframe.modules:
+                for kt in module.keytriggers:
+                    kt._enable = False
+                    kt.Refresh()
+                    hasModule = True
             self.start()
+            if hasModule and mainframe.serverPanel.sliderAmp.midictlnumber is not None:
+                slider = mainframe.serverPanel.sliderAmp
+                slider.midictl = Midictl(slider.midictlnumber, -60, 18, slider.GetValue())
+                slider.trigFunc = TrigFunc(mainframe.modules[0].synth._midi_metro, slider.valToWidget)
             if self.keyboardShown:
                 self.GetTopLevelParent().keyboard.SetFocus()
         else:
@@ -769,6 +780,13 @@ class ServerPanel(wx.Panel):
                 if menuItem is not None:
                     menuItem.Enable(True)
             wx.CallAfter(self.meter.setRms, *[0 for i in range(self.meter.numSliders)])
+            for module in self.GetTopLevelParent().modules:
+                for kt in module.keytriggers:
+                    kt._enable = True
+                    kt.Refresh()
+            if mainframe.serverPanel.sliderAmp.midictl is not None:
+                mainframe.serverPanel.sliderAmp.midictl = None
+                mainframe.serverPanel.sliderAmp.trigFunc = None
             self.setDriverSetting()
 
     def handleRec(self, evt):
@@ -795,7 +813,7 @@ class ServerPanel(wx.Panel):
     def getServerSettings(self):
         return [self.popupSr.GetSelection(), self.popupPoly.GetSelection(),
                 self.popupBit.GetSelection(), self.popupFormat.GetSelection(),
-                self.sliderAmp.GetValue()]
+                self.sliderAmp.GetValue(), self.sliderAmp.midictlnumber]
 
     def getPostProcSettings(self):
         dic = {}
@@ -822,6 +840,8 @@ class ServerPanel(wx.Panel):
             popup.ProcessEvent(evt)
         amp = serverSettings[4]
         self.sliderAmp.SetValue(amp)
+        if len(serverSettings) > 5 and serverSettings[5] is not None:
+            self.sliderAmp.setMidiCtlNumber(serverSettings[5])
         self.resetVirtualKeyboard()
 
     def setPostProcSettings(self, postProcSettings):
@@ -869,7 +889,7 @@ class ServerPanel(wx.Panel):
         mainframe.panel.Freeze()
         if vars.vars["VIRTUAL"]:
             self.resetVirtualKeyboard()
-        modules, params, lfo_params, ctl_params = self.GetTopLevelParent().getModulesAndParams()
+        modules, params, lfo_params, ctl_params = mainframe.getModulesAndParams()
         postProcSettings = self.getPostProcSettings()
         mainframe.deleteAllModules()
         self.shutdown()
@@ -1033,6 +1053,10 @@ class ServerPanel(wx.Panel):
         gbcolour = vars.constants["BACKCOLOUR"]
         if state:
             self.SetBackgroundColour(learnColour)
+            for module in mainFrame.modules:
+                for kt in module.keytriggers:
+                    kt._enable = False
+                    kt.Refresh()
             for widget in self.widgets:
                 widget.setBackgroundColour(learnColour)
             for popup in self.popupsLearn:
@@ -1041,6 +1065,10 @@ class ServerPanel(wx.Panel):
             self.fsserver.startMidiLearn()
         else:
             self.SetBackgroundColour(gbcolour)
+            for module in mainFrame.modules:
+                for kt in module.keytriggers:
+                    kt._enable = True
+                    kt.Refresh()
             for widget in self.widgets:
                 widget.setBackgroundColour(gbcolour)
             for popup in self.popupsLearn:
@@ -1067,6 +1095,8 @@ class BasePanel(wx.Panel):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.name = name
         self.title = title
+        self.triggers = []
+        self.keytriggers = []
 
     def updateSliderTitle(self, idx, x):
         if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
@@ -1159,6 +1189,7 @@ class BasePanel(wx.Panel):
             dropTarget = MySamplerDropTarget(self)
             self.SetDropTarget(dropTarget)
 
+            self.triggers.extend([self.trigLoopmode, self.trigXfade])
 
         self.row1Sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -1182,6 +1213,9 @@ class BasePanel(wx.Panel):
 
         self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT | wx.TOP | wx.CENTER, self.FromDIP(2))
         self.sizer.Layout()
+
+        self.keytriggers.extend([self.trigChannel, self.trigVelRange, self.trigKeyRange, self.trigFirstKey])
+        self.triggers.extend(self.keytriggers)
 
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
         height = 14 if vars.constants["IS_MAC"] else 16
@@ -1216,7 +1250,7 @@ class BasePanel(wx.Panel):
         self.Refresh()
 
     def leaveX(self, evt):
-        self.close.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.close.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
         self.Refresh()
 
     def MouseDown(self, evt):
@@ -1271,7 +1305,7 @@ class GenericPanel(BasePanel):
             self.slider_title_dicts = slider_title_dicts
 
         self.headPanel = wx.Panel(self)
-        self.headPanel.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.headPanel.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
 
         self.titleSizer = wx.FlexGridSizer(1, 4, 5, 5)
         self.titleSizer.AddGrowableCol(2)
@@ -1452,7 +1486,7 @@ class GenericPanel(BasePanel):
     def leaveCorner(self, evt):
         col = {0: "#0000FF", 1: "white", 2: "#FF7700"}[self.mute]
         self.corner.SetForegroundColour(col)
-        self.corner.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.corner.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
         self.Refresh()
 
     def MouseDownCorner(self, evt):
@@ -1477,7 +1511,7 @@ class GenericPanel(BasePanel):
         self.Refresh()
 
     def leaveInfo(self, evt):
-        self.info.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.info.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
         self.Refresh()
 
     def MouseDownInfo(self, evt):
@@ -1739,7 +1773,7 @@ class LFOPanel(BasePanel):
         self.which = which
 
         self.headPanel = wx.Panel(self)
-        self.headPanel.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.headPanel.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
 
         self.titleSizer = wx.FlexGridSizer(1, 3, 5, 5)
         self.titleSizer.AddGrowableCol(1)
@@ -1803,13 +1837,16 @@ class LFOPanel(BasePanel):
         self.Refresh()
 
     def leaveInfo(self, evt):
-        self.minfo.SetBackgroundColour(HEADTITLE_BACK_COLOUR)
+        self.minfo.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
         self.Refresh()
 
     def MouseDownInfo(self, evt):
-        old_col = self.parent.module.GetBackgroundColour()
-        self.parent.module.setBackgroundColour((43, 96, 200))
-        wx.CallLater(80, self.parent.module.setBackgroundColour, old_col)
+        p = self.parent.module.headPanel
+        old_col = p.GetBackgroundColour()
+        p.SetBackgroundColour(vars.constants["HIGHLIGHT_COLOUR"])
+        p.Refresh()
+        wx.CallLater(80, p.SetBackgroundColour, old_col)
+        wx.CallLater(100, p.Refresh)
 
     def changeP1(self, x):
         if self.which == 0:
