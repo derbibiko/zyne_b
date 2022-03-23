@@ -385,6 +385,7 @@ class ServerPanel(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent, style=wx.BORDER_NONE)
         self.parent = parent
+        self.mainFrame = self.GetTopLevelParent()
         self.SetSize(self.FromDIP(wx.Size(230, 500)))
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.SetForegroundColour(vars.constants["FORECOLOUR"])
@@ -704,7 +705,7 @@ class ServerPanel(wx.Panel):
         if resetDisplay:
             self.keyboard.reset()
         else:
-            modules = self.GetTopLevelParent().modules
+            modules = self.mainFrame.modules
             for pit, voice in self.virtualNotePressed.items():
                 for module in modules:
                     synth = module.synth
@@ -733,7 +734,7 @@ class ServerPanel(wx.Panel):
             elif vel == 0 and pit in self.virtualNotePressed.keys():
                 voice = self.virtualNotePressed[pit]
                 del self.virtualNotePressed[pit]
-            for module in self.GetTopLevelParent().modules:
+            for module in self.mainFrame.modules:
                 synth = module.synth
                 if (synth.channel == 0 or synth.channel == note[2]) \
                         and pit >= synth.first \
@@ -748,45 +749,44 @@ class ServerPanel(wx.Panel):
             self.keyboard.reset()
 
     def handleAudio(self, evt):
-        mainframe = self.GetTopLevelParent()
-        modules = mainframe.modules
+        modules = self.mainFrame.modules
         if evt.GetInt() == 1:
             hasModule = False
             for popup in self.popups:
                 popup.Disable()
             for menuId in self.menuIds:
-                menuItem = mainframe.menubar.FindItemById(menuId)
+                menuItem = self.mainFrame.menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(False)
-            for module in mainframe.modules:
+            for module in self.mainFrame.modules:
                 for kt in module.keytriggers:
                     kt._enable = False
                     kt.Refresh()
                     hasModule = True
             self.start()
-            if hasModule and mainframe.serverPanel.sliderAmp.midictlnumber is not None:
-                slider = mainframe.serverPanel.sliderAmp
+            if hasModule and self.mainFrame.serverPanel.sliderAmp.midictlnumber is not None:
+                slider = self.mainFrame.serverPanel.sliderAmp
                 slider.midictl = Midictl(slider.midictlnumber, -60, 18, slider.GetValue())
-                slider.trigFunc = TrigFunc(mainframe.modules[0].synth._midi_metro, slider.valToWidget)
+                slider.trigFunc = TrigFunc(self.mainFrame.modules[0].synth._midi_metro, slider.valToWidget)
             if self.keyboardShown:
-                self.GetTopLevelParent().keyboard.SetFocus()
+                self.mainFrame.keyboard.SetFocus()
         else:
             self.fsserver._stRev.reset()
             for popup in self.popups:
                 if popup != self.popupDriver or vars.vars["AUDIO_HOST"] != "Jack":
                     popup.Enable()
             for menuId in self.menuIds:
-                menuItem = self.GetTopLevelParent().menubar.FindItemById(menuId)
+                menuItem = self.mainFrame.menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(True)
             wx.CallAfter(self.meter.setRms, *[0 for i in range(self.meter.numSliders)])
-            for module in self.GetTopLevelParent().modules:
+            for module in self.mainFrame.modules:
                 for kt in module.keytriggers:
                     kt._enable = True
                     kt.Refresh()
-            if mainframe.serverPanel.sliderAmp.midictl is not None:
-                mainframe.serverPanel.sliderAmp.midictl = None
-                mainframe.serverPanel.sliderAmp.trigFunc = None
+            if self.mainFrame.serverPanel.sliderAmp.midictl is not None:
+                self.mainFrame.serverPanel.sliderAmp.midictl = None
+                self.mainFrame.serverPanel.sliderAmp.trigFunc = None
             self.setDriverSetting()
 
     def handleRec(self, evt):
@@ -885,22 +885,21 @@ class ServerPanel(wx.Panel):
                 widget.SetValue(comp[i])
 
     def setDriverSetting(self, func=None, val=0):
-        mainframe = self.GetTopLevelParent()
-        mainframe.panel.Freeze()
+        self.mainFrame.panel.Freeze()
         if vars.vars["VIRTUAL"]:
             self.resetVirtualKeyboard()
-        modules, params, lfo_params, ctl_params = mainframe.getModulesAndParams()
+        modules, params, lfo_params, ctl_params = self.mainFrame.getModulesAndParams()
         postProcSettings = self.getPostProcSettings()
-        mainframe.deleteAllModules()
+        self.mainFrame.deleteAllModules()
         self.shutdown()
         if func is not None:
             func(val)
         self.boot()
-        mainframe.setModulesAndParams(modules, params, lfo_params, ctl_params)
+        self.mainFrame.setModulesAndParams(modules, params, lfo_params, ctl_params)
         self.setPostProcSettings(postProcSettings)
-        mainframe.panel.Thaw()
+        self.mainFrame.panel.Thaw()
         if self.keyboardShown:
-            mainframe.keyboard.SetFocus()
+            self.mainFrame.keyboard.SetFocus()
         else:
             self.SetFocus()
 
@@ -930,7 +929,6 @@ class ServerPanel(wx.Panel):
             self.popupInterface.SetStringSelection(s)
 
     def changeInterface(self, evt):
-        mainFrame = self.GetTopLevelParent()
         try:
             vars.vars["VIRTUAL"] = False
             if evt.GetString() in self.interfaceList:
@@ -942,13 +940,13 @@ class ServerPanel(wx.Panel):
             if self.keyboardShown:
                 self.keyboardShown = 0
                 self.keyboard.reset()
-                mainFrame.showKeyboard(False)
+                self.mainFrame.showKeyboard(False)
         except IndexError:
             vars.vars["VIRTUAL"] = True
             if not self.keyboardShown:
                 self.keyboardShown = 1
                 self.setDriverSetting()
-                mainFrame.showKeyboard()
+                self.mainFrame.showKeyboard()
 
     def changeSr(self, evt):
         if evt.GetInt() == 0:
@@ -1048,12 +1046,11 @@ class ServerPanel(wx.Panel):
         self.fsserver.setCompParam("falltime", x)
 
     def midiLearn(self, state):
-        mainFrame = self.GetTopLevelParent()
         learnColour = wx.Colour("#DEDEDE")
         gbcolour = vars.constants["BACKCOLOUR"]
         if state:
             self.SetBackgroundColour(learnColour)
-            for module in mainFrame.modules:
+            for module in self.mainFrame.modules:
                 for kt in module.keytriggers:
                     kt._enable = False
                     kt.Refresh()
@@ -1061,11 +1058,11 @@ class ServerPanel(wx.Panel):
                 widget.setBackgroundColour(learnColour)
             for popup in self.popupsLearn:
                 popup.Disable()
-            mainFrame.menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(False)
+            self.mainFrame.menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(False)
             self.fsserver.startMidiLearn()
         else:
             self.SetBackgroundColour(gbcolour)
-            for module in mainFrame.modules:
+            for module in self.mainFrame.modules:
                 for kt in module.keytriggers:
                     kt._enable = True
                     kt.Refresh()
@@ -1073,12 +1070,12 @@ class ServerPanel(wx.Panel):
                 widget.setBackgroundColour(gbcolour)
             for popup in self.popupsLearn:
                 popup.Enable()
-            mainFrame.menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(True)
+            self.mainFrame.menubar.FindItemById(vars.constants["ID"]["Run"]).Enable(True)
             self.fsserver.stopMidiLearn()
             wx.CallAfter(self.setDriverSetting)
         wx.CallAfter(self.Refresh)
         if self.keyboardShown:
-            mainFrame.keyboard.SetFocus()
+            self.mainFrame.keyboard.SetFocus()
         else:
             self.SetFocus()
 
@@ -1118,7 +1115,7 @@ class BasePanel(wx.Panel):
                 loaded = self.synth.loadSamples(path)
                 if loaded:
                     s = os.path.split(self.synth.path)[1]
-                    self.GetTopLevelParent().refreshOutputSignal()
+                    self.mainFrame.refreshOutputSignal()
                     self.reinitLFOS(self.getLFOParams(), True)
             if len(s) > 0:
                 if self.pathText.GetLabel() == defaultLabel:
@@ -1235,7 +1232,7 @@ class BasePanel(wx.Panel):
             hsizer.Add(slider, 0, wx.CENTER | wx.ALL | wx.EXPAND, 0)
         else:
             button = LFOButton(self, synth=self.synth, which=i, callback=self.startLFO)
-            lfo_frame = LFOFrame(self.GetTopLevelParent(), self.synth, label, i, self)
+            lfo_frame = LFOFrame(self.mainFrame, self.synth, label, i, self)
             self.buttons[i] = button
             self.lfo_frames[i] = lfo_frame
             hsizer.Add(slider, 0, wx.CENTER | wx.ALL | wx.EXPAND, 0)
@@ -1259,9 +1256,9 @@ class BasePanel(wx.Panel):
                 if frame is not None:
                     if frame.IsShown():
                         frame.Hide()
-            self.GetTopLevelParent().deleteModule(self)
+            self.mainFrame.deleteModule(self)
         else:
-            win = self.GetTopLevelParent()
+            win = self.mainFrame
             win.Hide()
 
     def setBackgroundColour(self, col):
@@ -1300,6 +1297,7 @@ class GenericPanel(BasePanel):
         self.firstVel = 0
         self.lastVel = 127
         self.path = ""
+        self.mainFrame = self.GetTopLevelParent()
 
         if slider_title_dicts is not None:
             self.slider_title_dicts = slider_title_dicts
@@ -1333,6 +1331,8 @@ class GenericPanel(BasePanel):
         else:
             self.title = wx.StaticText(self.headPanel, id=-1, label=title[:23].strip() + '..')
             self.title.SetToolTip(wx.ToolTip(title))
+
+        self.title.Bind(wx.EVT_LEFT_DOWN, self.selectModule)
 
         if vars.constants["IS_WIN"]:
             self.corner = wx.StaticText(self.headPanel, -1, label=" M|S ")
@@ -1501,7 +1501,7 @@ class GenericPanel(BasePanel):
             self.setMute(2)
         elif self.mute == 2:
             self.setMute(1)
-            for module in self.GetTopLevelParent().modules:
+            for module in self.mainFrame.modules:
                 if module != self:
                     module.setMute(1)
         self.Refresh()
@@ -1521,16 +1521,29 @@ class GenericPanel(BasePanel):
             else:
                 size = (850, 600)
             lines = self.synth.__doc__.splitlines(True)
-            win = HelpFrame(self.GetTopLevelParent(), -1, title="Module info", size=size,
+            win = HelpFrame(self.mainFrame, -1, title="Module info", size=size,
                             subtitle=f"Info about {self.name} module.", lines=lines)
             win.CenterOnParent()
             win.Show(True)
         else:
             wx.LogMessage(f"No info for {self.name} module.")
 
+    def selectModule(self, evt):
+        if self.mainFrame.serverPanel.onOff.GetValue():
+            return
+        for i, module in enumerate(self.mainFrame.modules):
+            if module == self:
+                evt = wx.CommandEvent()
+                if self.mainFrame.selected == i:
+                    self.mainFrame.clearSelection(evt)
+                    break
+                evt.SetInt(i)
+                self.mainFrame.selectNextModule(evt)
+                break
+
     def setMute(self, mute):
         if mute == 2:
-            for module in self.GetTopLevelParent().modules:
+            for module in self.mainFrame.modules:
                 if module != self:
                     module.setMute(0)
             self.corner.SetForegroundColour("#FF7700")
@@ -1558,7 +1571,7 @@ class GenericPanel(BasePanel):
                 lfo_params.append(get_lfo_init())
             else:
                 if self.lfo_frames[i].IsShown():
-                    offset = self.GetTopLevelParent().GetPosition()
+                    offset = self.mainFrame.GetPosition()
                     pos = self.lfo_frames[i].GetPosition()
                     shown = (pos[0] - offset[0], pos[1] - offset[1])
                 else:
@@ -1587,7 +1600,7 @@ class GenericPanel(BasePanel):
                 self.startLFO(i, state)
                 self.buttons[i].setState(state)
                 if lfo_conf["shown"]:
-                    offset = self.GetTopLevelParent().GetPosition()
+                    offset = self.mainFrame.GetPosition()
                     pos = (lfo_conf["shown"][0] + offset[0], lfo_conf["shown"][1] + offset[1])
                     self.lfo_frames[i].SetPosition(pos)
                     self.lfo_frames[i].Show()

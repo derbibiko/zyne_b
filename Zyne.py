@@ -212,8 +212,8 @@ class ZyneFrame(wx.Frame):
         self.genMenu.Append(vars.constants["ID"]["Jitter"], 'Jitterize current values\tCtrl+J', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onGenerateValues, id=vars.constants["ID"]["Uniform"], id2=vars.constants["ID"]["Jitter"])
         self.genMenu.AppendSeparator()
-        self.genMenu.Append(vars.constants["ID"]["Select"], 'Select first module\tCtrl+B', kind=wx.ITEM_NORMAL)
-        self.Bind(wx.EVT_MENU, self.selectFirstModule, id=vars.constants["ID"]["Select"])
+        self.genMenu.Append(vars.constants["ID"]["Select"], 'Select next module\tCtrl+B', kind=wx.ITEM_NORMAL)
+        self.Bind(wx.EVT_MENU, self.selectNextModule, id=vars.constants["ID"]["Select"])
         self.genMenu.Append(vars.constants["ID"]["DeSelect"], 'Clear module selection\tShift+Ctrl+B', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.clearSelection, id=vars.constants["ID"]["DeSelect"])
         self.genMenu.AppendSeparator()
@@ -300,27 +300,32 @@ class ZyneFrame(wx.Frame):
             except Exception as e:
                 pass
 
-    def selectFirstModule(self, evt):
+    def selectNextModule(self, evt):
+        idx = evt.GetInt()
         num = len(self.modules)
         old = self.selected
+
         if num == 0:
             return
-        if self.selected is None:
-            self.selected = 0
+
+        if idx >= 0:
+            self.selected = idx
         else:
-            self.selected = (self.selected + 1) % num
+            self.selected = 0 if self.selected is None else (self.selected + 1) % num
+
         if old is not None:
             self.modules[old].headPanel.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
-            self.modules[old].headPanel.Refresh()
+            wx.CallAfter(self.modules[old].Refresh)
+
         self.modules[self.selected].headPanel.SetBackgroundColour(vars.constants["HIGHLIGHT_COLOUR"])
-        self.modules[self.selected].headPanel.Refresh()
+        wx.CallAfter(self.modules[self.selected].Refresh)
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(True)
 
     def clearSelection(self, evt):
         if self.selected is not None:
             self.modules[self.selected].headPanel.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
-            self.modules[self.selected].headPanel.Refresh()
+            wx.CallAfter(self.modules[self.selected].Refresh)
         self.selected = None
         item = self.genMenu.FindItemById(vars.constants["ID"]["Duplicate"])
         item.Enable(False)
@@ -348,19 +353,20 @@ class ZyneFrame(wx.Frame):
             titleDic = dic.get("slider_title_dicts", None)
             self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
                                              dic["p1"], dic["p2"], dic["p3"], titleDic))
-            self.addModule(self.modules[-1])
-            self.modules[-1].setMute(mute)
-            self.modules[-1].trigChannel.SetValue(channel)
-            self.modules[-1].trigVelRange.SetValue((firstVel, lastVel))
-            self.modules[-1].trigKeyRange.SetValue((first, last))
-            self.modules[-1].trigFirstKey.SetValue(firstkey_pitch)
-            self.modules[-1].SetLoopmode(loopmode)
-            self.modules[-1].SetXFade(xfade)
-            self.modules[-1].SetSamples(samplerpath)
+            newmod = self.modules[-1]
+            self.addModule(newmod)
+            newmod.setMute(mute)
+            newmod.trigChannel.SetValue(channel)
+            newmod.trigVelRange.SetValue((firstVel, lastVel))
+            newmod.trigKeyRange.SetValue((first, last))
+            newmod.trigFirstKey.SetValue(firstkey_pitch)
+            newmod.SetLoopmode(loopmode)
+            newmod.SetXFade(xfade)
+            newmod.SetSamples(samplerpath)
 
             for j, param in enumerate(params):
                 wx.CallAfter(self.modules[-1].sliders[j].SetValue, param)
-            self.modules[-1].reinitLFOS(lfo_params, ctl_binding=False)
+            newmod.reinitLFOS(lfo_params, ctl_binding=False)
             self.refresh()
 
             old = self.selected
@@ -580,6 +586,7 @@ class ZyneFrame(wx.Frame):
         self.openedFile = ""
         self.setServerPanelFooter("")
         self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - Untitled")
+        self.selected = None
         wx.GetTopLevelWindows()[0].Raise()
 
     def onSave(self, evt):
