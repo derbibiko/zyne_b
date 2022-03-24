@@ -1260,8 +1260,8 @@ class ZB_Sampler(BaseSynth):
         pit = int(self.pitch.get(all=True)[voice])
         if pit in self.loops:
             self.loops[pit].stop()
-            if hasattr(self.loops[pit].mul, 'setInput'):
-                self.loops[pit].mul.setInput(Sig(0.), 0.)
+            if isinstance(self.loops[pit].mul, MidiDelAdsr):
+                self.loops[pit].mul.setInput([Sig(0.)] * 2, 0.)
 
     def playloop(self, voice):
         pit = int(self.pitch.get(all=True)[voice])
@@ -1283,7 +1283,10 @@ class ZB_Sampler(BaseSynth):
                 o.xfade = [self.xfade, self.xfade]
             o.mode = self.loopmode
             o.pitch = self.samplerpitch
-            env = MidiDelAdsr([Sig(vel), Sig(vel)], delay=self.amp.delay, attack=self.amp.attack, decay=self.amp.decay,
+            if isinstance(o.mul, MidiDelAdsr):
+                o.mul.stop()
+                o.mul = 1.
+            env = MidiDelAdsr([Sig(vel)] * 2, delay=self.amp.delay, attack=self.amp.attack, decay=self.amp.decay,
                            sustain=self.amp.sustain, release=self.amp.release, mul=self._rawamp * 0.5,
                            add=[self._lfo_amp.sig()] * 2)
             env.setExp(self.amp.exp)
@@ -1359,6 +1362,9 @@ class ZB_Sampler(BaseSynth):
     def __del__(self):
         if hasattr(self, 'loops'):
             for o in self.loops.values():
+                if isinstance(o.mul, MidiDelAdsr):
+                    o.mul.stop()
+                    o.mul = 1.
                 o.setStopDelay(0.)
                 o.stop()
         for key in list(self.__dict__.keys()):
