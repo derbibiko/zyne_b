@@ -1280,9 +1280,9 @@ class ZB_Sampler(BaseSynth):
             if self.loopmode == 0:
                 o.xfade = [0, 0]
             else:
-                o.xfade = [self.xfade, self.xfade]
+                o.xfade = [self.xfade] * 2
             o.mode = self.loopmode
-            o.pitch = self.samplerpitch
+            o.pitch = [self.samplerpitch] * 2
             if isinstance(o.mul, MidiDelAdsr):
                 o.mul.stop()
                 o.mul = 1.
@@ -1307,9 +1307,7 @@ class ZB_Sampler(BaseSynth):
                 else:
                     o.dur = o.table.getDur()
         elif which == 3:
-            self.samplerpitch = x
-            for o in self.loops.values():
-                o.pitch = x
+            self.samplerpitch = x + self.p3
 
     def SetLoopmode(self, x):
         self.loopmode = int(x)

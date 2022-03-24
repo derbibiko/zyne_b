@@ -1094,6 +1094,7 @@ class BasePanel(wx.Panel):
         self.title = title
         self.triggers = []
         self.keytriggers = []
+        self.mainFrame = self.GetTopLevelParent()
 
     def updateSliderTitle(self, idx, x):
         if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
@@ -1228,7 +1229,7 @@ class BasePanel(wx.Panel):
         hsizer.AddGrowableCol(0)
         slider = ZyneB_ControlSlider(self, minValue, maxValue, value, log=log,
                                      integer=integer, outFunction=callback, label=label)
-        if self.from_lfo or integer or self.synth.isSampler:
+        if self.from_lfo or integer or (self.synth.isSampler and i in [1, 2]):
             hsizer.Add(slider, 0, wx.CENTER | wx.ALL | wx.EXPAND, 0)
         else:
             button = LFOButton(self, synth=self.synth, which=i, callback=self.startLFO)
@@ -1297,7 +1298,6 @@ class GenericPanel(BasePanel):
         self.firstVel = 0
         self.lastVel = 127
         self.path = ""
-        self.mainFrame = self.GetTopLevelParent()
 
         if slider_title_dicts is not None:
             self.slider_title_dicts = slider_title_dicts
