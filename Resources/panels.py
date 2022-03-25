@@ -758,6 +758,11 @@ class ServerPanel(wx.Panel):
                 menuItem = self.mainFrame.menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(False)
+            for menuId in range(vars.constants["ID"]["Modules"],
+                                vars.constants["ID"]["Modules"] + self.mainFrame.addMenu.GetMenuItemCount() - 1):
+                menuItem = self.mainFrame.menubar.FindItemById(menuId)
+                if menuItem is not None:
+                    menuItem.Enable(False)
             for module in self.mainFrame.modules:
                 for kt in module.keytriggers:
                     kt._enable = False
@@ -776,6 +781,11 @@ class ServerPanel(wx.Panel):
                 if popup != self.popupDriver or vars.vars["AUDIO_HOST"] != "Jack":
                     popup.Enable()
             for menuId in self.menuIds:
+                menuItem = self.mainFrame.menubar.FindItemById(menuId)
+                if menuItem is not None:
+                    menuItem.Enable(True)
+            for menuId in range(vars.constants["ID"]["Modules"],
+                                vars.constants["ID"]["Modules"] + self.mainFrame.addMenu.GetMenuItemCount() - 1):
                 menuItem = self.mainFrame.menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(True)
