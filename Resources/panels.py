@@ -1118,32 +1118,24 @@ class BasePanel(wx.Panel):
             wx.CallAfter(self.labels[idx].Refresh)
 
     def SetSamples(self, path):
-        defaultLabel = "No Samples - Drop Folder or Double-Click"
-        fontSizeDelta = 2
         if self.synth.isSampler:
-            s = ""
-            if len(path) > 0:
+            loaded = False
+            s = "No Samples - Drop Folder or Double-Click"
+            pt = self.pathText
+            if len(path.strip()) > 0:
                 loaded = self.synth.loadSamples(path)
                 if loaded:
                     s = os.path.split(self.synth.path)[1]
                     self.mainFrame.refreshOutputSignal()
                     self.reinitLFOS(self.getLFOParams(), True)
-            if len(s) > 0:
-                if self.pathText.GetLabel() == defaultLabel:
-                    psize = self.pathText.GetFont().GetPointSize()
-                    font = wx.Font(psize + fontSizeDelta, wx.FONTFAMILY_DEFAULT, wx.NORMAL, wx.NORMAL)
-                    self.pathText.SetFont(font)
-                s = s.replace('_', ' ')
-            else:
-                s = defaultLabel
-                psize = self.pathText.GetFont().GetPointSize()
-                font = wx.Font(psize - fontSizeDelta, wx.FONTFAMILY_DEFAULT, wx.ITALIC, wx.NORMAL)
-                self.pathText.SetFont(font)
+            pt.SetFont(wx.Font(pt.GetFont().GetPointSize(),
+                               wx.FONTFAMILY_DEFAULT, wx.NORMAL if loaded else wx.ITALIC, wx.NORMAL))
+            s = s.replace('_', ' ')
             if len(s) > 40:
-                self.pathText.SetLabel(s[:40].strip() + '..')
-                self.pathText.SetToolTip(wx.ToolTip(s))
+                pt.SetLabel(s[:40].strip() + '..')
+                pt.SetToolTip(wx.ToolTip(s))
             else:
-                self.pathText.SetLabel(s)
+                pt.SetLabel(s)
             self.sizer.Fit(self)
             self.sizer.Layout()
 
