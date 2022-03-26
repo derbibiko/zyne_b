@@ -870,7 +870,6 @@ class ZyneFrame(wx.Frame):
         titleDic = dic.get("slider_title_dicts", None)
         self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
                                          dic["p1"], dic["p2"], dic["p3"], titleDic))
-        self.addModule(self.modules[-1])
         self.modules[-1].trigChannel.SetValue(0)
         self.modules[-1].trigVelRange.SetValue((1, 127))
         self.modules[-1].trigKeyRange.SetValue((0, 127))
@@ -878,6 +877,7 @@ class ZyneFrame(wx.Frame):
         self.modules[-1].SetLoopmode(0)
         self.modules[-1].SetXFade(10)
         self.modules[-1].SetSamples("")
+        self.addModule(self.modules[-1])
 
         wx.CallAfter(self.SetFocus)
 

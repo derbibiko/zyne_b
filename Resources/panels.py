@@ -1118,6 +1118,7 @@ class BasePanel(wx.Panel):
             wx.CallAfter(self.labels[idx].Refresh)
 
     def SetSamples(self, path):
+        print("d")
         if self.synth.isSampler:
             loaded = False
             s = "No Samples - Drop Folder or Double-Click"
@@ -1182,7 +1183,7 @@ class BasePanel(wx.Panel):
             self.triggerSizer.Add(self.row0Sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
             self.pathText = wx.StaticText(self, id=-1, label="")
-            self.SetSamples("")
+
             self.pathText.Bind(wx.EVT_LEFT_DCLICK, self.openSamples)
             self.triggerSizer.Add(self.pathText, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, self.FromDIP(12))
 
