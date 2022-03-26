@@ -1118,7 +1118,6 @@ class BasePanel(wx.Panel):
             wx.CallAfter(self.labels[idx].Refresh)
 
     def SetSamples(self, path):
-        print("d")
         if self.synth.isSampler:
             loaded = False
             s = "No Samples - Drop Folder or Double-Click"
