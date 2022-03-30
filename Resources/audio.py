@@ -1354,13 +1354,13 @@ class ZB_Sampler(BaseSynth):
             if isinstance(o.mul, MidiDelAdsr):
                 o.mul.stop()
                 o.mul = 1.
-            env = MidiDelAdsr([Sig(vel)] * 2, delay=self.amp.delay, attack=self.amp.attack, decay=self.amp.decay,
-                           sustain=self.amp.sustain, release=self.amp.release, mul=self._rawamp * 0.5,
+            env = MidiDelAdsr([Sig(vel)] * 2, delay=self.normamp.delay, attack=self.normamp.attack, decay=self.normamp.decay,
+                           sustain=self.normamp.sustain, release=self.normamp.release, mul=self._rawamp * 0.5,
                            add=[self._lfo_amp.sig()] * 2)
-            env.setExp(self.amp.exp)
+            env.setExp(self.normamp.exp)
             o.mul = env
-            o.play(delay=self.amp.delay)
-            o.setStopDelay(self.amp.release + .001)
+            o.play(delay=self.normamp.delay)
+            o.setStopDelay(self.normamp.release + .001)
 
     def set(self, which, x):
         if which == 1:
