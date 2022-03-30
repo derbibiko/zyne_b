@@ -10,6 +10,11 @@ import wx
 import Resources.variables as vars
 from Resources.utils import *
 
+if vars.vars["PYO_PRECISION"] == "single":
+    from pyo import *
+else:
+    from pyo64 import *
+
 
 if "phoenix" in wx.version():
     wx.GraphicsContext_Create = wx.GraphicsContext.Create
@@ -22,6 +27,177 @@ if "phoenix" in wx.version():
 
 BACKGROUND_COLOUR = "#EBEBEB"
 CHAR_SET = set("0123456789.-")
+OFF = 10
+OFF2 = OFF * 2
+RAD = 3
+RAD2 = RAD * 2
+AREA = RAD + 2
+AREA2 = AREA * 2
+
+
+class ZB_Grapher(Grapher):
+    def __init__(self, parent, xlen=8192, yrange=(0.0, 1.0), init=[(0.0, 1.0), (1.0, 1.0)],
+                 mode=0, exp=0.38, inverse=False, tension=0.0, bias=0.0, outFunction=None,
+                 pos=(0, 0), size=(100, 80), style=wx.BORDER_NONE):
+        Grapher.__init__(self, parent, xlen, yrange, init, mode, exp, inverse, tension, bias,
+                         outFunction, pos, size, style)
+        self.parent = parent
+
+    def OnPaint(self, evt):
+        w, h = self.GetSize()
+        corners = [(OFF, OFF), (w - OFF, OFF), (w - OFF, h - OFF), (OFF, h - OFF)]
+        dc = self.dcref(self)
+        gc = wx.GraphicsContext_Create(dc)
+        gc.SetBrush(wx.Brush("#000000"))
+        gc.SetPen(wx.Pen("#000000"))
+        if sys.platform == "darwin":
+            font, ptsize = dc.GetFont(), dc.GetFont().GetPointSize()
+        else:
+            font, ptsize = dc.GetFont(), 10
+        font.SetPointSize(ptsize - 4)
+        dc.SetFont(font)
+        dc.SetTextForeground("#888888")
+        dc.Clear()
+
+        # Draw grid
+        dc.SetPen(wx.Pen("#CCCCCC", 1))
+        xstep = int(round((w - OFF2) / 10.0))
+        ystep = int(round((h - OFF2) / 10.0))
+        for i in range(10):
+            xpos = i * xstep + OFF
+            dc.DrawLine(xpos, OFF, xpos, h - OFF)
+            ypos = i * ystep + OFF
+            dc.DrawLine(OFF, ypos, w - OFF, ypos)
+            # if i > 0:
+            #     if type(self.xlen) == int:
+            #         t = "%d" % int(self.xlen * i * 0.1)
+            #     else:
+            #         t = "%.2f" % (self.xlen * i * 0.1)
+            #     dc.DrawText(t, xpos + 2, h - OFF - 10)
+            # if i < 9:
+            #     t = "%.2f" % ((9 - i) * 0.1 * (self.yrange[1] - self.yrange[0]) + self.yrange[0])
+            #     dc.DrawText(t, OFF + 2, ypos + ystep - 10)
+            # else:
+            #     t = "%.2f" % ((9 - i) * 0.1 * (self.yrange[1] - self.yrange[0]) + self.yrange[0])
+            #     dc.DrawText(t, OFF + 2, h - OFF - 10)
+
+        dc.SetPen(wx.Pen("#000000", 1))
+        dc.SetBrush(wx.Brush("#000000"))
+        # Draw bounding box
+        for i in range(4):
+            dc.DrawLine(corners[i][0], corners[i][1], corners[(i + 1) % 4][0], corners[(i + 1) % 4][1])
+
+        # Convert points in pixels
+        w, h = w - OFF2 - RAD2, h - OFF2 - RAD2
+        tmp = []
+        back_y_for_log = []
+        for p in self.points:
+            x = int(round(p[0] * w)) + OFF + RAD
+            y = int(round((1.0 - p[1]) * h)) + OFF + RAD
+            tmp.append((x, y))
+            back_y_for_log.append(p[1])
+
+        # Draw lines
+        dc.SetPen(wx.Pen("#000000", 1))
+        last_p = None
+        if len(tmp) > 1:
+            if self.mode == 0:
+                for i in range(len(tmp) - 1):
+                    gc.DrawLines([tmp[i], tmp[i + 1]])
+            elif self.mode == 1:
+                for i in range(len(tmp) - 1):
+                    tmp2 = self.getCosPoints(tmp[i], tmp[i + 1])
+                    if i == 0 and len(tmp2) < 2:
+                        gc.DrawLines([tmp[i], tmp[i + 1]])
+                    if last_p is not None:
+                        gc.DrawLines([last_p, tmp[i]])
+                    for j in range(len(tmp2) - 1):
+                        gc.DrawLines([tmp2[j], tmp2[j + 1]])
+                        last_p = tmp2[j + 1]
+                if last_p is not None:
+                    gc.DrawLines([last_p, tmp[-1]])
+            elif self.mode == 2:
+                for i in range(len(tmp) - 1):
+                    tmp2 = self.getExpPoints(tmp[i], tmp[i + 1])
+                    if i == 0 and len(tmp2) < 2:
+                        gc.DrawLines([tmp[i], tmp[i + 1]])
+                    if last_p is not None:
+                        gc.DrawLines([last_p, tmp[i]])
+                    for j in range(len(tmp2) - 1):
+                        gc.DrawLines([tmp2[j], tmp2[j + 1]])
+                        last_p = tmp2[j + 1]
+                if last_p is not None:
+                    gc.DrawLines([last_p, tmp[-1]])
+            elif self.mode == 3:
+                curvetmp = self.addImaginaryPoints(tmp)
+                for i in range(1, len(curvetmp) - 2):
+                    tmp2 = self.getCurvePoints(curvetmp[i - 1], curvetmp[i], curvetmp[i + 1], curvetmp[i + 2])
+                    if i == 1 and len(tmp2) < 2:
+                        gc.DrawLines([curvetmp[i], curvetmp[i + 1]])
+                    if last_p is not None:
+                        gc.DrawLines([last_p, curvetmp[i]])
+                    for j in range(len(tmp2) - 1):
+                        gc.DrawLines([tmp2[j], tmp2[j + 1]])
+                        last_p = tmp2[j + 1]
+                if last_p is not None:
+                    gc.DrawLines([last_p, tmp[-1]])
+            elif self.mode == 4:
+                back_tmp = [p for p in tmp]
+                for i in range(len(tmp)):
+                    tmp[i] = (tmp[i][0], back_y_for_log[i])
+                for i in range(len(tmp) - 1):
+                    tmp2 = self.getLogPoints(tmp[i], tmp[i + 1])
+                    for j in range(len(tmp2)):
+                        tmp2[j] = (tmp2[j][0], int(round((1.0 - tmp2[j][1]) * h)) + OFF + RAD)
+                    if i == 0 and len(tmp2) < 2:
+                        gc.DrawLines([back_tmp[i], back_tmp[i + 1]])
+                    if last_p is not None:
+                        gc.DrawLines([last_p, back_tmp[i]])
+                    for j in range(len(tmp2) - 1):
+                        gc.DrawLines([tmp2[j], tmp2[j + 1]])
+                        last_p = tmp2[j + 1]
+                if last_p is not None:
+                    gc.DrawLines([last_p, back_tmp[-1]])
+                tmp = [p for p in back_tmp]
+            elif self.mode == 5:
+                back_tmp = [p for p in tmp]
+                for i in range(len(tmp)):
+                    tmp[i] = (tmp[i][0], back_y_for_log[i])
+                for i in range(len(tmp) - 1):
+                    tmp2 = self.getCosLogPoints(tmp[i], tmp[i + 1])
+                    for j in range(len(tmp2)):
+                        tmp2[j] = (tmp2[j][0], int(round((1.0 - tmp2[j][1]) * h)) + OFF + RAD)
+                    if i == 0 and len(tmp2) < 2:
+                        gc.DrawLines([back_tmp[i], back_tmp[i + 1]])
+                    if last_p is not None:
+                        gc.DrawLines([last_p, back_tmp[i]])
+                    for j in range(len(tmp2) - 1):
+                        gc.DrawLines([tmp2[j], tmp2[j + 1]])
+                        last_p = tmp2[j + 1]
+                if last_p is not None:
+                    gc.DrawLines([last_p, back_tmp[-1]])
+                tmp = [p for p in back_tmp]
+
+        # Draw points
+        for i, p in enumerate(tmp):
+            if i == self.selected:
+                gc.SetBrush(wx.Brush("#FFFFFF"))
+                dc.SetBrush(wx.Brush("#FFFFFF"))
+            else:
+                gc.SetBrush(wx.Brush("#000000"))
+                dc.SetBrush(wx.Brush("#000000"))
+            gc.DrawEllipse(p[0] - RAD, p[1] - RAD, RAD2, RAD2)
+
+        # Draw position values
+        font.SetPointSize(ptsize - 3)
+        dc.SetFont(font)
+        dc.SetTextForeground("#222222")
+        posptx, pospty = self.pixelsToPoint(self.pos)
+        xval, yval = self.pointToValues((posptx, pospty))
+        if type(self.xlen) == int:
+            dc.DrawText(f"{xval}, {yval:.3f}", w - 75, OFF)
+        else:
+            dc.DrawText(f"{xval:.3f}, {yval:.3f}", w - 75, OFF)
 
 
 class ZB_HeadTitle(wx.Panel):
@@ -246,13 +422,13 @@ class ZB_Base_Control(wx.Panel):
             else:
                 absval = abs(val)
                 if absval >= 1000:
-                    self.display_value = "%.0f" % val
+                    self.display_value = f"{val:.0f}"
                 elif absval >= 100:
-                    self.display_value = "%.1f" % val
+                    self.display_value = f"{val:.1f}"
                 elif absval >= 10:
-                    self.display_value = "%.2f" % val
+                    self.display_value = f"{val:.2f}"
                 elif absval < 10:
-                    self.display_value = "%.3f" % val
+                    self.display_value = f"{val:.3f}"
         self.setFocusToKeyboard()
 
     def setFocusToKeyboard(self):

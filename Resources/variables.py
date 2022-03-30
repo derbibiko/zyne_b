@@ -101,6 +101,8 @@ vars["VIRTUAL"] = False
 
 vars["PREF_FILE_SETTINGS"] = {}
 
+vars["DADSR_CLIPBOARD"] = None
+
 def readPreferencesFile():
     preffile = os.path.join(os.path.expanduser("~"), constants["PREF_FILE_NAME"])
     if os.path.isfile(preffile):

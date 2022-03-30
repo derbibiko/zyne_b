@@ -208,6 +208,8 @@ class LFOFrame(wx.Frame):
         wx.Frame.__init__(self, parent, -1, style=wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE | wx.FRAME_TOOL_WINDOW)
         self.parent = parent
         self.module = module
+        self.which = which
+        self.synth = synth
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.SetForegroundColour(vars.constants["FORECOLOUR"])
 
@@ -241,15 +243,18 @@ class LFOFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.parent.onQuit, id=vars.constants["ID"]["Quit"])
         self.Bind(wx.EVT_MENU, self.onClose, id=vars.constants["ID"]["CloseLFO"])
         self.mouseOffset = (0, 0)
-        self.which = which
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.panel = LFOPanel(self, "LFO", f"{label} LFO", synth,
                               LFO_CONFIG["p1"], LFO_CONFIG["p2"], LFO_CONFIG["p3"], LFO_CONFIG["p4"], which)
         self.panel.title.Bind(wx.EVT_LEFT_DOWN, self.onMouseDown)
         self.panel.title.Bind(wx.EVT_LEFT_UP, self.onMouseUp)
         self.panel.title.Bind(wx.EVT_MOTION, self.onMotion)
-        self.synth = synth
-        self.SetSize(self.FromDIP(wx.Size(267, 350)))
-        self.SetMaxSize(self.GetSize())
+        self.sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, 0)
+        self.sizer.AddSpacer(2)
+        self.sizer.SetSizeHints(self)
+        self.SetSizer(self.sizer)
+        self.panel.Fit()
         self.Layout()
 
     def onClose(self, evt):
@@ -1105,6 +1110,11 @@ class BasePanel(wx.Panel):
         self.triggers = []
         self.keytriggers = []
         self.mainFrame = self.GetTopLevelParent()
+        self.envmode = 0
+        self.graphAtt_pts = [(0,0), (.2,0.9), (.25, 0.4), (.5, 0.4), (.7, 0), (1., .5)]
+        self.graphRel_pts = [(0,.5), (.2, 0.4), (.4, .6), (1, 0)]
+        self.old_dadsr = ()
+        self.old_dadsr_lfos = dict()
 
     def updateSliderTitle(self, idx, x):
         if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
@@ -1140,6 +1150,33 @@ class BasePanel(wx.Panel):
             self.sizer.Layout()
 
     def createAdsrKnobs(self):
+        self.graphAtt_panel = ZB_Grapher(self, size=(-1, 80))
+        self.sizer.Add(self.graphAtt_panel, 0, wx.CENTER | wx.EXPAND, 0)
+        self.graphAtt_panel.Bind(wx.EVT_ENTER_WINDOW, self.hoverAttGraph)
+
+        self.graphRel_panel = ZB_Grapher(self, size=(-1, 40))
+        self.sizer.Add(self.graphRel_panel, 0, wx.CENTER | wx.EXPAND, 0)
+        self.graphRel_panel.Bind(wx.EVT_ENTER_WINDOW, self.hoverRelGraph)
+
+        self.sizer.AddSpacer(4)
+
+        self.knobSizerG = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.knobAttDur = ZB_ControlKnob(self, 0.01, 120.0, 2.0, size=(66, 74), label='Att Dur', outFunction=self.changeGAttDur)
+        self.knobSizerG.Add(self.knobAttDur, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobRelDur = ZyneB_ControlKnob(self, 0.01, 120.0, 2.0, size=(66, 74), label='Rel Dur', outFunction=self.changeGRelDur)
+        self.knobSizerG.Add(self.knobRelDur, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobGAttExp = ZyneB_ControlKnob(self, -15.0, 15.0, 0.38, size=(66, 74), label='Att Slope', outFunction=self.changeGAttExp)
+        self.knobSizerG.Add(self.knobGAttExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobGRelExp = ZyneB_ControlKnob(self, -15.0, 15.0, 0.38, size=(66, 74), label='Rel Slope', outFunction=self.changeGRelExp)
+        self.knobSizerG.Add(self.knobGRelExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobSizerG.Layout()
+        self.sizer.Add(self.knobSizerG, 0, wx.CENTER, 0)
+
+        self.gdadsr_knobs = [self.graphAtt_panel, self.graphRel_panel, self.knobAttDur, self.knobRelDur, self.knobGAttExp, self.knobGRelExp]
+        for o in self.gdadsr_knobs:
+            o.Hide()
+
         self.knobSizerTop = wx.BoxSizer(wx.HORIZONTAL)
         self.knobDel = ZyneB_ControlKnob(self, 0, 60.0, 0, label='Delay', outFunction=self.changeDelay)
         self.knobSizerTop.Add(self.knobDel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
@@ -1155,9 +1192,37 @@ class BasePanel(wx.Panel):
         self.knobSizerTop.Add(self.knobExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobSizerTop.Layout()
         self.sizer.Add(self.knobSizerTop, 0, wx.CENTER, 0)
+        self.dadsr_knobs = [self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel, self.knobExp]
 
         self.knobSizerBottom = wx.BoxSizer(wx.HORIZONTAL)
+        self.copyDadsr = wx.StaticText(self, id=-1, label="C")
+        font, psize = self.copyDadsr.GetFont(), self.copyDadsr.GetFont().GetPointSize()
+        font = wx.Font(psize-2, wx.FONTFAMILY_DEFAULT, wx.NORMAL, wx.NORMAL)
+        self.copyDadsr.SetFont(font)
+        self.copyDadsr.Bind(wx.EVT_LEFT_DOWN, self.copyDADSR)
+        self.copyDadsr.SetToolTip(wx.ToolTip("Copy DADSR settings"))
+        self.copyDadsr.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
+        self.copyDadsr.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
+        self.knobSizerBottom.Add(self.copyDadsr, 0, wx.LEFT | wx.RIGHT, 3)
 
+        self.pasteDadsr = wx.StaticText(self, id=-1, label="P")
+        self.pasteDadsr.SetFont(font)
+        self.pasteDadsr.Bind(wx.EVT_LEFT_DOWN, self.pasteDADSR)
+        self.pasteDadsr.SetToolTip(wx.ToolTip("Paste DADSR settings"))
+        self.pasteDadsr.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
+        self.pasteDadsr.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
+        self.knobSizerBottom.Add(self.pasteDadsr, 0, wx.LEFT | wx.RIGHT, 3)
+
+        if not self.synth.isSampler:
+            self.modeDadsr = wx.StaticText(self, id=-1, label="M")
+            self.modeDadsr.SetFont(font)
+            self.modeDadsr.Bind(wx.EVT_LEFT_DOWN, self.modeDADSR)
+            self.modeDadsr.SetToolTip(wx.ToolTip("Switch DADSR mode"))
+            self.modeDadsr.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
+            self.modeDadsr.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
+            self.knobSizerBottom.Add(self.modeDadsr, 0, wx.LEFT | wx.RIGHT, 3)
+
+        self.knobSizerBottom.Layout()
         self.sizer.Add(self.knobSizerBottom, 0, wx.CENTER, 0)
 
         self.sliders.extend(
@@ -1245,12 +1310,162 @@ class BasePanel(wx.Panel):
         self.sliders.append(slider)
         return slider
 
+    def modeDADSR(self, evt):
+        if self.envmode == 0:
+            self.envmode = 1
+            if self.from_lfo:
+                graphAttAmp = self.synth._params[self.which].lfo.graphAttAmp
+                graphRelAmp = self.synth._params[self.which].lfo.graphRelAmp
+                samp = self.synth._params[self.which].lfo.amp
+                self.old_dadsr_lfos[self.which] = (samp.delay, samp.attack, samp.decay, samp.sustain, samp.release, samp.exp)
+            else:
+                graphAttAmp = self.synth.graphAttAmp
+                graphRelAmp = self.synth.graphRelAmp
+                samp = self.synth.amp
+                self.old_dadsr = (samp.delay, samp.attack, samp.decay, samp.sustain, samp.release, samp.exp)
+            graphAttAmp.setList(self.graphAtt_pts)
+            graphRelAmp.setList(self.graphRel_pts)
+            self.knobDel.SetValue(0.0)
+            self.knobAtt.SetValue(0.05)
+            self.knobDec.SetValue(0.001)
+            self.knobSus.SetValue(1.)
+            self.knobRel.SetValue(0.05)
+            self.knobExp.SetValue(1.)
+            for o in self.gdadsr_knobs:
+                o.Show()
+            for o in self.dadsr_knobs:
+                o.Hide()
+            graphAttAmp.initPanel(self.graphAtt_panel, (self.GetSize()[0], self.FromDIP(80)))
+            graphRelAmp.initPanel(self.graphRel_panel, (self.GetSize()[0], self.FromDIP(40)))
+            graphAttAmp.show()
+            graphRelAmp.show()
+
+            self.gdadsron = TrigFunc(Change(self.synth._trigamp), self.triggerGdadsr, arg=list(range(vars.vars["POLY"])))
+
+            if self.from_lfo:
+                wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
+            else:
+                wx.CallAfter(self.mainFrame.OnSize, wx.CommandEvent())
+        else:
+            self.envmode = 0
+            if self.from_lfo:
+                graphAttAmp = self.synth._params[self.which].lfo.graphAttAmp
+                graphRelAmp = self.synth._params[self.which].lfo.graphRelAmp
+                samp = self.synth._params[self.which].lfo.amp
+                self.knobDel.SetValue(self.old_dadsr_lfos[self.which][0])
+                self.knobAtt.SetValue(self.old_dadsr_lfos[self.which][1])
+                self.knobDec.SetValue(self.old_dadsr_lfos[self.which][2])
+                self.knobSus.SetValue(self.old_dadsr_lfos[self.which][3])
+                self.knobRel.SetValue(self.old_dadsr_lfos[self.which][4])
+                self.knobExp.SetValue(self.old_dadsr_lfos[self.which][5])
+            else:
+                graphAttAmp = self.synth.graphAttAmp
+                graphRelAmp = self.synth.graphRelAmp
+                samp = self.synth.amp
+                self.knobDel.SetValue(self.old_dadsr[0])
+                self.knobAtt.SetValue(self.old_dadsr[1])
+                self.knobDec.SetValue(self.old_dadsr[2])
+                self.knobSus.SetValue(self.old_dadsr[3])
+                self.knobRel.SetValue(self.old_dadsr[4])
+                self.knobExp.SetValue(self.old_dadsr[5])
+            self.graphAtt_pts = graphAttAmp.getPoints()
+            self.graphRel_pts = graphRelAmp.getPoints()
+            graphAttAmp.setList([(0,1), (1,0)])
+            graphRelAmp.setList([(0,1), (1,0)])
+            for o in self.gdadsr_knobs:
+                o.Hide()
+            for o in self.dadsr_knobs:
+                o.Show()
+            graphAttAmp.hide()
+            graphRelAmp.hide()
+            self.gdadsron = None
+
+            if self.from_lfo:
+                wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
+            else:
+                wx.CallAfter(self.mainFrame.OnSize, wx.CommandEvent())
+
+    def triggerGdadsr(self, voice):
+        vel = self.synth._trigamp.get(all=True)[voice]
+        if self.from_lfo:
+            if vel > 0.:
+                self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].setList(self.graphAtt_pts)
+                self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].play()
+            else:
+                self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].setList([(0,1), (1,0)])
+        else:
+            if vel > 0.:
+                self.synth.graphAttAmp._base_objs[voice].setList(self.graphAtt_pts)
+                self.synth.graphAttAmp._base_objs[voice].play()
+            else:
+                self.synth.graphAttAmp._base_objs[voice].setList([(0,0), (1,0)])
+
+    def copyDADSR(self, evt):
+        if self.envmode == 1:
+            try:
+                s = self.synth._params[self.which].lfo.graphAttAmp
+            except AttributeError:
+                s = self.synth.graphAttAmp
+        else:
+            try:
+                s = self.synth._params[self.which].lfo.amp
+            except AttributeError:
+                s = self.synth.amp
+        if self.envmode == 1:
+            vars.vars["DADSR_CLIPBOARD"] = ('GDADSR', s.getPoints())
+        else:
+            vars.vars["DADSR_CLIPBOARD"] = ('DADSR', s.delay, s.attack, s.decay, s.sustain, s.release, s.exp)
+        print(vars.vars["DADSR_CLIPBOARD"])
+
+    def pasteDADSR(self, evt):
+        if vars.vars["DADSR_CLIPBOARD"] is None:
+            return
+        try:
+            if  vars.vars["DADSR_CLIPBOARD"][0] == 'DADSR':
+                self.knobDel.SetValue(vars.vars["DADSR_CLIPBOARD"][1])
+                self.knobAtt.SetValue(vars.vars["DADSR_CLIPBOARD"][2])
+                self.knobDec.SetValue(vars.vars["DADSR_CLIPBOARD"][3])
+                self.knobSus.SetValue(vars.vars["DADSR_CLIPBOARD"][4])
+                self.knobRel.SetValue(vars.vars["DADSR_CLIPBOARD"][5])
+                self.knobExp.SetValue(vars.vars["DADSR_CLIPBOARD"][6])
+            elif vars.vars["DADSR_CLIPBOARD"][0] == 'GDADSR':
+                try:
+                    s = self.synth._params[self.which].lfo.graphAttAmp
+                except AttributeError:
+                    s = self.synth.graphAttAmp
+                s.setList(vars.vars["DADSR_CLIPBOARD"][1])
+                s.parent.setInitPoints(vars.vars["DADSR_CLIPBOARD"][1])
+        except Exception as e:
+            print('pasteDADSR: ', e)
+
+    def hoverAttGraph(self, evt):
+        if self.from_lfo:
+            graphAttAmp = self.synth._params[self.which].lfo.graphAttAmp
+            graphRelAmp = self.synth._params[self.which].lfo.graphRelAmp
+        else:
+            graphAttAmp = self.synth.graphAttAmp
+            graphRelAmp = self.synth.graphRelAmp
+        graphAttAmp.setSize((self.graphAtt_panel.GetSize()[0], self.FromDIP(80)))
+        graphRelAmp.setSize((self.graphRel_panel.GetSize()[0], self.FromDIP(40)))
+        wx.CallAfter(self.sizer.Layout)
+
+    def hoverRelGraph(self, evt):
+        if self.from_lfo:
+            graphAttAmp = self.synth._params[self.which].lfo.graphAttAmp
+            graphRelAmp = self.synth._params[self.which].lfo.graphRelAmp
+        else:
+            graphAttAmp = self.synth.graphAttAmp
+            graphRelAmp = self.synth.graphRelAmp
+        graphAttAmp.setSize((self.graphAtt_panel.GetSize()[0], self.FromDIP(40)))
+        graphRelAmp.setSize((self.graphRel_panel.GetSize()[0], self.FromDIP(80)))
+        wx.CallAfter(self.sizer.Layout)
+
     def hoverX(self, evt):
-        self.close.SetBackgroundColour("#CCCCCC")
+        evt.GetEventObject().SetBackgroundColour("#CCCCCC")
         self.Refresh()
 
     def leaveX(self, evt):
-        self.close.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
+        evt.GetEventObject().SetBackgroundColour(wx.NullColour)
         self.Refresh()
 
     def MouseDown(self, evt):
@@ -1323,8 +1538,8 @@ class GenericPanel(BasePanel):
             self.info = wx.StaticText(self.headPanel, -1, label=" ? ")
         else:
             self.info = GenStaticText(self.headPanel, -1, label=" ? ")
-        self.info.Bind(wx.EVT_ENTER_WINDOW, self.hoverInfo)
-        self.info.Bind(wx.EVT_LEAVE_WINDOW, self.leaveInfo)
+        self.info.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
+        self.info.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.info.Bind(wx.EVT_LEFT_DOWN, self.MouseDownInfo)
         self.info.SetToolTip(wx.ToolTip("Show module's infos"))
 
@@ -1340,12 +1555,11 @@ class GenericPanel(BasePanel):
             self.corner = wx.StaticText(self.headPanel, -1, label=" M|S ")
         else:
             self.corner = GenStaticText(self.headPanel, -1, label=" M|S ")
-        # self.corner = wx.StaticText(self.headPanel, id=-1, label=" M|S ")
         self.corner.SetToolTip(wx.ToolTip("Mute / Solo. Click to toggle mute, Right+Click to toggle solo"))
         self.corner.Bind(wx.EVT_LEFT_DOWN, self.MouseDownCorner)
         self.corner.Bind(wx.EVT_RIGHT_DOWN, self.MouseRightDownCorner)
-        self.corner.Bind(wx.EVT_ENTER_WINDOW, self.hoverCorner)
-        self.corner.Bind(wx.EVT_LEAVE_WINDOW, self.leaveCorner)
+        self.corner.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
+        self.corner.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
 
         self.titleSizer.AddMany([
             (self.close, 0, wx.TOP | wx.LEFT, 2),
@@ -1363,11 +1577,7 @@ class GenericPanel(BasePanel):
             obj.SetFont(self.font)
             obj.SetForegroundColour(wx.WHITE)
 
-        self.sizer.AddSpacer(8)
-
         self.createAdsrKnobs()
-
-        self.sizer.AddSpacer(1)
 
         self.sliderAmp = self.createSlider("Amplitude", 1, 0.0001, 2, False, False, self.changeAmp, 0)
         self.tmp_amplitude = 1
@@ -1473,23 +1683,23 @@ class GenericPanel(BasePanel):
     def changeExponent(self, x):
         self.synth.amp.setExp(float(x))
 
+    def changeGAttDur(self, x):
+        pass
+
+    def changeGRelDur(self, x):
+        pass
+
+    def changeGAttExp(self, x):
+        pass
+
+    def changeGRelExp(self, x):
+        pass
+
     def changeAmp(self, x):
         self.synth._rawamp.value = x
 
     def changePan(self, x):
         self.synth._panner.set(x)
-
-    def hoverCorner(self, evt):
-        col = {0: "#0000CC", 1: "white", 2: "#FFAA00"}[self.mute]
-        self.corner.SetForegroundColour(col)
-        self.corner.SetBackgroundColour("#CCCCCC")
-        self.Refresh()
-
-    def leaveCorner(self, evt):
-        col = {0: "#0000FF", 1: "white", 2: "#FF7700"}[self.mute]
-        self.corner.SetForegroundColour(col)
-        self.corner.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
-        self.Refresh()
 
     def MouseDownCorner(self, evt):
         if self.mute:
@@ -1506,14 +1716,6 @@ class GenericPanel(BasePanel):
             for module in self.mainFrame.modules:
                 if module != self:
                     module.setMute(1)
-        self.Refresh()
-
-    def hoverInfo(self, evt):
-        self.info.SetBackgroundColour("#CCCCCC")
-        self.Refresh()
-
-    def leaveInfo(self, evt):
-        self.info.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
         self.Refresh()
 
     def MouseDownInfo(self, evt):
@@ -1806,8 +2008,8 @@ class LFOPanel(BasePanel):
             self.minfo = wx.StaticText(self.headPanel, -1, label=" ? ")
         else:
             self.minfo = GenStaticText(self.headPanel, -1, label=" ? ")
-        self.minfo.Bind(wx.EVT_ENTER_WINDOW, self.hoverInfo)
-        self.minfo.Bind(wx.EVT_LEAVE_WINDOW, self.leaveInfo)
+        self.minfo.Bind(wx.EVT_ENTER_WINDOW, self.hoverX)
+        self.minfo.Bind(wx.EVT_LEAVE_WINDOW, self.leaveX)
         self.minfo.Bind(wx.EVT_LEFT_DOWN, self.MouseDownInfo)
         self.minfo.SetToolTip(wx.ToolTip("Click to highlight parent module"))
 
@@ -1836,8 +2038,6 @@ class LFOPanel(BasePanel):
 
         self.createAdsrKnobs()
 
-        self.sizer.AddSpacer(1)
-
         self.sliderAmp = self.createSlider("Amplitude", .1, 0, 1, False, False, self.changeAmp)
         self.sliderP1 = self.createSlider(p1[0], p1[1], p1[2], p1[3], p1[4], p1[5], self.changeP1)
         self.sliderP2 = self.createSlider(p2[0], p2[1], p2[2], p2[3], p2[4], p2[5], self.changeP2)
@@ -1845,15 +2045,6 @@ class LFOPanel(BasePanel):
         self.sliderP4 = self.createSlider(p4[0], p4[1], p4[2], p4[3], p4[4], p4[5], self.changeP4)
 
         self.SetSizer(self.sizer)
-        self.Layout()
-
-    def hoverInfo(self, evt):
-        self.minfo.SetBackgroundColour("#CCCCCC")
-        self.Refresh()
-
-    def leaveInfo(self, evt):
-        self.minfo.SetBackgroundColour(vars.constants["HEADTITLE_BACKGROUND_COLOUR"])
-        self.Refresh()
 
     def MouseDownInfo(self, evt):
         p = self.parent.module.headPanel
@@ -1936,6 +2127,13 @@ class LFOPanel(BasePanel):
             self.synth._params[self.which].lfo.setAmp(x)
 
 
-class GraphicalEnvelop(wx.Panel):
-    def __init__(self, parent):
-        wx.Panel.__init__(self, parent, style=wx.BORDER_NONE)
+
+    def changeGAttackDur(self, x):
+        pass
+
+    def changeGReleaseDur(self, x):
+        pass
+
+    def changeGExponent(self, x):
+        pass
+

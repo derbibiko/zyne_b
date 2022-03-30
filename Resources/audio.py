@@ -9,6 +9,7 @@ import time
 import Resources.variables as vars
 from Resources.utils import *
 
+
 if vars.vars["PYO_PRECISION"] == "single":
     from pyo import *
 else:
@@ -31,6 +32,63 @@ def get_midi_input_devices():
 
 def get_midi_default_input():
     return pm_get_default_input()
+
+
+class GraphicalDelAdsr(Expseg):
+    def __init__(self, list=[(0,0), (1,1)], loop=False, exp=0.38, inverse=False, initToFirstVal=False, mul=1, add=0, parent=None):
+
+        Expseg.__init__(self, list=list, loop=loop, exp=exp, inverse=inverse, initToFirstVal=initToFirstVal, mul=mul, add=add)
+
+        self.parent = parent
+
+        self.xlen = float(self.getPoints()[-1][0])
+
+        ymin = float(min([x[1] for x in self.getPoints()]))
+        ymax = float(max([x[1] for x in self.getPoints()]))
+        if ymin == ymax:
+            self.yrange = (0, ymax)
+        else:
+            self.yrange = (ymin, ymax)
+
+        for i in range(len( self.getPoints())):
+            x = self.getPoints()[i][0] / float(self.xlen)
+            y = (self.getPoints()[i][1] - float(self.yrange[0])) / (self.yrange[1] - self.yrange[0])
+            self.getPoints()[i] = (x, y)
+
+        if parent is not None:
+            self.graph(parent)
+
+    def hide(self):
+        self.parent.Hide()
+        if self.parent.parent.from_lfo:
+            self.parent.parent.parent.Fit()
+
+    def show(self):
+        self.parent.Show()
+        if self.parent.parent.from_lfo:
+            self.parent.parent.parent.Fit()
+
+    def SetList(self, pts):
+        self.parent.graphAtt_pts = pts
+        self.setList(pts)
+
+    def setSize(self, size):
+        self.parent.SetMinSize(size)
+        self.parent.SetMaxSize(size)
+        self.parent.Fit()
+        self.parent.Layout()
+
+    def initPanel(self, parent, size=None):
+        self.parent = parent
+        if size is not None:
+            wx.CallAfter(self.setSize, size)
+        self.parent.mode = 2
+        self.parent.points = self.getPoints()
+        self.parent.xlen = self.xlen
+        self.parent.yrange = self.yrange
+        self.parent.outFunction = self.SetList
+        self.parent.inverse = self.inverse
+        self.parent.exp = self.exp
 
 
 class FSServer:
@@ -389,7 +447,9 @@ class LFOSynth(CtlBind):
         self.trigger = trigger
         self._midi_metro = midi_metro
         self.rawamp = SigTo(.1, vars.vars["SLIDERPORT"], .1, mul=rng)
-        self.amp = MidiDelAdsr(self.trigger, delay=0, attack=5, decay=.1, sustain=.5, release=1, mul=self.rawamp)
+        self.graphAttAmp = GraphicalDelAdsr(list=[(0,1), (1,1)], loop=False, mul=[self.rawamp]*vars.vars["POLY"])
+        self.graphRelAmp = GraphicalDelAdsr(list=[(0,1), (1,1)], loop=False, mul=self.graphAttAmp)
+        self.amp = MidiDelAdsr(self.trigger, delay=0, attack=5, decay=.1, sustain=.5, release=1, mul=self.graphRelAmp)
         self.speed = SigTo(4, vars.vars["SLIDERPORT"], 4)
         self.jitter = SigTo(0, vars.vars["SLIDERPORT"], 0)
         self.freq = Randi(min=1-self.jitter, max=1+self.jitter, freq=1, mul=self.speed)
@@ -398,6 +458,7 @@ class LFOSynth(CtlBind):
 
     def play(self):
         self.rawamp.play()
+        self.graphAttAmp.play()
         self.amp.play()
         self.speed.play()
         self.jitter.play()
@@ -407,6 +468,7 @@ class LFOSynth(CtlBind):
 
     def stop(self):
         self.rawamp.stop()
+        self.graphAttAmp.stop()
         self.amp.stop()
         self.speed.stop()
         self.jitter.stop()
@@ -590,8 +652,10 @@ class BaseSynth:
             self._transpo = Sig(value=0)
             self.pitch = Snap(self._virtualpit+self._transpo, choice=list(range(12)), scale=self.scaling)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
+            self.graphAttAmp = GraphicalDelAdsr(list=[(0,1), (1,1)], loop=False, mul=[self._rawamp]*vars.vars["POLY"], add=self._lfo_amp.sig()).play()
+            self.graphRelAmp = GraphicalDelAdsr(list=[(0,1), (1,1)], loop=False, mul=self.graphAttAmp, add=self._lfo_amp.sig()).play()
             self.amp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
-                                   mul=self._rawamp, add=self._lfo_amp.sig())
+                                   mul=self.graphRelAmp)
             self.trig = Thresh(self._trigamp)
 
         else:
