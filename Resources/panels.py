@@ -1110,11 +1110,15 @@ class BasePanel(wx.Panel):
         self.triggers = []
         self.keytriggers = []
         self.mainFrame = self.GetTopLevelParent()
-        self.envmode = 0
+        self.envmode = 0  # 0 := DASDR, 1 := Graphical DADSR
         self.graphAtt_pts = [(0,0), (.2,0.9), (.25, 0.4), (.5, 0.4), (.7, 0), (1., .5)]
         self.graphRel_pts = [(0,.5), (.2, 0.4), (.4, .6), (1, 0)]
-        self.old_dadsr = ()
-        self.old_dadsr_lfos = dict()
+        self.graphAtt_exp = 0.38
+        self.graphRel_exp = 0.38
+        self.graphAtt_dur = 2.0
+        self.graphRel_dur = 2.0
+        self.graphAtt_loop = False
+        self.graphRel_loop = False
 
     def updateSliderTitle(self, idx, x):
         if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
@@ -1150,11 +1154,11 @@ class BasePanel(wx.Panel):
             self.sizer.Layout()
 
     def createAdsrKnobs(self):
-        self.graphAtt_panel = ZB_Grapher(self, size=(-1, 80))
+        self.graphAtt_panel = ZB_Grapher(self, size=(-1, 80), title='Att')
         self.sizer.Add(self.graphAtt_panel, 0, wx.CENTER | wx.EXPAND, 0)
         self.graphAtt_panel.Bind(wx.EVT_ENTER_WINDOW, self.hoverAttGraph)
 
-        self.graphRel_panel = ZB_Grapher(self, size=(-1, 40))
+        self.graphRel_panel = ZB_Grapher(self, size=(-1, 40), title='Rel')
         self.sizer.Add(self.graphRel_panel, 0, wx.CENTER | wx.EXPAND, 0)
         self.graphRel_panel.Bind(wx.EVT_ENTER_WINDOW, self.hoverRelGraph)
 
@@ -1316,21 +1320,13 @@ class BasePanel(wx.Panel):
             if self.from_lfo:
                 graphAttAmp = self.synth._params[self.which].lfo.graphAttAmp
                 graphRelAmp = self.synth._params[self.which].lfo.graphRelAmp
-                samp = self.synth._params[self.which].lfo.amp
-                self.old_dadsr_lfos[self.which] = (samp.delay, samp.attack, samp.decay, samp.sustain, samp.release, samp.exp)
+                normAmp = self.synth._params[self.which].lfo.normamp
             else:
                 graphAttAmp = self.synth.graphAttAmp
                 graphRelAmp = self.synth.graphRelAmp
-                samp = self.synth.amp
-                self.old_dadsr = (samp.delay, samp.attack, samp.decay, samp.sustain, samp.release, samp.exp)
+                normAmp = self.synth.normamp
             graphAttAmp.setList(self.graphAtt_pts)
             graphRelAmp.setList(self.graphRel_pts)
-            self.knobDel.SetValue(0.0)
-            self.knobAtt.SetValue(0.05)
-            self.knobDec.SetValue(0.001)
-            self.knobSus.SetValue(1.)
-            self.knobRel.SetValue(0.05)
-            self.knobExp.SetValue(1.)
             for o in self.gdadsr_knobs:
                 o.Show()
             for o in self.dadsr_knobs:
@@ -1342,6 +1338,8 @@ class BasePanel(wx.Panel):
 
             self.gdadsron = TrigFunc(Change(self.synth._trigamp), self.triggerGdadsr, arg=list(range(vars.vars["POLY"])))
 
+            normAmp.stop()
+
             if self.from_lfo:
                 wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
             else:
@@ -1351,27 +1349,13 @@ class BasePanel(wx.Panel):
             if self.from_lfo:
                 graphAttAmp = self.synth._params[self.which].lfo.graphAttAmp
                 graphRelAmp = self.synth._params[self.which].lfo.graphRelAmp
-                samp = self.synth._params[self.which].lfo.amp
-                self.knobDel.SetValue(self.old_dadsr_lfos[self.which][0])
-                self.knobAtt.SetValue(self.old_dadsr_lfos[self.which][1])
-                self.knobDec.SetValue(self.old_dadsr_lfos[self.which][2])
-                self.knobSus.SetValue(self.old_dadsr_lfos[self.which][3])
-                self.knobRel.SetValue(self.old_dadsr_lfos[self.which][4])
-                self.knobExp.SetValue(self.old_dadsr_lfos[self.which][5])
+                normAmp = self.synth._params[self.which].lfo.normamp
             else:
                 graphAttAmp = self.synth.graphAttAmp
                 graphRelAmp = self.synth.graphRelAmp
-                samp = self.synth.amp
-                self.knobDel.SetValue(self.old_dadsr[0])
-                self.knobAtt.SetValue(self.old_dadsr[1])
-                self.knobDec.SetValue(self.old_dadsr[2])
-                self.knobSus.SetValue(self.old_dadsr[3])
-                self.knobRel.SetValue(self.old_dadsr[4])
-                self.knobExp.SetValue(self.old_dadsr[5])
+                normAmp = self.synth.normamp
             self.graphAtt_pts = graphAttAmp.getPoints()
             self.graphRel_pts = graphRelAmp.getPoints()
-            graphAttAmp.setList([(0,1), (1,0)])
-            graphRelAmp.setList([(0,1), (1,0)])
             for o in self.gdadsr_knobs:
                 o.Hide()
             for o in self.dadsr_knobs:
@@ -1379,7 +1363,9 @@ class BasePanel(wx.Panel):
             graphAttAmp.hide()
             graphRelAmp.hide()
             self.gdadsron = None
-
+            graphAttAmp.stop()
+            graphRelAmp.stop()
+            normAmp.play()
             if self.from_lfo:
                 wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
             else:
@@ -1390,15 +1376,21 @@ class BasePanel(wx.Panel):
         if self.from_lfo:
             if vel > 0.:
                 self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].setList(self.graphAtt_pts)
+                self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].stop()
                 self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].play()
             else:
-                self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].setList([(0,1), (1,0)])
+                self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].setList(self.graphRel_pts)
+                self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].stop()
+                self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].play()
         else:
             if vel > 0.:
                 self.synth.graphAttAmp._base_objs[voice].setList(self.graphAtt_pts)
+                self.synth.graphRelAmp._base_objs[voice].stop()
                 self.synth.graphAttAmp._base_objs[voice].play()
             else:
-                self.synth.graphAttAmp._base_objs[voice].setList([(0,0), (1,0)])
+                self.synth.graphRelAmp._base_objs[voice].setList(self.graphRel_pts)
+                self.synth.graphAttAmp._base_objs[voice].stop()
+                self.synth.graphRelAmp._base_objs[voice].play()
 
     def copyDADSR(self, evt):
         if self.envmode == 1:
@@ -1447,6 +1439,7 @@ class BasePanel(wx.Panel):
             graphRelAmp = self.synth.graphRelAmp
         graphAttAmp.setSize((self.graphAtt_panel.GetSize()[0], self.FromDIP(80)))
         graphRelAmp.setSize((self.graphRel_panel.GetSize()[0], self.FromDIP(40)))
+        self.graphAtt_panel.SetFocus()
         wx.CallAfter(self.sizer.Layout)
 
     def hoverRelGraph(self, evt):
@@ -1458,6 +1451,7 @@ class BasePanel(wx.Panel):
             graphRelAmp = self.synth.graphRelAmp
         graphAttAmp.setSize((self.graphAtt_panel.GetSize()[0], self.FromDIP(40)))
         graphRelAmp.setSize((self.graphRel_panel.GetSize()[0], self.FromDIP(80)))
+        self.graphRel_panel.SetFocus()
         wx.CallAfter(self.sizer.Layout)
 
     def hoverX(self, evt):
@@ -1666,22 +1660,22 @@ class GenericPanel(BasePanel):
         self.synth._transpo.value = x + self.synth.firstkey_pitch
 
     def changeDelay(self, x):
-        self.synth.amp.delay = x
+        self.synth.normamp.delay = x
 
     def changeAttack(self, x):
-        self.synth.amp.attack = x
+        self.synth.normamp.attack = x
 
     def changeDecay(self, x):
-        self.synth.amp.decay = x
+        self.synth.normamp.decay = x
 
     def changeSustain(self, x):
-        self.synth.amp.sustain = x
+        self.synth.normamp.sustain = x
 
     def changeRelease(self, x):
-        self.synth.amp.release = x
+        self.synth.normamp.release = x
 
     def changeExponent(self, x):
-        self.synth.amp.setExp(float(x))
+        self.synth.normamp.setExp(float(x))
 
     def changeGAttDur(self, x):
         pass
@@ -1690,10 +1684,22 @@ class GenericPanel(BasePanel):
         pass
 
     def changeGAttExp(self, x):
-        pass
+        if x == 0.:
+            x += 0.001
+        self.synth.graphAttAmp.inverse = bool(x < 0)
+        self.graphAtt_panel.inverse = bool(x < 0)
+        self.synth.graphAttAmp.exp = abs(x)
+        self.graphAtt_panel.exp = abs(x)
+        wx.CallAfter(self.graphAtt_panel.Refresh)
 
     def changeGRelExp(self, x):
-        pass
+        if x == 0.:
+            x += 0.001
+        self.synth.graphRelAmp.inverse = bool(x < 0)
+        self.graphRel_panel.inverse = bool(x < 0)
+        self.synth.graphRelAmp.exp = abs(x)
+        self.graphRel_panel.exp = abs(x)
+        wx.CallAfter(self.graphRel_panel.Refresh)
 
     def changeAmp(self, x):
         self.synth._rawamp.value = x
@@ -2086,39 +2092,39 @@ class LFOPanel(BasePanel):
 
     def changeDelay(self, x):
         if self.which == 0:
-            self.synth.amp.delay = x
+            self.synth.normamp.delay = x
         else:
-            self.synth._params[self.which].lfo.amp.delay = x
+            self.synth._params[self.which].lfo.normamp.delay = x
 
     def changeAttack(self, x):
         if self.which == 0:
-            self.synth.amp.attack = x
+            self.synth.normamp.attack = x
         else:
-            self.synth._params[self.which].lfo.amp.attack = x
+            self.synth._params[self.which].lfo.normamp.attack = x
 
     def changeDecay(self, x):
         if self.which == 0:
-            self.synth.amp.decay = x
+            self.synth.normamp.decay = x
         else:
-            self.synth._params[self.which].lfo.amp.decay = x
+            self.synth._params[self.which].lfo.normamp.decay = x
 
     def changeSustain(self, x):
         if self.which == 0:
-            self.synth.amp.sustain = x
+            self.synth.normamp.sustain = x
         else:
-            self.synth._params[self.which].lfo.amp.sustain = x
+            self.synth._params[self.which].lfo.normamp.sustain = x
 
     def changeRelease(self, x):
         if self.which == 0:
-            self.synth.amp.release = x
+            self.synth.normamp.release = x
         else:
-            self.synth._params[self.which].lfo.amp.release = x
+            self.synth._params[self.which].lfo.normamp.release = x
 
     def changeExponent(self, x):
         if self.which == 0:
-            self.synth.amp.exp = float(x)
+            self.synth.normamp.exp = float(x)
         else:
-            self.synth._params[self.which].lfo.amp.exp = float(x)
+            self.synth._params[self.which].lfo.normamp.exp = float(x)
 
     def changeAmp(self, x):
         if self.which == 0:
@@ -2126,14 +2132,34 @@ class LFOPanel(BasePanel):
         else:
             self.synth._params[self.which].lfo.setAmp(x)
 
-
-
-    def changeGAttackDur(self, x):
+    def changeGAttDur(self, x):
         pass
 
-    def changeGReleaseDur(self, x):
+    def changeGRelDur(self, x):
         pass
 
-    def changeGExponent(self, x):
-        pass
+    def changeGAttExp(self, x):
+        if x == 0.:
+            x += 0.001
+        if self.which == 0:
+            pass
+        else:
+            self.synth._params[self.which].parent.graphAttAmp.inverse = bool(x < 0)
+            self.graphAtt_panel.inverse = bool(x < 0)
+            self.synth._params[self.which].parent.graphAttAmp.exp = abs(x)
+            self.graphAtt_panel.exp = abs(x)
+            wx.CallAfter(self.graphAtt_panel.Refresh)
+
+    def changeGRelExp(self, x):
+        if x == 0.:
+            x += 0.001
+        if self.which == 0:
+            pass
+        else:
+            self.synth._params[self.which].parent.graphRelAmp.inverse = bool(x < 0)
+            self.graphRel_panel.inverse = bool(x < 0)
+            self.synth._params[self.which].parent.graphRelAmp.exp = abs(x)
+            self.graphRel_panel.exp = abs(x)
+            wx.CallAfter(self.graphRel_panel.Refresh)
+
 

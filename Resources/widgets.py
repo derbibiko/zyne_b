@@ -27,25 +27,48 @@ if "phoenix" in wx.version():
 
 BACKGROUND_COLOUR = "#EBEBEB"
 CHAR_SET = set("0123456789.-")
-OFF = 10
-OFF2 = OFF * 2
-RAD = 3
-RAD2 = RAD * 2
-AREA = RAD + 2
-AREA2 = AREA * 2
 
 
 class ZB_Grapher(Grapher):
-    def __init__(self, parent, xlen=8192, yrange=(0.0, 1.0), init=[(0.0, 1.0), (1.0, 1.0)],
+    def __init__(self, parent, title='', xlen=8192, yrange=(0.0, 1.0), init=[(0.0, 1.0), (1.0, 1.0)],
                  mode=0, exp=0.38, inverse=False, tension=0.0, bias=0.0, outFunction=None,
-                 pos=(0, 0), size=(100, 80), style=wx.BORDER_NONE):
+                 pos=(0, 0), size=(100, 80), style=wx.BORDER_NONE | wx.WANTS_CHARS):
         Grapher.__init__(self, parent, xlen, yrange, init, mode, exp, inverse, tension, bias,
                          outFunction, pos, size, style)
         self.parent = parent
+        self.title = title
+        self.off = self.FromDIP(4)
+        self.off2 = self.off * 2
+        self.rad = self.FromDIP(3)
+        self.rad2 = self.rad * 2
+        self.area = self.rad + 2
+        self.area2 = self.area * 2
+
+    def MouseDown(self, evt):
+        self.CaptureMouse()
+        w, h = self.GetSize()
+        self.pos = self.borderClip(evt.GetPosition())
+        self.pos[1] = h - self.pos[1]
+        for i, p in enumerate(self.points):
+            x, y = self.pointToPixels(p)
+            if wx.Rect(x - self.area, y - self.area, self.area2, self.area2).Contains(self.pos):
+                # Grab a point
+                self.selected = i
+                self.Refresh()
+                return
+        # Add a point
+        pt = self.pixelsToPoint(self.pos)
+        for i, p in enumerate(self.points):
+            if p >= pt:
+                self.points.insert(i, pt)
+                break
+        self.selected = self.points.index(pt)
+        self.Refresh()
+
 
     def OnPaint(self, evt):
         w, h = self.GetSize()
-        corners = [(OFF, OFF), (w - OFF, OFF), (w - OFF, h - OFF), (OFF, h - OFF)]
+        corners = [(self.off, self.off), (w - self.off, self.off), (w - self.off, h - self.off), (self.off, h - self.off)]
         dc = self.dcref(self)
         gc = wx.GraphicsContext_Create(dc)
         gc.SetBrush(wx.Brush("#000000"))
@@ -61,39 +84,39 @@ class ZB_Grapher(Grapher):
 
         # Draw grid
         dc.SetPen(wx.Pen("#CCCCCC", 1))
-        xstep = int(round((w - OFF2) / 10.0))
-        ystep = int(round((h - OFF2) / 10.0))
+        xstep = int(round((w - self.off2) / 10.0))
+        ystep = int(round((h - self.off2) / 10.0))
         for i in range(10):
-            xpos = i * xstep + OFF
-            dc.DrawLine(xpos, OFF, xpos, h - OFF)
-            ypos = i * ystep + OFF
-            dc.DrawLine(OFF, ypos, w - OFF, ypos)
+            xpos = i * xstep + self.off
+            dc.DrawLine(xpos, self.off, xpos, h - self.off)
+            ypos = i * ystep + self.off
+            dc.DrawLine(self.off, ypos, w - self.off, ypos)
             # if i > 0:
             #     if type(self.xlen) == int:
             #         t = "%d" % int(self.xlen * i * 0.1)
             #     else:
             #         t = "%.2f" % (self.xlen * i * 0.1)
-            #     dc.DrawText(t, xpos + 2, h - OFF - 10)
+            #     dc.DrawText(t, xpos + 2, h - self.off - 10)
             # if i < 9:
             #     t = "%.2f" % ((9 - i) * 0.1 * (self.yrange[1] - self.yrange[0]) + self.yrange[0])
-            #     dc.DrawText(t, OFF + 2, ypos + ystep - 10)
+            #     dc.DrawText(t, self.off + 2, ypos + ystep - 10)
             # else:
             #     t = "%.2f" % ((9 - i) * 0.1 * (self.yrange[1] - self.yrange[0]) + self.yrange[0])
-            #     dc.DrawText(t, OFF + 2, h - OFF - 10)
+            #     dc.DrawText(t, self.off + 2, h - self.off - 10)
 
-        dc.SetPen(wx.Pen("#000000", 1))
+        dc.SetPen(wx.Pen("#999999", 1))
         dc.SetBrush(wx.Brush("#000000"))
         # Draw bounding box
         for i in range(4):
             dc.DrawLine(corners[i][0], corners[i][1], corners[(i + 1) % 4][0], corners[(i + 1) % 4][1])
 
         # Convert points in pixels
-        w, h = w - OFF2 - RAD2, h - OFF2 - RAD2
+        w, h = w - self.off2 - self.rad2, h - self.off2 - self.rad2
         tmp = []
         back_y_for_log = []
         for p in self.points:
-            x = int(round(p[0] * w)) + OFF + RAD
-            y = int(round((1.0 - p[1]) * h)) + OFF + RAD
+            x = int(round(p[0] * w)) + self.off + self.rad
+            y = int(round((1.0 - p[1]) * h)) + self.off + self.rad
             tmp.append((x, y))
             back_y_for_log.append(p[1])
 
@@ -148,7 +171,7 @@ class ZB_Grapher(Grapher):
                 for i in range(len(tmp) - 1):
                     tmp2 = self.getLogPoints(tmp[i], tmp[i + 1])
                     for j in range(len(tmp2)):
-                        tmp2[j] = (tmp2[j][0], int(round((1.0 - tmp2[j][1]) * h)) + OFF + RAD)
+                        tmp2[j] = (tmp2[j][0], int(round((1.0 - tmp2[j][1]) * h)) + self.off + self.rad)
                     if i == 0 and len(tmp2) < 2:
                         gc.DrawLines([back_tmp[i], back_tmp[i + 1]])
                     if last_p is not None:
@@ -166,7 +189,7 @@ class ZB_Grapher(Grapher):
                 for i in range(len(tmp) - 1):
                     tmp2 = self.getCosLogPoints(tmp[i], tmp[i + 1])
                     for j in range(len(tmp2)):
-                        tmp2[j] = (tmp2[j][0], int(round((1.0 - tmp2[j][1]) * h)) + OFF + RAD)
+                        tmp2[j] = (tmp2[j][0], int(round((1.0 - tmp2[j][1]) * h)) + self.off + self.rad)
                     if i == 0 and len(tmp2) < 2:
                         gc.DrawLines([back_tmp[i], back_tmp[i + 1]])
                     if last_p is not None:
@@ -186,7 +209,7 @@ class ZB_Grapher(Grapher):
             else:
                 gc.SetBrush(wx.Brush("#000000"))
                 dc.SetBrush(wx.Brush("#000000"))
-            gc.DrawEllipse(p[0] - RAD, p[1] - RAD, RAD2, RAD2)
+            gc.DrawEllipse(p[0] - self.rad, p[1] - self.rad, self.rad2, self.rad2)
 
         # Draw position values
         font.SetPointSize(ptsize - 3)
@@ -194,10 +217,12 @@ class ZB_Grapher(Grapher):
         dc.SetTextForeground("#222222")
         posptx, pospty = self.pixelsToPoint(self.pos)
         xval, yval = self.pointToValues((posptx, pospty))
+        if self.title:
+            dc.DrawText(self.title, self.FromDIP(5), self.off)
         if type(self.xlen) == int:
-            dc.DrawText(f"{xval}, {yval:.3f}", w - 75, OFF)
+            dc.DrawText(f"{xval}, {yval:.3f}", w - 75, self.off)
         else:
-            dc.DrawText(f"{xval:.3f}, {yval:.3f}", w - 75, OFF)
+            dc.DrawText(f"{xval:.3f}, {yval:.3f}", w - 75, self.off)
 
 
 class ZB_HeadTitle(wx.Panel):
