@@ -1154,13 +1154,15 @@ class BasePanel(wx.Panel):
             self.sizer.Layout()
 
     def createAdsrKnobs(self):
-        self.graphAtt_panel = ZB_Grapher(self, size=(-1, 80), title='Att')
+        self.graphAtt_panel = ZB_Grapher(self, size=(-1, 60), title='Att')
         self.sizer.Add(self.graphAtt_panel, 0, wx.CENTER | wx.EXPAND, 0)
         self.graphAtt_panel.Bind(wx.EVT_ENTER_WINDOW, self.hoverAttGraph)
+        self.graphAtt_panel.Bind(wx.EVT_LEAVE_WINDOW, self.leaveGraph)
 
-        self.graphRel_panel = ZB_Grapher(self, size=(-1, 40), title='Rel')
+        self.graphRel_panel = ZB_Grapher(self, size=(-1, 60), title='Rel')
         self.sizer.Add(self.graphRel_panel, 0, wx.CENTER | wx.EXPAND, 0)
         self.graphRel_panel.Bind(wx.EVT_ENTER_WINDOW, self.hoverRelGraph)
+        self.graphRel_panel.Bind(wx.EVT_LEAVE_WINDOW, self.leaveGraph)
 
         self.sizer.AddSpacer(4)
 
@@ -1452,6 +1454,17 @@ class BasePanel(wx.Panel):
         graphAttAmp.setSize((self.graphAtt_panel.GetSize()[0], self.FromDIP(40)))
         graphRelAmp.setSize((self.graphRel_panel.GetSize()[0], self.FromDIP(80)))
         self.graphRel_panel.SetFocus()
+        wx.CallAfter(self.sizer.Layout)
+
+    def leaveGraph(self, evt):
+        if self.from_lfo:
+            graphAttAmp = self.synth._params[self.which].lfo.graphAttAmp
+            graphRelAmp = self.synth._params[self.which].lfo.graphRelAmp
+        else:
+            graphAttAmp = self.synth.graphAttAmp
+            graphRelAmp = self.synth.graphRelAmp
+        graphAttAmp.setSize((self.graphAtt_panel.GetSize()[0], self.FromDIP(60)))
+        graphRelAmp.setSize((self.graphRel_panel.GetSize()[0], self.FromDIP(60)))
         wx.CallAfter(self.sizer.Layout)
 
     def hoverX(self, evt):
