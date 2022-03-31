@@ -30,22 +30,24 @@ CHAR_SET = set("0123456789.-")
 
 
 class ZB_Grapher(Grapher):
-    def __init__(self, parent, title='', xlen=8192, yrange=(0.0, 1.0), init=[(0.0, 1.0), (1.0, 1.0)],
+    def __init__(self, parent, label='', xlen=1., yrange=(0.0, 1.0), init=[(0.0, 1.0), (1.0, 1.0)],
                  mode=0, exp=0.38, inverse=False, tension=0.0, bias=0.0, outFunction=None,
                  pos=(0, 0), size=(100, 80), style=wx.BORDER_NONE | wx.WANTS_CHARS):
         Grapher.__init__(self, parent, xlen, yrange, init, mode, exp, inverse, tension, bias,
                          outFunction, pos, size, style)
         self.parent = parent
-        self.title = title
+        self.label = label
         self.off = self.FromDIP(4)
         self.off2 = self.off * 2
         self.rad = self.FromDIP(3)
         self.rad2 = self.rad * 2
         self.area = self.rad + 2
         self.area2 = self.area * 2
+        self.pos = (self.off + self.rad, self.off + self.rad)
 
     def MouseDown(self, evt):
         self.CaptureMouse()
+        self.SetFocus()
         w, h = self.GetSize()
         self.pos = self.borderClip(evt.GetPosition())
         self.pos[1] = h - self.pos[1]
@@ -65,6 +67,61 @@ class ZB_Grapher(Grapher):
         self.selected = self.points.index(pt)
         self.Refresh()
 
+    def OnLeave(self, evt):
+        if self.selected:
+            self.pos = self.pointToPixels(self.points[self.selected])
+        else:
+            self.pos = (self.off + self.rad, self.off + self.rad)
+        self.Refresh()
+
+    def pointToPixels(self, pt):
+        w, h = self.GetSize()
+        w, h = w - self.off2 - self.rad2, h - self.off2 - self.rad2
+        x = int(round(pt[0] * w)) + self.off + self.rad
+        y = int(round(pt[1] * h)) + self.off + self.rad
+        return x, y
+
+    def pixelsToPoint(self, pos):
+        w, h = self.GetSize()
+        w, h = w - self.off2 - self.rad2, h - self.off2 - self.rad2
+        x = (pos[0] - self.off - self.rad) / float(w)
+        y = (pos[1] - self.off - self.rad) / float(h)
+        return x, y
+
+    def borderClip(self, pos):
+        w, h = self.GetSize()
+        if pos[0] < (self.off + self.rad):
+            pos[0] = self.off + self.rad
+        elif pos[0] > (w - self.off - self.rad):
+            pos[0] = w - self.off - self.rad
+        if pos[1] < (self.off + self.rad):
+            pos[1] = self.off + self.rad
+        elif pos[1] > (h - self.off - self.rad):
+            pos[1] = h - self.off - self.rad
+        return pos
+
+    def pointClip(self, pos):
+        w, h = self.GetSize()
+        if self.selected == 0:
+            leftclip = self.off + self.rad
+        else:
+            x, y = self.pointToPixels(self.points[self.selected - 1])
+            leftclip = x
+        if self.selected == (len(self.points) - 1):
+            rightclip = w - self.off - self.rad
+        else:
+            x, y = self.pointToPixels(self.points[self.selected + 1])
+            rightclip = x
+
+        if pos[0] < leftclip:
+            pos[0] = leftclip
+        elif pos[0] > rightclip:
+            pos[0] = rightclip
+        if pos[1] < (self.off + self.rad):
+            pos[1] = self.off + self.rad
+        elif pos[1] > (h - self.off - self.rad):
+            pos[1] = h - self.off - self.rad
+        return pos
 
     def OnPaint(self, evt):
         w, h = self.GetSize()
@@ -217,12 +274,12 @@ class ZB_Grapher(Grapher):
         dc.SetTextForeground("#222222")
         posptx, pospty = self.pixelsToPoint(self.pos)
         xval, yval = self.pointToValues((posptx, pospty))
-        if self.title:
-            dc.DrawText(self.title, self.FromDIP(5), self.off)
+        if self.label:
+            dc.DrawText(self.label, self.FromDIP(5), self.off)
         if type(self.xlen) == int:
-            dc.DrawText(f"{xval}, {yval:.3f}", w - 75, self.off)
+            dc.DrawText(f"{xval}, {yval:.3f}", w - self.FromDIP(75), self.off)
         else:
-            dc.DrawText(f"{xval:.3f}, {yval:.3f}", w - 75, self.off)
+            dc.DrawText(f"{xval:.3f}, {yval:.3f}", w - self.FromDIP(75), self.off)
 
 
 class ZB_HeadTitle(wx.Panel):
