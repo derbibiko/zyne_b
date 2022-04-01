@@ -112,7 +112,7 @@ MODULES = {
                     "p1": ["Loop Start Time (normalized)", 0., 0., 1., False, False],
                     "p2": ["Loop Duration (normalized)", 0., 0., 1., False, False],
                     "p3": ["Pitch", 1., 0., 4., False, False]
-            }
+        }
 }
 
 LFO_CONFIG = {"p1": ["Speed", 4, .01, 1000, False, True],
@@ -744,8 +744,7 @@ class ServerPanel(wx.Panel):
                 if (synth.channel == 0 or synth.channel == note[2]) \
                         and pit >= synth.first \
                         and pit <= synth.last \
-                        and (note[1] == 0 or
-                            (note[1] >= synth.firstVel and note[1] <= synth.lastVel)):
+                        and (note[1] == 0 or (note[1] >= synth.firstVel and note[1] <= synth.lastVel)):
                     synth._virtualpit[voice].setValue(pit)
                     synth._trigamp[voice].setValue(vel)
 
@@ -1111,22 +1110,22 @@ class BasePanel(wx.Panel):
         self.keytriggers = []
         self.mainFrame = self.GetTopLevelParent()
         self.envmode = 0  # 0 := DASDR, 1 := Graphical DADSR
-        self.graphAtt_pts = [(0,0), (.2,0.9), (.25, 0.4), (.5, 0.4), (.7, 0), (1., .5)]
-        self.graphRel_pts = [(0,.5), (.2, 0.4), (.4, .6), (1, 0)]
+        self.graphAtt_pts = [(0., 0.), (.2, 0.9), (.25, 0.4), (.5, 0.4), (.7, 0.3), (1., .5)]
+        self.graphRel_pts = [(0., .5), (.2, 0.4), (.4, .6), (1., 0.)]
         self.graphAtt_exp = 0.38
         self.graphRel_exp = 0.38
         self.graphAtt_dur = 1.0
         self.graphRel_dur = 1.0
-        self.graphAtt_loop = False
-        self.graphRel_loop = False
-        self.graphAtt_pts_lfos = [[(0,0), (.2,0.9), (.25, 0.4), (.5, 0.4), (.7, 0), (1., .5)]] * 5
-        self.graphRel_pts_lfos = [[(0,.5), (.2, 0.4), (.4, .6), (1, 0)]] * 5
+        self.graphAtt_mode = 0
+        self.graphRel_mode = 0
+        self.graphAtt_pts_lfos = [self.graphAtt_pts] * 5
+        self.graphRel_pts_lfos = [self.graphRel_pts] * 5
         self.graphAtt_exp_lfos = [0.38] * 5
         self.graphRel_exp_lfos = [0.38] * 5
         self.graphAtt_dur_lfos = [1.0] * 5
         self.graphRel_dur_lfos = [1.0] * 5
-        self.graphAtt_loop_lfos = [False] * 5
-        self.graphRel_loop_lfos = [False] * 5
+        self.graphAtt_mode_lfos = [0] * 5
+        self.graphRel_mode_lfos = [0] * 5
 
     def updateSliderTitle(self, idx, x):
         if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
@@ -1174,18 +1173,25 @@ class BasePanel(wx.Panel):
 
         self.knobSizerG = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.knobAttDur = ZyneB_ControlKnob(self, 0.01, 120.0, 1.0, size=(66, 74), label='Att Dur', outFunction=self.changeGAttDur)
+        self.knobAttDur = ZyneB_ControlKnob(self, 0.01, 120.0, 1.0, log=True, label='Att Dur', outFunction=self.changeGAttDur)
         self.knobSizerG.Add(self.knobAttDur, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
-        self.knobGAttExp = ZyneB_ControlKnob(self, -15.0, 15.0, 0.38, size=(66, 74), label='Att Slope', outFunction=self.changeGAttExp)
+        self.knobGAttExp = ZyneB_ControlKnob(self, 0.001, 15.0, 0.38, log=True, label='Slope', outFunction=self.changeGAttExp)
         self.knobSizerG.Add(self.knobGAttExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
-        self.knobRelDur = ZyneB_ControlKnob(self, 0.01, 120.0, 1.0, size=(66, 74), label='Rel Dur', outFunction=self.changeGRelDur)
+        self.knobGAttMode = ZB_ControlKnob(self, 0, 3, 0, integer=True, label='Mode', outFunction=self.changeGAttMode,
+                                              displayFunction=self.SetGrapherModeDisplay)
+        self.knobSizerG.Add(self.knobGAttMode, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobRelDur = ZyneB_ControlKnob(self, 0.01, 120.0, 1.0, log=True, label='Rel Dur', outFunction=self.changeGRelDur)
         self.knobSizerG.Add(self.knobRelDur, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
-        self.knobGRelExp = ZyneB_ControlKnob(self, -15.0, 15.0, 0.38, size=(66, 74), label='Rel Slope', outFunction=self.changeGRelExp)
+        self.knobGRelExp = ZyneB_ControlKnob(self, 0.001, 15.0, 0.38, log=True, label='Slope', outFunction=self.changeGRelExp)
         self.knobSizerG.Add(self.knobGRelExp, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
+        self.knobGRelMode = ZB_ControlKnob(self, 0, 3, 0, integer=True, label='Mode', outFunction=self.changeGRelMode,
+                                              displayFunction=self.SetGrapherModeDisplay)
+        self.knobSizerG.Add(self.knobGRelMode, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobSizerG.Layout()
         self.sizer.Add(self.knobSizerG, 0, wx.CENTER, 0)
 
-        self.gdadsr_knobs = [self.attGrapher, self.relGrapher, self.knobAttDur, self.knobRelDur, self.knobGAttExp, self.knobGRelExp]
+        self.gdadsr_knobs = [self.attGrapher, self.relGrapher, self.knobAttDur, self.knobRelDur, self.knobGAttExp, self.knobGRelExp,
+                             self.knobGAttMode, self.knobGRelMode]
         for o in self.gdadsr_knobs:
             o.Hide()
 
@@ -1370,6 +1376,8 @@ class BasePanel(wx.Panel):
                 self.synth.normamp.play()
                 self.graphAtt_pts = graphAttAmp.getPoints()
                 self.graphRel_pts = graphRelAmp.getPoints()
+            graphAttAmp.stop()
+            graphRelAmp.stop()
             for o in self.gdadsr_knobs:
                 o.Hide()
             for o in self.dadsr_knobs:
@@ -1377,8 +1385,6 @@ class BasePanel(wx.Panel):
             graphAttAmp.hide()
             graphRelAmp.hide()
             self.gdadsron = None
-            graphAttAmp.stop()
-            graphRelAmp.stop()
 
             if self.from_lfo:
                 wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
@@ -1387,20 +1393,23 @@ class BasePanel(wx.Panel):
 
     def triggerGdadsr(self, voice):
         vel = self.synth._trigamp.get(all=True)[voice]
-        if self.from_lfo:
-            if vel > 0.:
-                self.synth._params[self.which].lfo.graphRelAmp.stop()
-                self.synth._params[self.which].lfo.graphAttAmp.play()
+        try:
+            if self.from_lfo:
+                if vel > 0.:
+                    self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].stop()
+                    self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].play()
+                else:
+                    self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].stop()
+                    self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].play()
             else:
-                self.synth._params[self.which].lfo.graphAttAmp.stop()
-                self.synth._params[self.which].lfo.graphRelAmp.play()
-        else:
-            if vel > 0.:
-                self.synth.graphRelAmp._base_objs[voice].stop()
-                self.synth.graphAttAmp._base_objs[voice].play()
-            else:
-                self.synth.graphAttAmp._base_objs[voice].stop()
-                self.synth.graphRelAmp._base_objs[voice].play()
+                if vel > 0.:
+                    self.synth.graphRelAmp._base_objs[voice].stop()
+                    self.synth.graphAttAmp._base_objs[voice].play()
+                else:
+                    self.synth.graphAttAmp._base_objs[voice].stop()
+                    self.synth.graphRelAmp._base_objs[voice].play()
+        except Exception as e:
+            print('triggerGdadsr', e)
 
     def copyDADSR(self, evt):
         if self.envmode == 1:
@@ -1629,6 +1638,13 @@ class GenericPanel(BasePanel):
         except Exception:
             return val
 
+    def SetGrapherModeDisplay(self, val):
+        displayDict = {0: 'Exp', 1: 'Exp\nLoop', 2: 'Exp Inv', 3: 'Exp Inv\nLoop'}
+        try:
+            return displayDict[int(val)]
+        except Exception:
+            return val
+
     def SetLoopmode(self, x):
         if self.synth.isSampler:
             self.synth.SetLoopmode(x)
@@ -1702,24 +1718,24 @@ class GenericPanel(BasePanel):
         self.graphRel_dur = x
         self.synth.graphRelAmp.setDuration(x)
 
+    def changeGAttMode(self, x):
+        self.graphAtt_mode = x
+        self.synth.graphAttAmp.setMode(x)
+
+    def changeGRelMode(self, x):
+        self.graphRel_mode = x
+        self.synth.graphRelAmp.setMode(x)
+
     def changeGAttExp(self, x):
-        if x == 0.:
-            x += 0.001
         self.graphAtt_exp = x
-        self.synth.graphAttAmp.inverse = bool(x < 0)
-        self.attGrapher.inverse = bool(x < 0)
-        self.synth.graphAttAmp.exp = abs(x)
-        self.attGrapher.exp = abs(x)
+        self.synth.graphAttAmp.exp = x
+        self.attGrapher.exp = x
         wx.CallAfter(self.attGrapher.Refresh)
 
     def changeGRelExp(self, x):
-        if x == 0.:
-            x += 0.001
         self.graphRel_exp = x
-        self.synth.graphRelAmp.inverse = bool(x < 0)
-        self.relGrapher.inverse = bool(x < 0)
-        self.synth.graphRelAmp.exp = abs(x)
-        self.relGrapher.exp = abs(x)
+        self.synth.graphRelAmp.exp = x
+        self.relGrapher.exp = x
         wx.CallAfter(self.relGrapher.Refresh)
 
     def changeAmp(self, x):
@@ -2167,30 +2183,43 @@ class LFOPanel(BasePanel):
             self.graphRel_dur_lfos[self.which] = x
             self.synth._params[self.which].lfo.graphRelAmp.setDuration(x)
 
+    def changeGAttMode(self, x):
+        if self.which == 0:
+            pass
+        else:
+            self.graphAtt_mode_lfos[self.which] = x
+            self.synth._params[self.which].lfo.graphAttAmp.setMode(x)
+
+    def changeGRelMode(self, x):
+        if self.which == 0:
+            pass
+        else:
+            self.graphRel_mode_lfos[self.which] = x
+            self.synth._params[self.which].lfo.graphRelAmp.setMode(x)
+
     def changeGAttExp(self, x):
-        if x == 0.:
-            x += 0.001
         if self.which == 0:
             pass
         else:
             self.graphAtt_exp_lfos[self.which] = x
-            self.synth._params[self.which].lfo.graphAttAmp.inverse = bool(x < 0)
-            self.attGrapher.inverse = bool(x < 0)
-            self.synth._params[self.which].lfo.graphAttAmp.exp = abs(x)
-            self.attGrapher.exp = abs(x)
+            self.synth._params[self.which].lfo.graphAttAmp.exp = x
+            self.attGrapher.exp = x
             wx.CallAfter(self.attGrapher.Refresh)
 
     def changeGRelExp(self, x):
-        if x == 0.:
-            x += 0.001
         if self.which == 0:
             pass
         else:
             self.graphRel_exp_lfos[self.which] = x
-            self.synth._params[self.which].lfo.graphRelAmp.inverse = bool(x < 0)
-            self.relGrapher.inverse = bool(x < 0)
-            self.synth._params[self.which].lfo.graphRelAmp.exp = abs(x)
-            self.relGrapher.exp = abs(x)
+            self.synth._params[self.which].lfo.graphRelAmp.exp = x
+            self.relGrapher.exp = x
             wx.CallAfter(self.relGrapher.Refresh)
+
+    def SetGrapherModeDisplay(self, val):
+        displayDict = {0: 'Exp', 1: 'Exp\nLoop', 2: 'Exp Inv', 3: 'Exp Inv\nLoop'}
+        try:
+            return displayDict[int(val)]
+        except Exception:
+            return val
 
 

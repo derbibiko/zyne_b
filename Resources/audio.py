@@ -35,14 +35,14 @@ def get_midi_default_input():
 
 
 class GraphicalDelAdsr(Expseg):
-    def __init__(self, pts=[(0,0), (1,1)], loop=False, exp=0.38, inverse=False, initToFirstVal=False, mul=1, add=0, grapher=None):
+    def __init__(self, pts=[(0, 0), (1, 1)], loop=False, exp=0.38, inverse=False, initToFirstVal=False, mul=1, add=0, grapher=None):
 
         Expseg.__init__(self, pts, loop=loop, exp=exp, inverse=inverse, initToFirstVal=initToFirstVal, mul=mul, add=add)
 
         self.grapher = grapher
 
         self.xlen = float(self.getPoints()[-1][0])
-
+        self.mode = 0
 
     def hide(self):
         self.grapher.Hide()
@@ -60,9 +60,6 @@ class GraphicalDelAdsr(Expseg):
         if self.grapher is not None:
             self.grapher.points = list(map(lambda x: (x[0] / self.xlen, x[1]), pts))
             self.grapher.xlen = self.xlen
-            # if self.grapher.parent.from_lfo:
-            #     wx.CallAfter(self.grapher.parent.parent.Fit)
-            # else:
             wx.CallAfter(self.grapher.parent.Refresh)
 
     def setSize(self, size):
@@ -72,6 +69,31 @@ class GraphicalDelAdsr(Expseg):
     def setDuration(self, dur):
         if self.xlen != dur and self.grapher is not None:
             self.SetList(list(map(lambda x: (x[0] * dur, x[1]), self.grapher.getPoints())))
+
+    def setMode(self, mode):
+        if self.mode != mode and self.grapher is not None:
+            self.mode = mode
+            if mode == 0:
+                self.grapher.mode = 2
+                self.loop = False
+                self.inverse = False
+                self.grapher.inverse = False
+            elif mode == 1:
+                self.grapher.mode = 2
+                self.loop = True
+                self.inverse = False
+                self.grapher.inverse = False
+            elif mode == 2:
+                self.grapher.mode = 2
+                self.loop = False
+                self.inverse = True
+                self.grapher.inverse = True
+            elif mode == 3:
+                self.grapher.mode = 2
+                self.loop = True
+                self.inverse = True
+                self.grapher.inverse = True
+            wx.CallAfter(self.grapher.Refresh)
 
     def initPanel(self, grapher, size=None):
         self.grapher = grapher
@@ -443,9 +465,9 @@ class LFOSynth(CtlBind):
         self.last_sharp = 0.5
         self.trigger = trigger
         self._midi_metro = midi_metro
-        self.rawamp = SigTo(.1, vars.vars["SLIDERPORT"], .1, mul=rng)
-        self.graphAttAmp = GraphicalDelAdsr(pts=[(0.,1.), (1.,1.)], loop=False, mul=self.rawamp).stop()
-        self.graphRelAmp = GraphicalDelAdsr(pts=[(0.,1.), (1.,1.)], loop=False, mul=self.rawamp).stop()
+        self.rawamp = SigTo([.1]*vars.vars["POLY"], vars.vars["SLIDERPORT"], .1, mul=rng)
+        self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self.rawamp).stop()
+        self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self.rawamp).stop()
         self.normamp = MidiDelAdsr(self.trigger, delay=0, attack=5, decay=.1, sustain=.5, release=1, mul=self.rawamp)
         self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp
         self.speed = SigTo(4, vars.vars["SLIDERPORT"], 4)
@@ -642,8 +664,8 @@ class BaseSynth:
             self._secondtrig = Trig().play(delay=vars.vars["NOTEONDUR"])
             self._trigamp = Counter(Mix([self._firsttrig, self._secondtrig]), min=0, max=2, dir=1)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.graphAttAmp = GraphicalDelAdsr(list=[(0,1), (1,1)]*vars.vars["POLY"], loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
-            self.graphRelAmp = GraphicalDelAdsr(list=[(0,1), (1,1)]*vars.vars["POLY"], loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
+            self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
+            self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
             self.normamp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                        mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig())
             self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp
@@ -655,8 +677,8 @@ class BaseSynth:
             self._transpo = Sig(value=0)
             self.pitch = Snap(self._virtualpit+self._transpo, choice=list(range(12)), scale=self.scaling)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.graphAttAmp = GraphicalDelAdsr(pts=[(0.,1.), (1.,1.)]*vars.vars["POLY"], loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
-            self.graphRelAmp = GraphicalDelAdsr(pts=[(0.,1.), (1.,1.)]*vars.vars["POLY"], loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
+            self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._trigamp, add=self._lfo_amp.sig()).stop()
+            self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._trigamp, add=self._lfo_amp.sig()).stop()
             self.normamp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                        mul=self._rawamp, add=self._lfo_amp.sig())
             self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp
@@ -670,8 +692,8 @@ class BaseSynth:
             self._velrange = Between(self._note["velocity"], min=self.firstVel/127, max=self.lastVel/127+0.01)
             self._trigamp = self._note["velocity"] * self._velrange
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.graphAttAmp = GraphicalDelAdsr(list=[(0,1), (1,1)]*vars.vars["POLY"], loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
-            self.graphRelAmp = GraphicalDelAdsr(list=[(0,1), (1,1)]*vars.vars["POLY"], loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
+            self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._trigamp, add=self._lfo_amp.sig()).stop()
+            self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._trigamp, add=self._lfo_amp.sig()).stop()
             self.normamp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                        mul=self._rawamp, add=self._lfo_amp.sig())
             self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp
