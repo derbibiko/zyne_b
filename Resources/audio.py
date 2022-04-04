@@ -35,40 +35,49 @@ def get_midi_default_input():
 
 
 class GraphicalDelAdsr(Expseg):
-    def __init__(self, pts=[(0, 0), (1, 1)], loop=False, exp=0.38, inverse=False, initToFirstVal=False, mul=1, add=0, grapher=None):
+    def __init__(self, pts=[(0, 0), (1, 1)], loop=False, exp=0.38, inverse=False, initToFirstVal=False, mul=1, add=0):
 
         Expseg.__init__(self, pts, loop=loop, exp=exp, inverse=inverse, initToFirstVal=initToFirstVal, mul=mul, add=add)
 
-        self.grapher = grapher
+        self.graph = None
 
-        self.xlen = float(self.getPoints()[-1][0])
+        self.grapher = None
+        self.exp = exp
+        self.inverse = inverse
+
+        self.duration = float(self.getPoints()[-1][0])
         self.mode = 0
 
     def hide(self):
-        self.grapher.Hide()
-        if self.grapher.parent.from_lfo:
-            self.grapher.parent.parent.Fit()
+        if self.grapher is not None:
+            self.grapher.Hide()
+            if self.grapher.parent.from_lfo:
+                self.grapher.parent.parent.Fit()
 
     def show(self):
-        self.grapher.Show()
-        if self.grapher.parent.from_lfo:
-            self.grapher.parent.parent.Fit()
+        if self.grapher is not None:
+            self.grapher.Show()
+            self.grapher.Refresh()
+            if self.grapher.parent.from_lfo:
+                self.grapher.parent.parent.Fit()
 
     def SetList(self, pts):
-        self.xlen = float(pts[-1][0])
+        self.duration = float(pts[-1][0])
+        self.clear()
         self.setList(pts)
         if self.grapher is not None:
-            self.grapher.points = list(map(lambda x: (x[0] / self.xlen, x[1]), pts))
-            self.grapher.xlen = self.xlen
-            wx.CallAfter(self.grapher.parent.Refresh)
+            self.grapher.points = list(map(lambda x: (x[0] / self.duration, x[1]), pts))
+            self.grapher.xlen = self.duration
 
     def setSize(self, size):
-        self.grapher.SetMinSize(size)
-        self.grapher.SetMaxSize(size)
+        if self.grapher is not None:
+            self.grapher.SetMinSize(size)
+            self.grapher.SetMaxSize(size)
 
     def setDuration(self, dur):
-        if self.xlen != dur and self.grapher is not None:
-            self.SetList(list(map(lambda x: (x[0] * dur, x[1]), self.grapher.getPoints())))
+        if self.duration != dur:
+            if self.grapher is not None:
+                self.SetList(list(map(lambda x: (x[0] * dur, x[1]), self.grapher.getPoints())))
 
     def setMode(self, mode):
         if self.mode != mode and self.grapher is not None:
@@ -95,19 +104,22 @@ class GraphicalDelAdsr(Expseg):
                 self.grapher.inverse = True
             wx.CallAfter(self.grapher.Refresh)
 
-    def initPanel(self, grapher, size=None):
-        self.grapher = grapher
+    def initPanel(self, pts=None, grapher=None, size=None):
+        if self.grapher is None and grapher is not None:
+            self.grapher = grapher
         if size is not None:
             wx.CallAfter(self.setSize, size)
-        p = self.getPoints()
-        self.xlen = float(p[-1][0])
+        if pts is None:
+            pts = self.getPoints()
+        self.duration = float(pts[-1][0])
         self.grapher.mode = 2
-        self.grapher.points = list(map(lambda x: (x[0] / self.xlen, x[1]), p))
-        self.grapher.xlen = self.xlen
-        self.grapher.yrange = (0, 1)
+        self.grapher.init = list(map(lambda x: (x[0] / self.duration, x[1]), pts))
+        self.grapher.xlen = self.duration
+        self.grapher.yrange = (0., 1.)
         self.grapher.outFunction = self.SetList
         self.grapher.inverse = self.inverse
         self.grapher.exp = self.exp
+        self.grapher.reset()
 
 
 class FSServer:
@@ -476,11 +488,16 @@ class LFOSynth(CtlBind):
         self.lfo = LFO(freq=self.freq, sharp=.9, type=3).stop()
         self.sigout = Sig(self.lfo * self.amp).stop()
 
-    def play(self):
+    def play(self, envmode=0):
         self.rawamp.play()
-        self.graphAttAmp.stop()
-        self.graphRelAmp.stop()
-        self.normamp.play()
+        if envmode == 0:
+            self.graphAttAmp.stop()
+            self.graphRelAmp.stop()
+            self.normamp.play()
+        else:
+            self.graphAttAmp.play()
+            self.graphRelAmp.play()
+            self.normamp.stop()
         self.speed.play()
         self.jitter.play()
         self.freq.play()
@@ -547,13 +564,15 @@ class Param(CtlBind):
     def set(self, x):
         self.slider.value = x
 
-    def start_lfo(self, x):
+    def start_lfo(self, x, envmode=None):
         if x:
-            self.lfo.play()
+            self.lfo.play(envmode)
         else:
             self.lfo.stop()
 
     def __del__(self):
+        self.lfo.graphAttAmp.grapher = None
+        self.lfo.graphRelAmp.grapher = None
         for key in list(self.__dict__.keys()):
             del self.__dict__[key]
 
@@ -573,11 +592,14 @@ class Panner(CtlBind):
     def set(self, x):
         self.slider.value = x
 
-    def start_lfo(self, x):
+    def start_lfo(self, x, envmode=None):
         if not x:
             self.lfo.stop()
         else:
-            self.lfo.play()
+            if envmode is None:
+                envmode = self.parent.envmode
+                print(envmode)
+            self.lfo.play(envmode)
 
     def __del__(self):
         for key in list(self.__dict__.keys()):
@@ -677,8 +699,8 @@ class BaseSynth:
             self._transpo = Sig(value=0)
             self.pitch = Snap(self._virtualpit+self._transpo, choice=list(range(12)), scale=self.scaling)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._trigamp, add=self._lfo_amp.sig()).stop()
-            self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._trigamp, add=self._lfo_amp.sig()).stop()
+            self.graphAttAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
+            self.graphRelAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
             self.normamp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                        mul=self._rawamp, add=self._lfo_amp.sig())
             self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp

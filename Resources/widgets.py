@@ -313,7 +313,7 @@ class ZB_Base_Control(wx.Panel):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(200, 16),
                  log=False, powoftwo=False, integer=False,
-                 outFunction=None, label="", isrange=False, displayFunction=None):
+                 outFunction=None, label="", isrange=False, displayFunction=None, precision=6):
         wx.Panel.__init__(self, parent=parent, id=wx.ID_ANY, pos=pos, size=size,
                           style=wx.NO_BORDER | wx.WANTS_CHARS | wx.EXPAND)
         self.parent = parent
@@ -348,6 +348,7 @@ class ZB_Base_Control(wx.Panel):
         self.value = 0
         self.display_value = 0
         self.SetRange(minvalue, maxvalue)
+        self.precision = precision
 
         if log:
             self.toexp_c0 = p_mathlog10(minvalue)
@@ -503,6 +504,7 @@ class ZB_Base_Control(wx.Panel):
                     self.display_value = str(val)
             else:
                 absval = abs(val)
+                val = round(val, self.precision)
                 if absval >= 1000:
                     self.display_value = f"{val:.0f}"
                 elif absval >= 100:
@@ -526,10 +528,14 @@ class ZB_Base_Control(wx.Panel):
         self.selected = keepSelected
         if self.isRange:
             self.first, self.last = value
+            self.first = round(self.first, self.precision)
+            self.last = round(self.last, self.precision)
             if self.first > self.last:
                 self.first, self.last = self.last, self.first
             self.first = clamp(self.first, self.minvalue, self.last)
             self.last = clamp(self.last, self.first, self.maxvalue)
+        else:
+            value = round(value, self.precision)
         if self.HasCapture():
             self.ReleaseMouse()
         if self.powoftwo and not self.isRange:
@@ -558,6 +564,7 @@ class ZB_Base_Control(wx.Panel):
             self.value = powOfTwo(self.value)
         self.clampPos()
         self.handleNewValue()
+
         wx.CallAfter(self.setFocusToKeyboard)
         wx.CallAfter(self.Refresh)
 
@@ -620,7 +627,7 @@ class ZB_ControlSlider(ZB_Base_Control):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(-1, -1),
                  log=False, integer=False, powoftwo=False,
-                 outFunction=None, label="", orient=wx.HORIZONTAL):
+                 outFunction=None, label="", orient=wx.HORIZONTAL, precision=6):
 
         self.orient = orient
 
@@ -640,7 +647,7 @@ class ZB_ControlSlider(ZB_Base_Control):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos=pos, size=size,
                          log=log, integer=integer, powoftwo=powoftwo,
-                         outFunction=outFunction, label=label)
+                         outFunction=outFunction, label=label, precision=precision)
 
         self.parent = parent
         self.SetMinSize(self.GetSize())
@@ -852,11 +859,11 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(200, 16),
                  log=False, integer=False, powoftwo=False,
-                 outFunction=None, label="", orient=wx.HORIZONTAL):
+                 outFunction=None, label="", orient=wx.HORIZONTAL, precision=6):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos, size,
                          log, integer, powoftwo,
-                         outFunction, label=label, orient=orient)
+                         outFunction, label=label, orient=orient, precision=precision)
         self.parent = parent
 
     def setValue(self, x):
@@ -884,7 +891,7 @@ class ZB_ControlKnob(ZB_Base_Control):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(44, 74),
                  log=False, integer=False,
-                 outFunction=None, label='', isrange=False, displayFunction=None):
+                 outFunction=None, label='', isrange=False, displayFunction=None, precision=6):
 
         self.knobCenterPosX = int(size[0] / 2)
         self.knobRadius = 14
@@ -901,7 +908,7 @@ class ZB_ControlKnob(ZB_Base_Control):
                          pos=pos, size=size,
                          log=log, integer=integer,
                          outFunction=outFunction, label=label, isrange=isrange,
-                         displayFunction=displayFunction)
+                         displayFunction=displayFunction, precision=precision)
         self.parent = parent
         self.rangeIndex = -1
         self.SetMinSize(self.GetSize())
@@ -1136,11 +1143,11 @@ class ZyneB_ControlKnob(ZB_ControlKnob):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(44, 74),
                  log=False, integer=False,
-                 outFunction=None, label=''):
+                 outFunction=None, label='', precision=6):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos=pos, size=size,
                          log=log, integer=integer,
-                         outFunction=outFunction, label=label)
+                         outFunction=outFunction, label=label, precision=precision)
         self.parent = parent
 
     def setValue(self, x):
@@ -1168,7 +1175,7 @@ class ZB_ControlRangeKnob(ZB_ControlKnob):
     def __init__(self, parent, minvalue, maxvalue, init=None,
                  pos=(0, 0), size=(44, 74),
                  log=False, integer=False,
-                 outFunction=None, label='', isrange=True, displayFunction=None):
+                 outFunction=None, label='', isrange=True, displayFunction=None, precision=6):
         super().__init__(parent, minvalue, maxvalue, init,
                          pos=pos, size=size,
                          log=False, integer=integer,

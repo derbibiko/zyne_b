@@ -740,36 +740,51 @@ class ZyneFrame(wx.Frame):
         dlg.Destroy()
 
     def getModulesAndParams(self):
-        modules = [(module.name, module.mute, module.channel, module.firstVel, module.lastVel,
-                    module.first, module.last, module.firstkey_pitch, module.loopmode,
-                    module.xfade, module.synth.path if module.synth.isSampler else "") for module in self.modules]
+        modules = [module.getModuleParams() for module in self.modules]
         params = [[slider.GetValue() for slider in module.sliders] for module in self.modules]
         lfo_params = [module.getLFOParams() for module in self.modules]
         ctl_params = [[slider.midictlnumber for slider in module.sliders] for module in self.modules]
         return modules, params, lfo_params, ctl_params
 
     def setModulesAndParams(self, modules, params, lfo_params, ctl_params, from_export=False):
-        for name, mute, channel, firstVel, lastVel, first, last, firstkey_pitch, loopmode, xfade, samplerpath in modules:
+        for modparams in modules:
+            name = modparams[0]
             dic = MODULES[name]
             titleDic = dic.get("slider_title_dicts", None)
-            self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
-                                             dic["p1"], dic["p2"], dic["p3"], titleDic))
-            self.addModule(self.modules[-1])
-            self.modules[-1].setMute(mute)
-            self.modules[-1].trigChannel.SetValue(channel)
-            self.modules[-1].trigVelRange.SetValue((firstVel, lastVel))
-            self.modules[-1].trigKeyRange.SetValue((first, last))
-            self.modules[-1].trigFirstKey.SetValue(firstkey_pitch)
-            if self.modules[-1].synth.isSampler:
-                self.modules[-1].trigLoopmode.SetValue(loopmode)
-                self.modules[-1].trigXfade.SetValue(xfade)
-                self.modules[-1].SetSamples(samplerpath)
+            lastModule = GenericPanel(self.panel, name, dic["title"], dic["synth"],
+                                             dic["p1"], dic["p2"], dic["p3"], titleDic)
+            self.modules.append(lastModule)
+            self.addModule(lastModule)
+
+            mute, channel, firstVel, lastVel, first, last, firstkey_pitch, loopmode, xfade, samplerpath = modparams[1:11]
+            lastModule.setMute(mute)
+            lastModule.trigChannel.SetValue(channel)
+            lastModule.trigVelRange.SetValue((firstVel, lastVel))
+            lastModule.trigKeyRange.SetValue((first, last))
+            lastModule.trigFirstKey.SetValue(firstkey_pitch)
+            if lastModule.synth.isSampler:
+                lastModule.trigLoopmode.SetValue(loopmode)
+                lastModule.trigXfade.SetValue(xfade)
+                lastModule.SetSamples(samplerpath)
+
+            if len(modparams) == 12 and modparams[11] is not None:
+                envmode, graphAtt_pts, graphRel_pts, graphAtt_exp, graphRel_exp, \
+                graphAtt_dur, graphRel_dur, graphAtt_mode, graphRel_mode = modparams[11]
+                lastModule.synth.graphAttAmp.SetList(graphAtt_pts)
+                lastModule.synth.graphRelAmp.SetList(graphRel_pts)
+                lastModule.knobGAttExp.SetValue(graphAtt_exp)
+                lastModule.knobGRelExp.SetValue(graphRel_exp)
+                lastModule.knobAttDur.SetValue(graphAtt_dur)
+                lastModule.knobRelDur.SetValue(graphRel_dur)
+                lastModule.knobGAttMode.SetValue(graphAtt_mode)
+                lastModule.knobGRelMode.SetValue(graphRel_mode)
+                lastModule.setEnvMode(envmode)
 
         for i, paramset in enumerate(params):
             if len(paramset) == 10:  # old zy
                 paramset = paramset[:5] + [1.] + paramset[5:]
             for j, param in enumerate(paramset):
-                wx.CallAfter(self.modules[i].sliders[j].SetValue, param)
+                self.modules[i].sliders[j].SetValue(param)
 
         slider_idx = 0
         for i, ctl_paramset in enumerate(ctl_params):
@@ -791,6 +806,7 @@ class ZyneFrame(wx.Frame):
                         if self.modules[i].synth._params[slider_idx] is not None:
                             self.modules[i].synth._params[slider_idx].assignMidiCtl(ctl_param, slider)
                         slider_idx += 1
+
         for i, lfo_param in enumerate(lfo_params):
             self.modules[i].reinitLFOS(lfo_param)
         self.refresh()
@@ -806,17 +822,44 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.Layout()
 
     def savefile(self, filename):
+
+        def _f(x):
+            if isinstance(x, dict):
+                r = {}
+                for k, v in x.items():
+                    r[k] = _f(v)
+                return r
+            elif not isinstance(x, (tuple, list)):
+                return x
+            else:
+                r = []
+                for i in x:
+                    if i is None:
+                        r.append(None)
+                    elif isinstance(i, bool):
+                        r.append(i)
+                    elif isinstance(i, str):
+                        r.append(i)
+                    elif isinstance(i, (list, tuple)):
+                        r.append(_f(i))
+                    elif isinstance(i, dict):
+                        r.append(_f(i))
+                    else:
+                        r.append(round(i, 6))
+                return r
+
         modules, params, lfo_params, ctl_params = self.getModulesAndParams()
         serverSettings = self.serverPanel.getServerSettings()
         postProcSettings = self.serverPanel.getPostProcSettings()
         out_drv = self.serverPanel.getSelectedOutputDriverName()
         midi_itf = self.serverPanel.getSelectedMidiInterfaceName()
-        dic = {
+
+        dic = _f({
             "server": serverSettings, "postproc": postProcSettings,
-            "modules": modules, "params": params, "lfo_params": lfo_params,
+            "modules": modules, "params":params, "lfo_params": lfo_params,
             "ctl_params": ctl_params,
             "output_driver": out_drv, "midi_interface": midi_itf
-        }
+        })
         if not filename.endswith(vars.constants["ZYNE_B_FILE_EXT"]):
             filename = f"{filename}{vars.constants['ZYNE_B_FILE_EXT']}"
         with open(filename, "w") as f:
@@ -828,41 +871,40 @@ class ZyneFrame(wx.Frame):
 
     def openfile(self, filename):
         try:
-            try:
-                with open(filename, "r") as json_file:
-                    dic = json.load(json_file)
-            except Exception as e:
-                # try to read original zy file notation via eval
-                with open(filename, "r") as f:
-                    text = f.read()
-                dic = eval(text)
-            self.deleteAllModules()
-            self.serverPanel.shutdown()
-            self.serverPanel.boot()
-            if filename.endswith(vars.constants["DEFAULT_ZY_NAME"]):
-                self.openedFile = ""
-            else:
-                self.serverPanel.setServerSettings(dic["server"])
-                self.openedFile = filename
-            if "postproc" in dic:
-                self.serverPanel.setPostProcSettings(dic["postproc"])
-            if "output_driver" in dic:
-                self.serverPanel.setDriverByString(dic["output_driver"])
-            if "midi_interface" in dic:
-                self.serverPanel.setInterfaceByString(dic["midi_interface"])
-            fn = os.path.split(filename)[1]
-            self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - {fn}")
-            if not fn.endswith(vars.constants["DEFAULT_ZY_NAME"]):
-                self.setServerPanelFooter()
-            if len(dic["modules"]) and len(dic["modules"][0]) == 2:  # update old set
-                for m in dic["modules"]:
-                    m.extend([0, 1, 127, 0, 127, 0, 0, 0, ""])
-            wx.CallAfter(self.setModulesAndParams,
-                         dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])
+            with open(filename, "r") as json_file:
+                dic = json.load(json_file)
         except Exception as e:
-            wx.MessageBox(
-                f'The following error occurred when loading {filename}:\n"{e}"', 'Warning',
-                wx.OK | wx.ICON_WARNING)
+            # try to read original zy file notation via eval
+            with open(filename, "r") as f:
+                text = f.read()
+            try:
+                dic = eval(text)
+            except Exception as e:
+                wx.MessageBox(
+                    f'The following error occurred when loading {filename}:\n"{e}"', 'Warning',
+                    wx.OK | wx.ICON_WARNING)
+        self.deleteAllModules()
+        self.serverPanel.shutdown()
+        self.serverPanel.boot()
+        if filename.endswith(vars.constants["DEFAULT_ZY_NAME"]):
+            self.openedFile = ""
+        else:
+            self.serverPanel.setServerSettings(dic["server"])
+            self.openedFile = filename
+        if "postproc" in dic:
+            self.serverPanel.setPostProcSettings(dic["postproc"])
+        if "output_driver" in dic:
+            self.serverPanel.setDriverByString(dic["output_driver"])
+        if "midi_interface" in dic:
+            self.serverPanel.setInterfaceByString(dic["midi_interface"])
+        fn = os.path.split(filename)[1]
+        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - {fn}")
+        if not fn.endswith(vars.constants["DEFAULT_ZY_NAME"]):
+            self.setServerPanelFooter()
+        if len(dic["modules"]) and len(dic["modules"][0]) == 2:  # update old set
+            for m in dic["modules"]:
+                m.extend([0, 1, 127, 0, 127, 0, 0, 0, ""])
+        self.setModulesAndParams(dic["modules"], dic["params"], dic["lfo_params"], dic["ctl_params"])
 
     def onAddModule(self, evt):
         name = self.moduleNames[evt.GetId()-vars.constants["ID"]["Modules"]]
@@ -870,15 +912,7 @@ class ZyneFrame(wx.Frame):
         titleDic = dic.get("slider_title_dicts", None)
         self.modules.append(GenericPanel(self.panel, name, dic["title"], dic["synth"],
                                          dic["p1"], dic["p2"], dic["p3"], titleDic))
-        self.modules[-1].trigChannel.SetValue(0)
-        self.modules[-1].trigVelRange.SetValue((1, 127))
-        self.modules[-1].trigKeyRange.SetValue((0, 127))
-        self.modules[-1].trigFirstKey.SetValue(0)
-        self.modules[-1].SetLoopmode(0)
-        self.modules[-1].SetXFade(10)
-        self.modules[-1].SetSamples("")
         self.addModule(self.modules[-1])
-
         wx.CallAfter(self.SetFocus)
 
     def addModule(self, mod):
@@ -894,7 +928,7 @@ class ZyneFrame(wx.Frame):
                 del frame.panel.synth
                 frame.Destroy()
         module.synth.__del__()
-        module.Destroy()
+        wx.CallAfter(module.Destroy)
         self.modules.remove(module)
         self.refreshOutputSignal()
         wx.CallAfter(self.OnSize, wx.CommandEvent())
@@ -906,7 +940,7 @@ class ZyneFrame(wx.Frame):
                     del frame.panel.synth
                     frame.Destroy()
             module.synth.__del__()
-            module.Destroy()
+            wx.CallAfter(module.Destroy)
         self.modules = []
         self.refreshOutputSignal()
         self.serverPanel.resetVirtualKeyboard()
