@@ -493,10 +493,10 @@ class LFOSynth(CtlBind):
         if envmode == 0:
             self.graphAttAmp.stop()
             self.graphRelAmp.stop()
+            self.graphAttAmp.clear()
+            self.graphRelAmp.clear()
             self.normamp.play()
         else:
-            self.graphAttAmp.play()
-            self.graphRelAmp.play()
             self.normamp.stop()
         self.speed.play()
         self.jitter.play()
@@ -508,6 +508,8 @@ class LFOSynth(CtlBind):
         self.rawamp.stop()
         self.graphAttAmp.stop()
         self.graphRelAmp.stop()
+        self.graphAttAmp.clear()
+        self.graphRelAmp.clear()
         self.normamp.stop()
         self.speed.stop()
         self.jitter.stop()
@@ -564,7 +566,7 @@ class Param(CtlBind):
     def set(self, x):
         self.slider.value = x
 
-    def start_lfo(self, x, envmode=None):
+    def start_lfo(self, x, envmode):
         if x:
             self.lfo.play(envmode)
         else:
@@ -592,13 +594,10 @@ class Panner(CtlBind):
     def set(self, x):
         self.slider.value = x
 
-    def start_lfo(self, x, envmode=None):
+    def start_lfo(self, x, envmode):
         if not x:
             self.lfo.stop()
         else:
-            if envmode is None:
-                envmode = self.parent.envmode
-                print(envmode)
             self.lfo.play(envmode)
 
     def __del__(self):

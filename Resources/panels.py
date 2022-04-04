@@ -1845,7 +1845,7 @@ class GenericPanel(BasePanel):
                                    "ctl_params": ctl_params, "shown": shown})
         return lfo_params
 
-    def startLFO(self, which, x, envmode=None):
+    def startLFO(self, which, x):
         self.lfo_sliders[which]["state"] = x
         if which == 0:
             if x:
@@ -1853,8 +1853,7 @@ class GenericPanel(BasePanel):
             else:
                 self.synth._lfo_amp.stop()
         else:
-            if envmode is None:
-                envmode = self.lfo_frames[which].panel.envmode
+            envmode = self.lfo_frames[which].panel.envmode
             self.synth._params[which].start_lfo(x, envmode)
 
     def reinitLFOS(self, lfo_param, ctl_binding=True):
@@ -1889,9 +1888,7 @@ class GenericPanel(BasePanel):
                     panel.knobRelDur.SetValue(graphRel_dur)
                     panel.knobGAttMode.SetValue(graphAtt_mode)
                     panel.knobGRelMode.SetValue(graphRel_mode)
-                    self.startLFO(i, state, envmode)
-                else:
-                    self.startLFO(i, state, 0)
+                self.startLFO(i, state)
 
     def generateUniform(self):
         for i, slider in enumerate(self.sliders):
