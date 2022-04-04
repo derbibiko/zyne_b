@@ -572,12 +572,6 @@ class Param(CtlBind):
         else:
             self.lfo.stop()
 
-    def __del__(self):
-        self.lfo.graphAttAmp.grapher = None
-        self.lfo.graphRelAmp.grapher = None
-        for key in list(self.__dict__.keys()):
-            del self.__dict__[key]
-
 
 class Panner(CtlBind):
     def __init__(self, parent, lfo_trigger, midi_metro):

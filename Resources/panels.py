@@ -797,6 +797,8 @@ class ServerPanel(wx.Panel):
                     menuItem.Enable(True)
             wx.CallAfter(self.meter.setRms, *[0 for i in range(self.meter.numSliders)])
             for module in self.mainFrame.modules:
+                if module.gdadsron is not None:
+                    module.gdadsron = None
                 for kt in module.keytriggers:
                     kt._enable = True
                     kt.Refresh()
@@ -1114,6 +1116,7 @@ class BasePanel(wx.Panel):
         self.envmode = 0  # 0 := DASDR, 1 := Graphical DADSR
         self.graphAtt_pts = [(0., 0.), (.2, 0.9), (.25, 0.4), (.5, 0.4), (.7, 0.3), (1., .5)]
         self.graphRel_pts = [(0., .5), (.2, 0.4), (.4, .6), (1., 0.)]
+        self.gdadsron = None
 
     def updateSliderTitle(self, idx, x):
         if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
@@ -1391,8 +1394,10 @@ class BasePanel(wx.Panel):
                 wx.CallAfter(self.mainFrame.OnSize, wx.CommandEvent())
 
     def triggerGdadsr(self, voice):
-        vel = self.synth._trigamp.get(all=True)[voice]
         try:
+            if not hasattr(self, 'synth'):
+                return
+            vel = self.synth._trigamp.get(all=True)[voice]
             if self.from_lfo:
                 if vel > 0.:
                     self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].stop()
