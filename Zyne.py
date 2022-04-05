@@ -195,10 +195,14 @@ class ZyneFrame(wx.Frame):
         self.fileMenu.Append(vars.constants["ID"]["Run"], 'Run\tCtrl+R', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onRun, id=vars.constants["ID"]["Run"])
         self.fileMenu.AppendSeparator()
-        if wx.Platform == "__WXMAC__" and '/Zyne_B.app' in sys.executable:
-            self.fileMenu.AppendSeparator()
+        if (sys.platform == "darwin" and "/Zyne_B.app" in sys.executable) \
+                or (sys.platform == "win32" and 'Zyne_B.exe' in sys.executable):
+            if sys.platform == "darwin":
+                self.fileMenu.AppendSeparator()
             self.fileMenu.Append(vars.constants["ID"]["NewInstance"], 'Open new Zyne_B Instance\tCtrl+Shift+N', kind=wx.ITEM_NORMAL)
             self.Bind(wx.EVT_MENU, self.onNewInstance, id=vars.constants["ID"]["NewInstance"])
+            if sys.platform != "darwin":
+                self.fileMenu.AppendSeparator()
         self.fileMenu.Append(vars.constants["ID"]["Quit"], 'Quit\tCtrl+Q', kind=wx.ITEM_NORMAL)
         self.Bind(wx.EVT_MENU, self.onQuit, id=vars.constants["ID"]["Quit"])
         self.addMenu = wx.Menu()
@@ -379,10 +383,13 @@ class ZyneFrame(wx.Frame):
             wx.CallAfter(self.SetFocus)
 
     def onNewInstance(self, evt):
-        if wx.Platform == "__WXMAC__":
+        if sys.platform == "darwin":
             p = os.path.dirname(os.path.dirname(os.path.dirname(sys.executable)))
             if p.endswith('/Zyne_B.app'):
                 os.system(f"open -n {p}")
+        elif sys.platform == "win32":
+            wx.MessageBox(sys.executable)
+            os.system(f"start {sys.executable}")
 
     def onRun(self, evt):
         state = self.serverPanel.onOff.GetValue()
