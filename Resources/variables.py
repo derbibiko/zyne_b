@@ -15,6 +15,7 @@ constants["WIN_TITLE"] = "Zyne_B"
 constants["PREF_FILE_NAME"] = ".Zyne_Brc"
 constants["ZYNE_B_FILE_EXT"] = ".zy"
 constants["DEFAULT_ZY_NAME"] = f"default{constants['ZYNE_B_FILE_EXT']}"
+constants["BACKUP_ZY_NAME"] = f"zyne_b_bkp{constants['ZYNE_B_FILE_EXT']}"
 
 constants["HEADTITLE_BACKGROUND_COLOUR"] = "#9999A0"
 constants["HIGHLIGHT_COLOUR"] = "#2B60C8"

@@ -289,20 +289,41 @@ class ZyneFrame(wx.Frame):
         self.Bind(wx.EVT_SIZE, self.OnSize)
 
         if vars.constants["IS_WIN"]:
-            self.SetMinSize(wx.Size(self.FromDIP(510), self.keyboard_height + self.FromDIP(50)))
+            self.SetMinSize(wx.Size(self.FromDIP(530), self.keyboard_height + self.FromDIP(50)))
         else:
-            self.SetMinSize(wx.Size(self.FromDIP(510), self.keyboard_height + self.FromDIP(10)))
+            self.SetMinSize(wx.Size(self.FromDIP(530), self.keyboard_height + self.FromDIP(10)))
+
+        self.backup_timer = wx.Timer(self, 1001)
+        self.Bind(wx.EVT_TIMER, self.save_bkp_file, self.backup_timer)
 
         dropTarget = MyFileDropTarget(self.panel)
         self.panel.SetDropTarget(dropTarget)
-        if vars.vars["AUTO_OPEN"] == 'Default':
-            self.openfile(os.path.join(vars.constants["RESOURCES_PATH"], vars.constants["DEFAULT_ZY_NAME"]))
-        elif vars.vars["AUTO_OPEN"] == 'Last Saved':
-            path = vars.vars["LAST_SAVED"]
-            try:
-                self.openfile(path)
-            except Exception as e:
-                pass
+
+        self.bkp_file = os.path.join(os.path.expanduser("~"), vars.constants["BACKUP_ZY_NAME"])
+
+        self.loaded_restore = False
+        if os.path.exists(self.bkp_file):
+            dlg = wx.MessageDialog(None, "Do you want to load the last backup file?", "Zyne_B quit unexpectedly", wx.YES_NO | wx.ICON_QUESTION)
+            r = dlg.ShowModal()
+            if r == wx.ID_YES:
+                try:
+                    self.openfile(self.bkp_file)
+                    self.loaded_restore = True
+                except Exception as e:
+                    pass
+            dlg.Destroy()
+
+        if not self.loaded_restore:
+            if vars.vars["AUTO_OPEN"] == 'Default':
+                self.openfile(os.path.join(vars.constants["RESOURCES_PATH"], vars.constants["DEFAULT_ZY_NAME"]))
+            elif vars.vars["AUTO_OPEN"] == 'Last Saved':
+                path = vars.vars["LAST_SAVED"]
+                try:
+                    self.openfile(path)
+                except Exception as e:
+                    pass
+
+        self.backup_timer.Start(10000)
 
     def selectNextModule(self, evt):
         idx = evt.GetInt()
@@ -575,10 +596,16 @@ class ZyneFrame(wx.Frame):
                         f.write(line)
 
     def onQuit(self, evt):
+        self.backup_timer.Stop()
         vars.vars["MIDIPITCH"] = None
         self.serverPanel.shutdown()
         try:
             self.serverPanel.keyboard.Destroy()
+        except Exception as e:
+            pass
+        try:
+            if os.path.exists(self.bkp_file):
+                os.remove(self.bkp_file)
         except Exception as e:
             pass
         for win in wx.GetTopLevelWindows():
@@ -828,7 +855,10 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.footer.setLabel(s)
         self.serverPanel.Layout()
 
-    def savefile(self, filename):
+    def save_bkp_file(self, evt):
+        self.savefile(self.bkp_file, True)
+
+    def savefile(self, filename, from_backup=False):
 
         def _f(x):
             if isinstance(x, dict):
@@ -871,10 +901,11 @@ class ZyneFrame(wx.Frame):
             filename = f"{filename}{vars.constants['ZYNE_B_FILE_EXT']}"
         with open(filename, "w") as f:
             f.write(json.dumps(dic))
-        self.openedFile = filename
-        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
-        self.setServerPanelFooter()
-        self.updateLastSavedInPreferencesFile(filename)
+        if not from_backup:
+            self.openedFile = filename
+            self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - " + os.path.split(filename)[1])
+            self.setServerPanelFooter()
+            self.updateLastSavedInPreferencesFile(filename)
 
     def openfile(self, filename):
         try:
@@ -893,11 +924,10 @@ class ZyneFrame(wx.Frame):
         self.deleteAllModules()
         self.serverPanel.shutdown()
         self.serverPanel.boot()
-        if filename.endswith(vars.constants["DEFAULT_ZY_NAME"]):
-            self.openedFile = ""
-        else:
-            self.serverPanel.setServerSettings(dic["server"])
+        self.openedFile = ""
+        if not filename.endswith(vars.constants["DEFAULT_ZY_NAME"]) and not filename.endswith(vars.constants["BACKUP_ZY_NAME"]):
             self.openedFile = filename
+        self.serverPanel.setServerSettings(dic["server"])
         if "postproc" in dic:
             self.serverPanel.setPostProcSettings(dic["postproc"])
         if "output_driver" in dic:
@@ -905,8 +935,11 @@ class ZyneFrame(wx.Frame):
         if "midi_interface" in dic:
             self.serverPanel.setInterfaceByString(dic["midi_interface"])
         fn = os.path.split(filename)[1]
-        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - {fn}")
-        if not fn.endswith(vars.constants["DEFAULT_ZY_NAME"]):
+        if self.openedFile == "":
+            self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth")
+            self.setServerPanelFooter("")
+        else:
+            self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - {fn}")
             self.setServerPanelFooter()
         if len(dic["modules"]) and len(dic["modules"][0]) == 2:  # update old set
             for m in dic["modules"]:
