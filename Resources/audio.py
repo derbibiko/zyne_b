@@ -679,8 +679,8 @@ class BaseSynth:
             self._secondtrig = Trig().play(delay=vars.vars["NOTEONDUR"])
             self._trigamp = Counter(Mix([self._firsttrig, self._secondtrig]), min=0, max=2, dir=1)
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
-            self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
+            self.graphAttAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
+            self.graphRelAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig()).stop()
             self.normamp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                        mul=self._rawamp*vars.vars["MIDIVELOCITY"], add=self._lfo_amp.sig())
             self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp
@@ -707,8 +707,8 @@ class BaseSynth:
             self._velrange = Between(self._note["velocity"], min=self.firstVel/127, max=self.lastVel/127+0.01)
             self._trigamp = self._note["velocity"] * self._velrange
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
-            self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
-            self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
+            self.graphAttAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
+            self.graphRelAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
             self.normamp = MidiDelAdsr(self._trigamp, delay=0, attack=.001, decay=.1, sustain=.5, release=1,
                                        mul=self._rawamp, add=self._lfo_amp.sig())
             self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp

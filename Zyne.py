@@ -619,7 +619,7 @@ class ZyneFrame(wx.Frame):
         self.deleteAllModules()
         self.openedFile = ""
         self.setServerPanelFooter("")
-        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth - Untitled")
+        self.SetTitle(f"{vars.constants['WIN_TITLE']} Synth")
         self.selected = None
         wx.GetTopLevelWindows()[0].Raise()
 
@@ -682,7 +682,7 @@ class ZyneFrame(wx.Frame):
                 num_modules = len(self.modules)
             notes = self.keyboard.getCurrentNotes()
             if len(notes) == 0:
-                wx.LogMessage("Play some notes on the virtual keyboard before calling the export chords function!.")
+                wx.LogMessage("Press some notes on the virtual keyboard in Hold mode before calling the export chords function.")
                 return
             midi_pitches = [tup[0] for tup in notes]
             midi_velocities = [tup[1] for tup in notes]

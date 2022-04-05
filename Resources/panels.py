@@ -1360,7 +1360,11 @@ class BasePanel(wx.Panel):
             graphAttAmp.show()
             graphRelAmp.show()
 
-            self.gdadsron = TrigFunc(Change(self.synth._trigamp), self.triggerGdadsr, arg=list(range(vars.vars["POLY"])))
+            if vars.vars["MIDIPITCH"] is None:
+                self.gdadsron = TrigFunc(Change(self.synth._trigamp), self.triggerGdadsr, arg=list(range(vars.vars["POLY"])))
+            else:
+                self.gdadsron = TrigFunc(self.synth._firsttrig, self.triggerGdadsrOn, arg=list(range(len(self.synth.pitch))))
+                self.gdadsroff = TrigFunc(self.synth._secondtrig, self.triggerGdadsrOff, arg=list(range(len(self.synth.pitch))))
 
             if self.from_lfo:
                 wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
@@ -1393,27 +1397,40 @@ class BasePanel(wx.Panel):
             else:
                 wx.CallAfter(self.mainFrame.OnSize, wx.CommandEvent())
 
+    def triggerGdadsrOff(self, voice):
+        if self.from_lfo:
+            self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].stop()
+            self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].play()
+        else:
+            self.synth.graphAttAmp._base_objs[voice].stop()
+            self.synth.graphRelAmp._base_objs[voice].play()
+
+    def triggerGdadsrOn(self, voice):
+        if self.from_lfo:
+            self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].play()
+            self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].stop()
+        else:
+            self.synth.graphAttAmp._base_objs[voice].play()
+            self.synth.graphRelAmp._base_objs[voice].stop()
+
     def triggerGdadsr(self, voice):
-        try:
-            if not hasattr(self, 'synth'):
-                return
-            vel = self.synth._trigamp.get(all=True)[voice]
-            if self.from_lfo:
-                if vel > 0.:
-                    self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].stop()
-                    self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].play()
-                else:
-                    self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].stop()
-                    self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].play()
+        if not hasattr(self, 'synth'):
+            return
+        vel = self.synth._trigamp.get(all=True)[voice]
+        if self.from_lfo:
+            if vel > 0.:
+                self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].stop()
+                self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].play()
             else:
-                if vel > 0.:
-                    self.synth.graphRelAmp._base_objs[voice].stop()
-                    self.synth.graphAttAmp._base_objs[voice].play()
-                else:
-                    self.synth.graphAttAmp._base_objs[voice].stop()
-                    self.synth.graphRelAmp._base_objs[voice].play()
-        except Exception as e:
-            print('triggerGdadsr', e)
+                self.synth._params[self.which].lfo.graphAttAmp._base_objs[voice].stop()
+                self.synth._params[self.which].lfo.graphRelAmp._base_objs[voice].play()
+        else:
+            if vel > 0.:
+                self.synth.graphRelAmp._base_objs[voice].stop()
+                self.synth.graphAttAmp._base_objs[voice].play()
+            else:
+                self.synth.graphAttAmp._base_objs[voice].stop()
+                self.synth.graphRelAmp._base_objs[voice].play()
 
     def copyDADSR(self, evt):
         if self.envmode == 1:
