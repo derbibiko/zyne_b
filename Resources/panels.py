@@ -1437,25 +1437,20 @@ class BasePanel(wx.Panel):
             if self.from_lfo:
                 if evt.ShiftDown():
                     s = self.synth._params[self.which].lfo.graphRelAmp
-                    exp = self.graphRel_exp_lfos[self.which]
                 else:
                     s = self.synth._params[self.which].lfo.graphAttAmp
-                    exp = self.graphAtt_exp_lfos[self.which]
             else:
                 if evt.ShiftDown():
                     s = self.synth.graphRelAmp
-                    exp = self.graphRel_exp
                 else:
                     s = self.synth.graphAttAmp
-                    exp = self.graphAtt_exp
-            vars.vars["DADSR_CLIPBOARD"] = ('GDADSR', s.getPoints(), exp)
+            vars.vars["DADSR_CLIPBOARD"] = ('GDADSR', s.getPoints(), s.exp)
         else:
             if self.from_lfo:
                 s = self.synth._params[self.which].lfo.normamp
             else:
                 s = self.synth.normamp
             vars.vars["DADSR_CLIPBOARD"] = ('DADSR', s.delay, s.attack, s.decay, s.sustain, s.release, s.exp)
-        print(vars.vars["DADSR_CLIPBOARD"])
 
     def pasteDADSR(self, evt):
         if vars.vars["DADSR_CLIPBOARD"] is None:
@@ -1482,19 +1477,10 @@ class BasePanel(wx.Panel):
                 s.SetList(vars.vars["DADSR_CLIPBOARD"][1])
                 if evt.ShiftDown():
                     self.knobGRelExp.SetValue(vars.vars["DADSR_CLIPBOARD"][2])
-                    self.knobRelDur.SetValue(s.xlen)
-                    if self.from_lfo:
-                        self.graphRel_pts_lfos[self.which] = s.getPoints()
-                    else:
-                        self.graphRel_pts = s.getPoints()
+                    self.knobRelDur.SetValue(s.duration)
                 else:
                     self.knobGAttExp.SetValue(vars.vars["DADSR_CLIPBOARD"][2])
-                    self.knobAttDur.SetValue(s.xlen)
-                    if self.from_lfo:
-                        self.graphAtt_pts_lfos[self.which] = s.getPoints()
-                    else:
-                        self.graphAtt_pts = s.getPoints()
-
+                    self.knobAttDur.SetValue(s.duration)
         except Exception as e:
             print('pasteDADSR: ', e)
 
