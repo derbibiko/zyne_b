@@ -1365,11 +1365,6 @@ class BasePanel(wx.Panel):
             else:
                 self.gdadsron = TrigFunc(self.synth._firsttrig, self.triggerGdadsrOn, arg=list(range(len(self.synth.pitch))))
                 self.gdadsroff = TrigFunc(self.synth._secondtrig, self.triggerGdadsrOff, arg=list(range(len(self.synth.pitch))))
-
-            if self.from_lfo:
-                wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
-            else:
-                wx.CallAfter(self.mainFrame.OnSize, wx.CommandEvent())
         else:
             self.copyDadsr.SetToolTip(wx.ToolTip("Copy DADSR settings"))
             self.pasteDadsr.SetToolTip(wx.ToolTip("Paste DADSR settings"))
@@ -1391,11 +1386,16 @@ class BasePanel(wx.Panel):
             graphRelAmp.hide()
 
             self.gdadsron = None
+            self.gdadsroff = None
 
-            if self.from_lfo:
-                wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
-            else:
-                wx.CallAfter(self.mainFrame.OnSize, wx.CommandEvent())
+        if self.from_lfo:
+            wx.CallAfter(wx.GetTopLevelWindows()[0].OnSize, wx.CommandEvent())
+        else:
+            wx.CallAfter(self.mainFrame.OnSize, wx.CommandEvent())
+
+        if vars.vars["VIRTUAL"]:
+            wx.GetTopLevelWindows()[0].serverPanel.keyboard.SetFocus()
+
 
     def triggerGdadsrOff(self, voice):
         if self.from_lfo:

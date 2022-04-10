@@ -480,21 +480,21 @@ class LFOSynth(CtlBind):
         self.rawamp = SigTo([.1]*vars.vars["POLY"], vars.vars["SLIDERPORT"], .1, mul=rng)
         self.graphAttAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self.rawamp).stop()
         self.graphRelAmp = GraphicalDelAdsr(pts=[(0., 1.), (1., 1.)], loop=False, mul=self.rawamp).stop()
-        self.normamp = MidiDelAdsr(self.trigger, delay=0, attack=5, decay=.1, sustain=.5, release=1, mul=self.rawamp)
+        self.normamp = MidiDelAdsr(self.trigger, delay=0, attack=.001, decay=.1, sustain=.5, release=1, mul=self.rawamp)
         self.amp = self.normamp + self.graphAttAmp + self.graphRelAmp
         self.speed = SigTo(4, vars.vars["SLIDERPORT"], 4)
         self.jitter = SigTo(0, vars.vars["SLIDERPORT"], 0)
         self.freq = Randi(min=1-self.jitter, max=1+self.jitter, freq=1, mul=self.speed)
         self.lfo = LFO(freq=self.freq, sharp=.9, type=3).stop()
         self.sigout = Sig(self.lfo * self.amp).stop()
+        self.envmode = 0
 
     def play(self, envmode=0):
         self.rawamp.play()
+        self.envmode = envmode
         if envmode == 0:
             self.graphAttAmp.stop()
             self.graphRelAmp.stop()
-            self.graphAttAmp.clear()
-            self.graphRelAmp.clear()
             self.normamp.play()
         else:
             self.normamp.stop()
@@ -541,10 +541,6 @@ class LFOSynth(CtlBind):
 
     def setAmp(self, x):
         self.rawamp.value = x
-
-    def __del__(self):
-        for key in list(self.__dict__.keys()):
-            del self.__dict__[key]
 
 
 class Param(CtlBind):

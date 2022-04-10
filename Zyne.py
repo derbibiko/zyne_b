@@ -4,6 +4,7 @@
 import json
 import os
 import sys
+import time
 import wx
 import Resources.audio as audio
 import Resources.tutorial as tutorial
@@ -764,6 +765,7 @@ class ZyneFrame(wx.Frame):
                         self.serverPanel.start()
                         self.deleteAllModules()
                         self.serverPanel.shutdown()
+                        time.sleep(0.25)
                         self.serverPanel.boot()
             dlg2.Destroy()
             self.serverPanel.reinitServer(vars.vars["SLIDERPORT"], vars.vars["AUDIO_HOST"], serverSettings, postProcSettings)
