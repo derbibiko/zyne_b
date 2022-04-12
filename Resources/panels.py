@@ -407,10 +407,6 @@ class ServerPanel(wx.Panel):
 
         self.mainBox = wx.BoxSizer(wx.VERTICAL)
 
-        self.font, psize = self.GetFont(), self.GetFont().GetPointSize()
-        if not vars.constants["IS_WIN"]:
-            self.font.SetPointSize(psize-1)
-
         self.fsserver = FSServer()
 
         dropTarget = MyFileDropTarget(self)
@@ -1117,6 +1113,7 @@ class BasePanel(wx.Panel):
         self.graphAtt_pts = [(0., 0.), (.2, 0.9), (.25, 0.4), (.5, 0.4), (.7, 0.3), (1., .5)]
         self.graphRel_pts = [(0., .5), (.2, 0.4), (.4, .6), (1., 0.)]
         self.gdadsron = None
+        self.sampler_path_text_ptsize = None
 
     def updateSliderTitle(self, idx, x):
         if hasattr(self, "slider_title_dicts") and self.slider_title_dicts[idx - 1] is not None:
@@ -1134,17 +1131,19 @@ class BasePanel(wx.Panel):
             loaded = False
             s = "No Samples - Drop Folder or Double-Click"
             pt = self.pathText
+            if self.sampler_path_text_ptsize is None:
+                self.sampler_path_text_ptsize = pt.GetFont().GetPointSize() - 2
             if len(path.strip()) > 0:
                 loaded = self.synth.loadSamples(path)
                 if loaded:
                     s = os.path.split(self.synth.path)[1]
                     self.mainFrame.refreshOutputSignal()
                     self.reinitLFOS(self.getLFOParams(), True)
-            pt.SetFont(wx.Font(pt.GetFont().GetPointSize(),
+            pt.SetFont(wx.Font(self.sampler_path_text_ptsize + int(loaded),
                                wx.FONTFAMILY_DEFAULT, wx.NORMAL if loaded else wx.ITALIC, wx.NORMAL))
             s = s.replace('_', ' ')
             if len(s) > 40:
-                pt.SetLabel(s[:40].strip() + '..')
+                pt.SetLabel(s[:38].strip() + '..')
                 pt.SetToolTip(wx.ToolTip(s))
             else:
                 pt.SetLabel(s)
@@ -1254,23 +1253,26 @@ class BasePanel(wx.Panel):
             self.trigLoopmode = ZB_ControlKnob(self, 0, 4, 0, size=(116, 74), label='Loop Mode',
                                               integer=True, outFunction=self.SetLoopmode,
                                               displayFunction=self.SetLoopmodeDisplay)
-            self.row0Sizer.Add(self.trigLoopmode, 0, wx.LEFT | wx.RIGHT, self.FromDIP(12))
+            self.row0Sizer.Add(self.trigLoopmode, 0, wx.LEFT | wx.RIGHT, 0)
 
             self.trigXfade = ZB_ControlKnob(self, 0, 50, 10, size=(116, 74), label='X-Fade (%)',
                                                     integer=False, outFunction=self.SetXFade)
-            self.row0Sizer.Add(self.trigXfade, 0, wx.LEFT | wx.RIGHT , self.FromDIP(12))
+            self.row0Sizer.Add(self.trigXfade, 0, wx.LEFT | wx.RIGHT, 0)
 
             self.triggerSizer.Add(self.row0Sizer, 0, wx.ALIGN_CENTER_HORIZONTAL)
 
             self.pathText = wx.StaticText(self, id=-1, label="")
-
             self.pathText.Bind(wx.EVT_LEFT_DCLICK, self.openSamples)
-            self.triggerSizer.Add(self.pathText, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.BOTTOM, self.FromDIP(12))
+            self.triggerSizer.Add(self.pathText, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+
+            self.triggerSizer.AddSpacer(self.FromDIP(8))
 
             dropTarget = MySamplerDropTarget(self)
             self.SetDropTarget(dropTarget)
 
             self.triggers.extend([self.trigLoopmode, self.trigXfade])
+
+            self.SetSamples("")
 
         self.row1Sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -1395,7 +1397,6 @@ class BasePanel(wx.Panel):
 
         if vars.vars["VIRTUAL"]:
             wx.GetTopLevelWindows()[0].serverPanel.keyboard.SetFocus()
-
 
     def triggerGdadsrOff(self, voice):
         if self.from_lfo:

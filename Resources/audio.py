@@ -1341,7 +1341,21 @@ class ZB_Sampler(BaseSynth):
     """
     Sampler and Looper.
 
+    Drag&Drop a folder containg wav or aif files t the module. The name of that folder
+    appears at label in the module.
+    Sound files inside the folder must be named like MidiKeyNumber_whatever.(wav|aif)
+    Example:
+        60_mycool_sample.wav := note c4
+        62_mycool_sample.wav := note d4
+        ...
+
     Parameters:
+        Loop Start Time (normalized) : if in loop mode start time
+                                       normalized to 1.0 - 1.0 := real length
+        Loop Duration (normalized) : if in loop mode duration of the loop
+                                     normalized to 1.0
+        Pitch : 1.0 saved pitch, 2.0 one octave higher, 0.5 one octave lower
+        X-Fade (%) : if in loop mode percetage of cross-fading time the loop
 
     ____________________________________________________________________________
     Author : Hans-Jörg Bibiko - 2022
