@@ -439,8 +439,8 @@ class ServerPanel(wx.Panel):
                 self.fsserver.boot()
                 self.popupDriver.SetStringSelection(preferedDriver)
                 self.selected_output_driver_name = preferedDriver
-            elif self.defaultDriver:
-                drivename = self.driverList[self.defaultDriver]
+            elif self.defaultDriver >= 0:
+                drivename = self.driverList[self.driverIndexes.index(self.defaultDriver)]
                 self.popupDriver.SetStringSelection(drivename)
                 self.selected_output_driver_name = drivename
             self.popupDriver.Bind(wx.EVT_CHOICE, self.changeDriver)
