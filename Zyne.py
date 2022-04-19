@@ -3,6 +3,7 @@
 
 import json
 import os
+import psutil
 import sys
 import time
 import wx
@@ -150,6 +151,8 @@ class SamplingDialog(wx.Dialog):
 class ZyneFrame(wx.Frame):
     def __init__(self, parent=None, title=f"{vars.constants['WIN_TITLE']} - Untitled", size=(966, 800)):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
+
+        self.number_of_instances = int(len([p.name() for p in psutil.process_iter() if p.name().startswith('Zyne_B')])/2)
 
         self.SetSize(self.FromDIP(self.GetSize()))
 
@@ -304,16 +307,17 @@ class ZyneFrame(wx.Frame):
         self.bkp_file = os.path.join(os.path.expanduser("~"), vars.constants["BACKUP_ZY_NAME"])
 
         self.loaded_restore = False
-        if os.path.exists(self.bkp_file):
-            dlg = wx.MessageDialog(None, "Do you want to load the last backup file?", "Zyne_B quit unexpectedly", wx.YES_NO | wx.ICON_QUESTION)
-            r = dlg.ShowModal()
-            if r == wx.ID_YES:
-                try:
-                    self.openfile(self.bkp_file)
-                    self.loaded_restore = True
-                except Exception as e:
-                    pass
-            dlg.Destroy()
+        if self.number_of_instances < 2:
+            if os.path.exists(self.bkp_file):
+                dlg = wx.MessageDialog(None, "Do you want to load the last backup file?", "Zyne_B quit unexpectedly", wx.YES_NO | wx.ICON_QUESTION)
+                r = dlg.ShowModal()
+                if r == wx.ID_YES:
+                    try:
+                        self.openfile(self.bkp_file)
+                        self.loaded_restore = True
+                    except Exception as e:
+                        pass
+                dlg.Destroy()
 
         if not self.loaded_restore:
             if vars.vars["AUTO_OPEN"] == 'Default':
@@ -325,7 +329,7 @@ class ZyneFrame(wx.Frame):
                 except Exception as e:
                     pass
 
-        self.backup_timer.Start(10000)
+        self.backup_timer.Start(5000)
 
     def selectNextModule(self, evt):
         idx = evt.GetInt()
@@ -411,7 +415,6 @@ class ZyneFrame(wx.Frame):
             if p.endswith('/Zyne_B.app'):
                 os.system(f"open -n {p}")
         elif sys.platform == "win32":
-            wx.MessageBox(sys.executable)
             os.system(f"start {sys.executable}")
 
     def onRun(self, evt):
@@ -859,10 +862,11 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.Layout()
 
     def save_bkp_file(self, evt):
-        try:
-            self.savefile(self.bkp_file, True)
-        except Exception as e:
-            pass
+        if app.IsActive():
+            try:
+                self.savefile(self.bkp_file, True)
+            except Exception as e:
+                pass
 
     def savefile(self, filename, from_backup=False):
 
@@ -1026,7 +1030,7 @@ class ZyneFrame(wx.Frame):
 class ZyneApp(wx.App):
     def OnInit(self):
         self.frame = ZyneFrame(None)
-        self.frame.SetPosition((50, 35))
+        self.frame.SetPosition((45 + 10 * self.frame.number_of_instances, 30 + 10 * self.frame.number_of_instances))
         return True
 
     def MacOpenFile(self, filename):

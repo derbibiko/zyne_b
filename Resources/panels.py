@@ -32,8 +32,8 @@ MODULES = {
                     "p2": ["Spread", 1, 0.001, 2, False, True],
                     "p3": ["Feedback", 0, 0, 1, False, False]
                     },
-            "Wind": { "title": "Wind Synthesis", "synth": WindSynth,
-                    "p1": ["Rand frequency", 1, 0.01, 20, False, True],
+            "Wind": { "title": "Wind Synthesis I", "synth": WindSynth,
+                    "p1": ["Rand Frequency", 1, 0.01, 20, False, True],
                     "p2": ["Rand Depth", .1, .001, .25, False, False],
                     "p3": ["Filter Q", 5, 1, 20, False, False]
                     },
