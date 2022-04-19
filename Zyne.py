@@ -11,6 +11,7 @@ import Resources.tutorial as tutorial
 import Resources.variables as vars
 import wx.richtext as rt
 import wx.lib.scrolledpanel as scrolled
+from Resources.Panels.ServerPanel import ServerPanel, MyFileDropTarget
 from Resources.panels import *
 from Resources.preferences import PreferencesDialog
 from Resources.splash import ZyneSplashScreen
@@ -858,7 +859,10 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.Layout()
 
     def save_bkp_file(self, evt):
-        self.savefile(self.bkp_file, True)
+        try:
+            self.savefile(self.bkp_file, True)
+        except Exception as e:
+            pass
 
     def savefile(self, filename, from_backup=False):
 

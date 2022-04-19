@@ -1,14 +1,15 @@
 """
 Copyright 2009-2015 Olivier Belanger - modifications by Hans-Jörg Bibiko 2022
 """
-import math
+from math import log10, sin, cos, atan, pi, pow
 
 
-p_mathlog10 = math.log10
-p_mathsin = math.sin
-p_mathcos = math.cos
-p_mathatan = math.atan
-p_math_pi = math.pi
+p_mathpow = pow
+p_mathlog10 = log10
+p_mathsin = sin
+p_mathcos = cos
+p_mathatan = atan
+p_math_pi = pi
 p_math_pi_2 = p_math_pi / 2
 
 
@@ -28,7 +29,7 @@ def clamp(v, vmin, vmax):
 
 
 def toLog(t, v1, v2):
-    return p_mathlog10(t/v1) / p_mathlog10(v2/v1)
+    return log10(t/v1) / p_mathlog10(v2/v1)
 
 
 def toExp(t, v1, v2):

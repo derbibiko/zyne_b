@@ -2,7 +2,6 @@
 Copyright 2009-2015 Olivier Belanger - modifications by Hans-Jörg Bibiko 2022
 """
 import codecs
-import math
 import os
 import random
 import time
