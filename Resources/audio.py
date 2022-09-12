@@ -648,6 +648,7 @@ class BaseSynth:
         self.lastVel = 127
         self.loopmode = 0
         self.xfade = 0
+        self.keymode = 0
 
         self._midi_metro = Metro(.1).play()
         self._rawamp = SigTo(1, vars.vars["SLIDERPORT"], 1)
@@ -697,10 +698,13 @@ class BaseSynth:
         else:
             self._note = Notein(poly=vars.vars["POLY"], scale=0, channel=self.channel,
                                 first=self.first, last=self.last)
+            self._note.holdmode = self.keymode
+            self._note.firstVelocity = self.firstVel
+            self._note.lastVelocity = self.lastVel
+            self._note.setStealing(True)
             self._transpo = Sig(value=0)
             self.pitch = Snap(self._note["pitch"]+self._transpo, choice=list(range(12)), scale=self.scaling)
-            self._velrange = Between(self._note["velocity"], min=self.firstVel/127, max=self.lastVel/127+0.01)
-            self._trigamp = self._note["velocity"] * self._velrange
+            self._trigamp = self._note["velocity"]
             self._lfo_amp = LFOSynth(.5, self._trigamp, self._midi_metro)
             self.graphAttAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
             self.graphRelAmp = GraphicalDelAdsr(loop=False, mul=self._rawamp, add=self._lfo_amp.sig()).stop()
@@ -731,6 +735,13 @@ class BaseSynth:
         except Exception:
             pass
 
+    def SetKeyMode(self, x):
+        self.keymode = int(x)
+        try:
+            self._note.holdmode = self.keymode
+        except Exception:
+            pass
+
     def SetFirst(self, x):
         self.first = int(x)
         try:
@@ -751,14 +762,14 @@ class BaseSynth:
     def SetFirstVel(self, x):
         self.firstVel = int(x)
         try:
-            self._velrange.min = self.firstVel/127
+            self._note.firstVelocity = self.firstVel
         except Exception:
             pass
 
     def SetLastVel(self, x):
         self.lastVel = int(x)
         try:
-            self._velrange.max = self.lastVel/127 + 0.01
+            self._note.lastVelocity = self.lastVel
         except Exception:
             pass
 

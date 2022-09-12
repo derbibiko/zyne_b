@@ -697,7 +697,7 @@ class ZB_ControlSlider(ZB_Base_Control):
             w, h = self.GetSize()
             pos = evt.GetPosition()
             if self.orient == wx.VERTICAL:
-                if not wx.Rect(0, self.pos - self.knobHalfSize, w, self.knobSize).Contains(pos):
+                if not wx.Rect(0, int(self.pos - self.knobHalfSize), w, self.knobSize).Contains(pos):
                     self.pos = clamp(evt.GetPosition()[1], self.knobHalfSize, h - self.knobHalfSize)
                     self.value = self.scale()
                     self.handleNewValue()
@@ -705,7 +705,7 @@ class ZB_ControlSlider(ZB_Base_Control):
                 else:
                     self.pos_offset = pos[1] - self.pos
             else:
-                if not wx.Rect(self.pos - self.knobHalfSize, 0, self.knobSize, h).Contains(pos):
+                if not wx.Rect(int(self.pos - self.knobHalfSize), 0, self.knobSize, h).Contains(pos):
                     self.pos = clamp(evt.GetPosition()[0], self.knobHalfSize, w - self.knobHalfSize)
                     self.value = self.scale()
                     self.handleNewValue()
@@ -727,10 +727,10 @@ class ZB_ControlSlider(ZB_Base_Control):
             w, h = self.GetSize()
             pos = event.GetPosition()
             if self.orient == wx.VERTICAL:
-                if wx.Rect(0, self.pos - self.knobHalfSize, w, self.knobSize).Contains(pos):
+                if wx.Rect(0, int(self.pos - self.knobHalfSize), w, self.knobSize).Contains(pos):
                     self.selected = True
             else:
-                if wx.Rect(self.pos - self.knobHalfSize, 0, self.knobSize, h).Contains(pos):
+                if wx.Rect(int(self.pos - self.knobHalfSize), 0, self.knobSize, h).Contains(pos):
                     self.selected = True
             self.Refresh()
         event.Skip()
@@ -1064,17 +1064,17 @@ class ZB_ControlKnob(ZB_Base_Control):
         if self.isRange:
             ph = interpFloat(tFromValue(self.value[0], self.minvalue, self.maxvalue),
                              self.knobStartAngle, self.knobEndAngle)
-            lendx1 = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
-            lendy1 = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
+            lendx1 = int(self.knobCenterPosX - self.knobRadius * p_mathsin(ph))
+            lendy1 = int(self.knobCenterPosY + self.knobRadius * p_mathcos(ph))
             ph = interpFloat(tFromValue(self.value[1], self.minvalue, self.maxvalue),
                              self.knobStartAngle, self.knobEndAngle)
-            lendx2 = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
-            lendy2 = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
+            lendx2 = int(self.knobCenterPosX - self.knobRadius * p_mathsin(ph))
+            lendy2 = int(self.knobCenterPosY + self.knobRadius * p_mathcos(ph))
         else:
             ph = interpFloat(tFromValue(self.value, self.minvalue, self.maxvalue),
                              self.knobStartAngle, self.knobEndAngle)
-            lendx = self.knobCenterPosX - self.knobRadius * p_mathsin(ph)
-            lendy = self.knobCenterPosY + self.knobRadius * p_mathcos(ph)
+            lendx = int(self.knobCenterPosX - self.knobRadius * p_mathsin(ph))
+            lendy = int(self.knobCenterPosY + self.knobRadius * p_mathcos(ph))
 
         if vars.constants["IS_WIN"]:
             dc.SetPen(wx.Pen(self.knobInnerColour, width=(4 - self.FromDIP(1)), style=wx.SOLID))
@@ -1350,76 +1350,55 @@ class ZB_Keyboard_Control(wx.Panel):
         self.keyboard.channel = 1
         self.parent = parent
 
-        self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
-        self.SetForegroundColour(vars.constants["FORECOLOUR"])
-
         sizer = wx.BoxSizer(wx.VERTICAL)
-
-        row1Box = wx.BoxSizer(wx.HORIZONTAL)
 
         chBox = wx.BoxSizer(wx.VERTICAL)
         self.channelText = wx.StaticText(self, id=-1, label="Channel")
 
         font, psize = self.channelText.GetFont(), self.channelText.GetFont().GetPointSize()
-        font.SetPointSize(psize - 2)
+        if vars.constants["IS_LINUX"]:
+            font.SetPointSize(psize - 4)
+        else:
+            font.SetPointSize(psize - 2)
         w, h = font.GetPixelSize()
-        popsize = self.FromDIP(wx.Size(-1, h + 12))
+        popsize = wx.Size((-1, h + self.FromDIP(12)))
+
         self.channelText.SetFont(font)
 
         chBox.Add(self.channelText, 0, wx.LEFT, 4)
-        self.cbChannel = wx.ComboBox(self, value="1", size=popsize,
-                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL_KEYBOARD"],
-                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.cbChannel = wx.Choice(self, size=popsize,
+                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL_KEYBOARD"])
         self.cbChannel.SetFont(font)
-        self.cbChannel.Bind(wx.EVT_COMBOBOX, self.changeChannel)
+        self.cbChannel.SetStringSelection("1")
+        self.cbChannel.Bind(wx.EVT_CHOICE, self.changeChannel)
         chBox.Add(self.cbChannel, 0, wx.EXPAND | wx.ALL, 2)
 
         scBox = wx.BoxSizer(wx.VERTICAL)
         self.octaveText = wx.StaticText(self, id=-1, label="Octave")
         self.octaveText.SetFont(font)
         scBox.Add(self.octaveText, 0, wx.LEFT, 4)
-        self.cbOctave = wx.ComboBox(self, value="0", size=popsize,
-                                    choices=list(map(str, range(-3, 5))),
-                                    style=wx.CB_DROPDOWN | wx.CB_READONLY)
+        self.cbOctave = wx.Choice(self, size=popsize,
+                                    choices=list(map(str, range(-3, 5))))
         self.cbOctave.SetFont(font)
-        self.cbOctave.Bind(wx.EVT_COMBOBOX, self.changeOctave)
+        self.cbOctave.SetStringSelection("0")
+        self.cbOctave.Bind(wx.EVT_CHOICE, self.changeOctave)
         scBox.Add(self.cbOctave, 0, wx.EXPAND | wx.ALL, 2)
 
-        row1Box.Add(chBox, 1)
-        row1Box.Add(scBox, 1)
-        sizer.Add(row1Box, 0, wx.EXPAND | wx.TOP, 2)
-
-        self.modeText = wx.StaticText(self, id=-1, label="Key Mode")
-        self.modeText.SetFont(font)
-        sizer.Add(self.modeText, 0, wx.LEFT, 4)
-        self.cbKeymode = wx.ComboBox(self, value="Dynamic", size=popsize,
-                                     choices=["Dynamic", "Hold", "Single Key Hold"],
-                                     style=wx.CB_DROPDOWN | wx.CB_READONLY)
-        self.cbKeymode.Bind(wx.EVT_COMBOBOX, self.changeKeymode)
-        self.cbKeymode.SetFont(font)
-        sizer.Add(self.cbKeymode, 0, wx.EXPAND | wx.ALL, 2)
+        sizer.Add(chBox, 0, wx.EXPAND | wx.ALL, 4)
+        sizer.Add(scBox, 0, wx.EXPAND | wx.ALL, 4)
 
         self.SetSizerAndFit(sizer)
 
     def changeChannel(self, evt):
         self.keyboard.reset()
-        self.keyboard.channel = int(self.cbChannel.GetValue())
+        self.keyboard.channel = int(evt.GetString())
         self.keyboard.SetFocus()
 
     def changeOctave(self, evt):
         self.keyboard.reset()
-        self.keyboard.octave = int(self.cbOctave.GetValue()) * 12
+        self.keyboard.octave = int(evt.GetString()) * 12
         self.keyboard.c_key_idx = (35 - (7 * int(self.keyboard.octave / 12)))
         wx.CallAfter(self.keyboard.Refresh)
-        self.keyboard.SetFocus()
-
-    def changeKeymode(self, evt):
-        self.keyboard.reset()
-        mode = self.cbKeymode.GetSelection()
-        if mode == 0:
-            self.keyboard.hold = 0
-        elif mode == 1:
-            self.keyboard.hold = 1
         self.keyboard.SetFocus()
 
 
@@ -1446,12 +1425,13 @@ class ZB_Keyboard(wx.Panel):
         self.octave = 0
         self.w1 = self.FromDIP(15)
         self.w2 = int(self.w1 / 2) + 1
-        self.hold = 0
+
         self.keyPressed = None
         self.channel = 0
         self.c_key_idx = 35
 
         self.Bind(wx.EVT_LEFT_DOWN, self.MouseDown)
+        self.Bind(wx.EVT_LEFT_DCLICK, self.MouseDown)
         self.Bind(wx.EVT_LEFT_UP, self.MouseUp)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
@@ -1548,6 +1528,7 @@ class ZB_Keyboard(wx.Panel):
         self.blackSelected = set()
         self.whiteVelocities = {}
         self.blackVelocities = {}
+        self.GetTopLevelParent().serverPanel.resetVirtualKeyboard(False)
         wx.CallAfter(self.Refresh)
 
     def setPoly(self, poly):
@@ -1584,6 +1565,31 @@ class ZB_Keyboard(wx.Panel):
         wx.CallAfter(self.Refresh)
         evt.Skip()
 
+    def redrawActiveKeys(self):
+        actKeys = {}
+        self.blackSelected = set()
+        self.whiteSelected = set()
+        self.blackVelocities = {}
+        self.whiteVelocities = {}
+
+        for m in wx.GetTopLevelWindows()[0].modules:
+            s = m.synth
+            for i, a in enumerate(s._trigamp.get(all=True)):
+                if a > 0.:
+                    actKeys[int(s._virtualpit.get(all=True)[i] - self.octave)] = int(a * 127)
+        for pit, vel in actKeys.items():
+            deg = pit % 12
+            if deg in self.black:
+                which = self.black.index(deg) + int(pit / 12) * 5
+                self.blackSelected.add(which)
+                self.blackVelocities[which] = 127 - vel
+            elif deg in self.white:
+                which = self.white.index(deg) + int(pit / 12) * 7
+                self.whiteSelected.add(which)
+                self.whiteVelocities[which] = 127 - vel
+
+        wx.CallAfter(self.Refresh)
+
     def OnKeyDown(self, evt):
         if evt.HasAnyModifiers():
             evt.Skip()
@@ -1592,55 +1598,28 @@ class ZB_Keyboard(wx.Panel):
         key_code = evt.GetKeyCode()
         if key_code in self.keymap and key_code not in self.keydown:
             self.keydown.add(key_code)
-            pit = self.keymap[key_code]
+            pit = self.keymap[key_code] + self.octave
             deg = pit % 12
 
             total = len(self.blackSelected) + len(self.whiteSelected)
             note = None
-            if self.hold:
-                if deg in self.black:
-                    which = self.black.index(deg) + int(pit / 12) * 5
-                    if which in self.blackSelected:
-                        self.blackSelected.remove(which)
-                        del self.blackVelocities[which]
-                        total -= 1
-                        note = (pit + self.octave, 0, self.channel)
-                    else:
-                        if total < self.poly:
-                            self.blackSelected.add(which)
-                            self.blackVelocities[which] = 100
-                            note = (pit + self.octave, 100, self.channel)
 
-                elif deg in self.white:
-                    which = self.white.index(deg) + int(pit / 12) * 7
-                    if which in self.whiteSelected:
-                        self.whiteSelected.remove(which)
-                        del self.whiteVelocities[which]
-                        total -= 1
-                        note = (pit + self.octave, 0, self.channel)
-                    else:
-                        if total < self.poly:
-                            self.whiteSelected.add(which)
-                            self.whiteVelocities[which] = 100
-                            note = (pit + self.octave, 100, self.channel)
-            else:
-                if deg in self.black:
-                    which = self.black.index(deg) + int(pit / 12) * 5
-                    if which not in self.blackSelected and total < self.poly:
-                        self.blackSelected.add(which)
-                        self.blackVelocities[which] = 100
-                        note = (pit + self.octave, 100, self.channel)
-                elif deg in self.white:
-                    which = self.white.index(deg) + int(pit / 12) * 7
-                    if which not in self.whiteSelected and total < self.poly:
-                        self.whiteSelected.add(which)
-                        self.whiteVelocities[which] = 100
-                        note = (pit + self.octave, 100, self.channel)
+            if deg in self.black:
+                which = self.black.index(deg) + int((pit - self.octave) / 12) * 5
+                if which in self.blackSelected:
+                    total -= 1
+                note = (pit, 100, self.channel)
+            elif deg in self.white:
+                which = self.white.index(deg) + int((pit - self.octave) / 12) * 7
+                if which in self.whiteSelected:
+                    total -= 1
+                note = (pit, 100, self.channel)
 
-            if note and self.outFunction and total < self.poly:
+            if note is not None and self.outFunction and total < self.poly:
                 self.outFunction(note)
 
-            wx.CallAfter(self.Refresh)
+            self.redrawActiveKeys()
+
         evt.StopPropagation()
 
     def OnKeyUp(self, evt):
@@ -1652,129 +1631,70 @@ class ZB_Keyboard(wx.Panel):
         if key_code in self.keydown:
             self.keydown.remove(key_code)
 
-        if not self.hold and key_code in self.keymap:
-            pit = self.keymap[key_code]
+        if key_code in self.keymap:
+            pit = self.keymap[key_code] + self.octave
             deg = pit % 12
 
             note = None
-            if deg in self.black:
-                which = self.black.index(deg) + int(pit / 12) * 5
-                if which in self.blackSelected:
-                    self.blackSelected.remove(which)
-                    del self.blackVelocities[which]
-                    note = (pit + self.octave, 0, self.channel)
-            elif deg in self.white:
-                which = self.white.index(deg) + int(pit / 12) * 7
-                if which in self.whiteSelected:
-                    self.whiteSelected.remove(which)
-                    del self.whiteVelocities[which]
-                    note = (pit + self.octave, 0, self.channel)
+            if deg in self.black or deg in self.white:
+                note = (pit, 0, self.channel)
 
-            if note and self.outFunction:
+            if note is not None and self.outFunction:
                 self.outFunction(note)
 
-            wx.CallAfter(self.Refresh)
+            self.redrawActiveKeys()
 
         evt.StopPropagation()
 
     def MouseUp(self, evt):
-        if not self.hold and self.keyPressed is not None:
+        if self.keyPressed is not None:
             key = self.keyPressed[0]
-            pit = self.keyPressed[1]
-            if key in self.blackSelected:
-                self.blackSelected.remove(key)
-                del self.blackVelocities[key]
-            if key in self.whiteSelected:
-                self.whiteSelected.remove(key)
-                del self.whiteVelocities[key]
+            pit = self.keyPressed[1] + self.octave
             note = (pit, 0, self.channel)
             if self.outFunction:
                 self.outFunction(note)
             self.keyPressed = None
-            wx.CallAfter(self.Refresh)
-        evt.Skip()
+            if key in self.blackSelected or key in self.whiteSelected:
+                self.redrawActiveKeys()
+        evt.StopPropagation()
 
     def MouseDown(self, evt):
+        self.keyPressed = None
         w, h = self.GetSize()
         pos = evt.GetPosition()
-
         total = len(self.blackSelected) + len(self.whiteSelected)
         note = None
-        if self.hold:
-            for i, rec in enumerate(self.blackKeys):
-                if rec.Contains(pos):
-                    pit = self.black[i % 5] + int(i / 5) * 12 + self.octave
-                    if pit < 0 or pit > 127:
-                        return
-                    if i in self.blackSelected:
-                        self.blackSelected.remove(i)
-                        del self.blackVelocities[i]
-                        total -= 1
-                        vel = 0
-                    else:
-                        hb = int(h * 4 / 7)
-                        vel = int((hb - pos[1]) * 127 / hb)
-                        if total < self.poly:
-                            self.blackSelected.add(i)
-                            self.blackVelocities[i] = int(127 - vel)
-                    note = (pit, vel, self.channel)
-                    break
-            else:
-                for i, rec in enumerate(self.whiteKeys):
-                    if rec.Contains(pos):
-                        pit = self.white[i % 7] + int(i / 7) * 12 + self.octave
-                        if pit < 0 or pit > 127:
-                            return
-                        if i in self.whiteSelected:
-                            self.whiteSelected.remove(i)
-                            del self.whiteVelocities[i]
-                            total -= 1
-                            vel = 0
-                        else:
-                            vel = int((h - pos[1]) * 127 / h)
-                            if total < self.poly:
-                                self.whiteSelected.add(i)
-                                self.whiteVelocities[i] = int(127 - vel)
-                        note = (pit, vel, self.channel)
-                        break
+        for i, rec in enumerate(self.blackKeys):
+            if rec.Contains(pos):
+                pit = self.black[i % 5] + int(i / 5) * 12
+                if pit < 0 or pit > 127:
+                    return
+                hb = int(h * 4 / 7)
+                vel = int(int((hb - pos[1]) * 127 / hb))
+                note = (pit + self.octave, vel, self.channel)
+                self.keyPressed = (i, pit)
+                if i in self.blackSelected:
+                    total -= 1
+                break
         else:
-            self.keyPressed = None
-            for i, rec in enumerate(self.blackKeys):
+            for i, rec in enumerate(self.whiteKeys):
                 if rec.Contains(pos):
-                    pit = self.black[i % 5] + int(i / 5) * 12 + self.octave
+                    pit = self.white[i % 7] + int(i / 7) * 12
                     if pit < 0 or pit > 127:
                         return
-                    vel = 0
-                    if i not in self.blackSelected:
-                        hb = int(h * 4 / 7)
-                        vel = int((hb - pos[1]) * 127 / hb)
-                        if total < self.poly:
-                            self.blackSelected.add(i)
-                            self.blackVelocities[i] = int(127 - vel)
-                    note = (pit, vel, self.channel)
+                    vel = int((h - pos[1]) * 127 / h)
+                    note = (pit + self.octave, vel, self.channel)
                     self.keyPressed = (i, pit)
+                    if i in self.whiteSelected:
+                        total -= 1
                     break
-            else:
-                for i, rec in enumerate(self.whiteKeys):
-                    if rec.Contains(pos):
-                        pit = self.white[i % 7] + int(i / 7) * 12 + self.octave
-                        if pit < 0 or pit > 127:
-                            return
-                        vel = 0
-                        if i not in self.whiteSelected:
-                            vel = int((h - pos[1]) * 127 / h)
-                            if total < self.poly:
-                                self.whiteSelected.add(i)
-                                self.whiteVelocities[i] = int(127 - vel)
-                        note = (pit, vel, self.channel)
-                        self.keyPressed = (i, pit)
-                        break
-        if note and self.outFunction and total < self.poly:
+        if note is not None and self.outFunction and total < self.poly:
             self.outFunction(note)
-        wx.CallAfter(self.Refresh)
-        evt.Skip()
+            self.redrawActiveKeys()
+        evt.StopPropagation()
 
     def OnPaint(self, evt):
+        self.redrawActiveKeys()
         w, h = self.GetSize()
         dc = wx.AutoBufferedPaintDC(self)
         dc.SetBrush(self.brush_black)

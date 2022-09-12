@@ -527,7 +527,7 @@ class BasePanel(wx.Panel):
             [self.knobDel, self.knobAtt, self.knobDec, self.knobSus, self.knobRel, self.knobExp])
 
     def createTriggerSettings(self):
-
+        triggerKnobSize = wx.Size(54, 74)
         self.triggerSizer = wx.BoxSizer(wx.VERTICAL)
 
         if self.synth.isSampler:
@@ -559,19 +559,24 @@ class BasePanel(wx.Panel):
 
         self.row1Sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.trigChannel = ZB_ControlKnob(self, 0, 15, 0, size=(58, 74), label='Channel',
+        self.trigChannel = ZB_ControlKnob(self, 0, 15, 0, size=triggerKnobSize, label='Channel',
                                           integer=True, outFunction=self.SetChannel)
         self.row1Sizer.Add(self.trigChannel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
-        self.trigVelRange = ZB_ControlRangeKnob(self, 1, 127, (1, 127), size=(58, 74), label='Vel Range',
+        self.trigKeyMode = ZB_ControlKnob(self, 0, 4, 0, size=triggerKnobSize, label='Key Mode',
+                                          integer=True, outFunction=self.SetKeyMode,
+                                          displayFunction=self.SetKeyModeDisplay)
+        self.row1Sizer.Add(self.trigKeyMode, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
+
+        self.trigVelRange = ZB_ControlRangeKnob(self, 1, 127, (1, 127), size=triggerKnobSize, label='Vel Range',
                                                 integer=True, outFunction=self.SetVelRange)
         self.row1Sizer.Add(self.trigVelRange, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
-        self.trigKeyRange = ZB_ControlRangeKnob(self, 0, 127, (0, 127), size=(58, 74), label='Key Range',
+        self.trigKeyRange = ZB_ControlRangeKnob(self, 0, 127, (0, 127), size=triggerKnobSize, label='Key Range',
                                                 integer=True, outFunction=self.SetKeyRange)
         self.row1Sizer.Add(self.trigKeyRange, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
-        self.trigFirstKey = ZB_ControlKnob(self, 0, 127, 0, size=(58, 74), label='First Key',
+        self.trigFirstKey = ZB_ControlKnob(self, 0, 127, 0, size=triggerKnobSize, label='First Key',
                                           integer=True, outFunction=self.SetFirstKeyPitch)
         self.row1Sizer.Add(self.trigFirstKey, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, self.FromDIP(2))
 
@@ -580,7 +585,9 @@ class BasePanel(wx.Panel):
         self.sizer.Add(self.triggerSizer, 0, wx.BOTTOM | wx.LEFT | wx.TOP | wx.CENTER, self.FromDIP(2))
         self.sizer.Layout()
 
-        self.keytriggers.extend([self.trigChannel, self.trigVelRange, self.trigKeyRange, self.trigFirstKey])
+        self.keytriggers.extend([
+            self.trigChannel, self.trigVelRange, self.trigKeyRange, self.trigFirstKey, self.trigKeyMode
+            ])
         self.triggers.extend(self.keytriggers)
 
     def createSlider(self, label, value, minValue, maxValue, integer, log, callback, i=-1):
@@ -819,6 +826,7 @@ class BasePanel(wx.Panel):
                     self.channel, self.firstVel, self.lastVel,
                     self.first, self.last, self.firstkey_pitch,
                     self.loopmode, self.xfade, self.synth.path if self.synth.isSampler else "", 
+                    self.keymode,
                     gdadsr
                 ]
 
@@ -841,6 +849,7 @@ class GenericPanel(BasePanel):
         self.firstVel = 0
         self.lastVel = 127
         self.path = ""
+        self.keymode = 0
 
         if slider_title_dicts is not None:
             self.slider_title_dicts = slider_title_dicts
@@ -965,6 +974,18 @@ class GenericPanel(BasePanel):
     def SetChannel(self, ch):
         self.channel = int(ch)
         self.synth.SetChannel(self.channel)
+
+    def SetKeyModeDisplay(self, mode):
+        displayDict = {0: 'No Hold', 1: 'Hold', 2: 'OnOff', 3: '1K Hold', 4: '1K OnOff'}
+        try:
+            return displayDict[int(mode)]
+        except Exception:
+            return mode
+
+    def SetKeyMode(self, mode):
+        wx.GetTopLevelWindows()[0].serverPanel.keyboard.reset()
+        self.keymode = int(mode)
+        self.synth.SetKeyMode(self.keymode)
 
     def SetVelRange(self, r):
         self.synth.SetFirstVel(r[0])

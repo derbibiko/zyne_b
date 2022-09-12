@@ -27,28 +27,32 @@ This work is licensed under a
 
 ## Installation ##
 
-Zyne_B should run on each OS with Python >= 3.6 and wxpython >= 4.1 installed. It uses Olivier Bélanger's
-pyo audio engine which has to be installed as well.
+Zyne_B should run on each OS with Python >= 3.6 and wxPython >= 4.2 installed. It uses a fork of Olivier Bélanger's
+pyo audio engine which has to be installed as well. In addition the Python package `psutil` should be installed.
 
 One possible installation scenario:
 
-- install wxpython (version >= 4.1)
+- install wxpython (version >= 4.2)
 
 `pip3 install wxpython`
 
-For Linux users (esp. Ubuntu) please refer to the [this site](https://extras.wxpython.org/wxPython4/extras/linux/gtk3/)
+For Linux users (esp. Ubuntu), if `pip3 install wxPython` fails, please refer to the [this site](https://extras.wxpython.org/wxPython4/extras/linux/gtk3/)
 and pick a matching package URL, e.g. for Ubuntu 20.04
 
+`sudo apt-get install libgtk-3-dev`
 `python3 -m pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-20.04 wxPython`
+`pip3 install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-20.04 wxPython --user`
 
 - make a new folder
 - go inside that folder clone the following packages:
 
 `git clone https://github.com/derbibiko/pyo.git`
 
-`git clone https://github.com/derbibiko/zyne.git`
+`git clone https://github.com/derbibiko/zyne_b.git`
 
 - go inside the folder "pyo" and build it
+
+For macos make sure portaudio, portmidi, liblo are installed and can be found (consider setting environment variables LIBRARY_PATH and CPATH), then run
 
 `python3 setup.py install --use-double`
 
@@ -60,7 +64,7 @@ If the compilation of pyo fails, you can try to install the original pyo package
 
 `pip3 install pyo`
 
-- go inside the folder "zyne" and execute the Python script "Zyne.py"
+- go inside the folder "zyne_b_" and execute the Python script "Zyne.py"
 
 `python3 Zyne.py`
 
@@ -71,7 +75,7 @@ If the compilation of pyo fails, you can try to install the original pyo package
 
 `pip3 install pyinstaller`
 
-- execute the following command from Zyne's root directory
+- execute the following command from Zyne_B_'s root directory
 
 `./scripts/builder_pyinstaller_macos.sh`
 

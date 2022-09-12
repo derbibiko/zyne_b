@@ -19,11 +19,13 @@ from Resources.splash import ZyneSplashScreen
 from Resources.widgets import ZB_Keyboard
 from Resources.utils import toLog
 
-try:
-    import ctypes
-    ctypes.windll.shcore.SetProcessDpiAwareness(True)
-except Exception as e:
-    pass
+
+if vars.constants["IS_WIN"]:
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(True)
+    except Exception as e:
+        pass
 
 try:
     from wx.adv import AboutDialogInfo, AboutBox
@@ -153,12 +155,13 @@ class ZyneFrame(wx.Frame):
         wx.Frame.__init__(self, parent, id=-1, title=title, size=size)
 
         self.number_of_instances = int(len([p.name() for p in psutil.process_iter() if p.name().startswith('Zyne_B')])/2)
-
         self.SetSize(self.FromDIP(self.GetSize()))
+
+        # self.Bind(wx.EVT_SYS_COLOUR_CHANGED, self.OnColourChanged)
+        # print(wx.SystemSettings.GetAppearance().IsDark())
 
         vars.constants["FORECOLOUR"] = wx.SystemSettings.GetColour(wx.SYS_COLOUR_MENUTEXT)
         vars.constants["BACKCOLOUR"] = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
-
         self.SetBackgroundColour(vars.constants["BACKCOLOUR"])
         self.SetForegroundColour(vars.constants["FORECOLOUR"])
         self.selectionBackgroundColour = wx.Colour("#999999")
@@ -283,6 +286,7 @@ class ZyneFrame(wx.Frame):
         self.serverPanel.setServerSettings(self.serverPanel.serverSettings)
 
         self.control_keyboard = ZB_Keyboard_Control(self.lowerSplitWindow, self.keyboard)
+        self.control_keyboard.SetMinSize((self.FromDIP(60), self.keyboard_height))
 
         self.lowerSplitWindow.SplitVertically(self.control_keyboard, self.keyboard, -1)
         self.upperSplitWindow.SplitVertically(self.serverPanel, self.panel, -1)
@@ -378,6 +382,7 @@ class ZyneFrame(wx.Frame):
                 samplerpath = module.synth.path
             else:
                 samplerpath = ""
+            keymode = module.keymode
             params = [slider.GetValue() for slider in module.sliders]
             lfo_params = module.getLFOParams()
             dic = MODULES[name]
@@ -394,6 +399,7 @@ class ZyneFrame(wx.Frame):
             newmod.SetLoopmode(loopmode)
             newmod.SetXFade(xfade)
             newmod.SetSamples(samplerpath)
+            newmod.SetKeyMode(keymode)
 
             for j, param in enumerate(params):
                 wx.CallAfter(self.modules[-1].sliders[j].SetValue, param)
@@ -796,20 +802,21 @@ class ZyneFrame(wx.Frame):
             self.modules.append(lastModule)
             self.addModule(lastModule)
 
-            mute, channel, firstVel, lastVel, first, last, firstkey_pitch, loopmode, xfade, samplerpath = modparams[1:11]
+            mute, channel, firstVel, lastVel, first, last, firstkey_pitch, loopmode, xfade, samplerpath, keymode = modparams[1:12]
             lastModule.setMute(mute)
             lastModule.trigChannel.SetValue(channel)
             lastModule.trigVelRange.SetValue((firstVel, lastVel))
             lastModule.trigKeyRange.SetValue((first, last))
             lastModule.trigFirstKey.SetValue(firstkey_pitch)
+            lastModule.trigKeyMode.SetValue(keymode)
             if lastModule.synth.isSampler:
                 lastModule.trigLoopmode.SetValue(loopmode)
                 lastModule.trigXfade.SetValue(xfade)
                 lastModule.SetSamples(samplerpath)
 
-            if len(modparams) == 12 and modparams[11] is not None:
+            if len(modparams) == 13 and modparams[12] is not None:
                 envmode, graphAtt_pts, graphRel_pts, graphAtt_exp, graphRel_exp, \
-                graphAtt_dur, graphRel_dur, graphAtt_mode, graphRel_mode = modparams[11]
+                graphAtt_dur, graphRel_dur, graphAtt_mode, graphRel_mode = modparams[12]
                 lastModule.synth.graphAttAmp.SetList(graphAtt_pts)
                 lastModule.synth.graphRelAmp.SetList(graphRel_pts)
                 lastModule.knobGAttExp.SetValue(graphAtt_exp)
@@ -1030,7 +1037,7 @@ class ZyneFrame(wx.Frame):
 class ZyneApp(wx.App):
     def OnInit(self):
         self.frame = ZyneFrame(None)
-        self.frame.SetPosition((45 + 10 * self.frame.number_of_instances, 30 + 10 * self.frame.number_of_instances))
+        self.frame.SetPosition((45 + 10 * self.frame.number_of_instances, 90 + 10 * self.frame.number_of_instances))
         return True
 
     def MacOpenFile(self, filename):
