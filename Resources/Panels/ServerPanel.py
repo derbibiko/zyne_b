@@ -472,6 +472,9 @@ class ServerPanel(wx.Panel):
     def handleAudio(self, evt):
         modules = self.mainFrame.modules
         if evt.GetInt() == 1:
+            self.changeAmp(self.sliderAmp.GetValue())
+            if self.keyboardShown:
+                self.keyboard.reset()
             hasModule = False
             for popup in self.popups:
                 popup.Disable()
@@ -497,6 +500,15 @@ class ServerPanel(wx.Panel):
             if self.keyboardShown:
                 self.mainFrame.keyboard.SetFocus()
         else:
+            # reduce crackles while switching off
+            current_amp = int(self.sliderAmp.GetValue())
+            for amp in [-10., -30., -50, -85]:
+                if amp > current_amp:
+                    continue
+                self.changeAmp(amp)
+                time.sleep(.1)
+            time.sleep(.2)
+
             self.fsserver._stRev.reset()
             for popup in self.popups:
                 if popup != self.popupDriver or vars.vars["AUDIO_HOST"] != "Jack":
