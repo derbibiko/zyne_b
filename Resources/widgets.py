@@ -524,6 +524,9 @@ class ZB_Base_Control(wx.Panel):
         except Exception as e:
             pass
 
+    def setValue(self, x):
+        wx.CallAfter(self.SetValue, x)
+
     def SetValue(self, value, keepSelected=False):
         self.selected = keepSelected
         if self.isRange:
@@ -581,7 +584,7 @@ class ZB_Base_Control(wx.Panel):
             val = self.value
         if self.integer:
             if self.isRange:
-                self.value = (int(self.value[0]), int(self.value[1]))
+                val = (int(self.value[0]), int(self.value[1]))
             else:
                 val = int(val)
         return val
@@ -865,9 +868,6 @@ class ZyneB_ControlSlider(ZB_ControlSlider):
                          log, integer, powoftwo,
                          outFunction, label=label, orient=orient, precision=precision)
         self.parent = parent
-
-    def setValue(self, x):
-        wx.CallAfter(self.SetValue, x)
 
     def MouseDown(self, evt):
         if vars.vars["MIDILEARN"]:
@@ -1367,7 +1367,7 @@ class ZB_Keyboard_Control(wx.Panel):
 
         chBox.Add(self.channelText, 0, wx.LEFT, 4)
         self.cbChannel = wx.Choice(self, size=popsize,
-                                     choices=vars.constants["VAR_CHOICES"]["CHANNEL_KEYBOARD"])
+                                   choices=vars.constants["VAR_CHOICES"]["CHANNEL_KEYBOARD"])
         self.cbChannel.SetFont(font)
         self.cbChannel.SetStringSelection("1")
         self.cbChannel.Bind(wx.EVT_CHOICE, self.changeChannel)
@@ -1378,7 +1378,7 @@ class ZB_Keyboard_Control(wx.Panel):
         self.octaveText.SetFont(font)
         scBox.Add(self.octaveText, 0, wx.LEFT, 4)
         self.cbOctave = wx.Choice(self, size=popsize,
-                                    choices=list(map(str, range(-3, 5))))
+                                  choices=list(map(str, range(-3, 5))))
         self.cbOctave.SetFont(font)
         self.cbOctave.SetStringSelection("0")
         self.cbOctave.Bind(wx.EVT_CHOICE, self.changeOctave)
@@ -1565,8 +1565,8 @@ class ZB_Keyboard(wx.Panel):
         wx.CallAfter(self.Refresh)
         evt.Skip()
 
-    def redrawActiveKeys(self):
-        actKeys = {}
+    def updateActiveKeys(self):
+
         self.blackSelected = set()
         self.whiteSelected = set()
         self.blackVelocities = {}
@@ -1574,21 +1574,20 @@ class ZB_Keyboard(wx.Panel):
 
         for m in wx.GetTopLevelWindows()[0].modules:
             s = m.synth
-            for i, a in enumerate(s._trigamp.get(all=True)):
-                if a > 0.:
-                    actKeys[int(s._virtualpit.get(all=True)[i] - self.octave)] = int(a * 127)
-        for pit, vel in actKeys.items():
-            deg = pit % 12
-            if deg in self.black:
-                which = self.black.index(deg) + int(pit / 12) * 5
-                self.blackSelected.add(which)
-                self.blackVelocities[which] = 127 - vel
-            elif deg in self.white:
-                which = self.white.index(deg) + int(pit / 12) * 7
-                self.whiteSelected.add(which)
-                self.whiteVelocities[which] = 127 - vel
-
-        wx.CallAfter(self.Refresh)
+            vels = [int(a * 127) for a in s._trigamp.get(all=True)]
+            pits = [int(p) - self.octave for p in s._virtualpit.get(all=True)]
+            for vel, pit in [v for v in zip(vels, pits) if v[0] > 0]:
+                deg = pit % 12
+                if deg in self.black:
+                    which = self.black.index(deg) + int(pit / 12) * 5
+                    if which not in self.blackSelected:
+                        self.blackSelected.add(which)
+                        self.blackVelocities[which] = 127 - vel
+                elif deg in self.white:
+                    which = self.white.index(deg) + int(pit / 12) * 7
+                    if which not in self.whiteSelected:
+                        self.whiteSelected.add(which)
+                        self.whiteVelocities[which] = 127 - vel
 
     def OnKeyDown(self, evt):
         if evt.HasAnyModifiers():
@@ -1615,10 +1614,8 @@ class ZB_Keyboard(wx.Panel):
                     total -= 1
                 note = (pit, 100, self.channel)
 
-            if note is not None and self.outFunction and total < self.poly:
+            if note is not None and self.outFunction is not None and total < self.poly:
                 self.outFunction(note)
-
-            self.redrawActiveKeys()
 
         evt.StopPropagation()
 
@@ -1636,13 +1633,8 @@ class ZB_Keyboard(wx.Panel):
             deg = pit % 12
 
             note = None
-            if deg in self.black or deg in self.white:
-                note = (pit, 0, self.channel)
-
-            if note is not None and self.outFunction:
-                self.outFunction(note)
-
-            self.redrawActiveKeys()
+            if (deg in self.black or deg in self.white) and self.outFunction is not None:
+                self.outFunction((pit, 0., self.channel))
 
         evt.StopPropagation()
 
@@ -1651,11 +1643,10 @@ class ZB_Keyboard(wx.Panel):
             key = self.keyPressed[0]
             pit = self.keyPressed[1] + self.octave
             note = (pit, 0, self.channel)
-            if self.outFunction:
+            if self.outFunction is not None:
                 self.outFunction(note)
             self.keyPressed = None
-            if key in self.blackSelected or key in self.whiteSelected:
-                self.redrawActiveKeys()
+
         evt.StopPropagation()
 
     def MouseDown(self, evt):
@@ -1690,11 +1681,11 @@ class ZB_Keyboard(wx.Panel):
                     break
         if note is not None and self.outFunction and total < self.poly:
             self.outFunction(note)
-            self.redrawActiveKeys()
+
         evt.StopPropagation()
 
     def OnPaint(self, evt):
-        self.redrawActiveKeys()
+        self.updateActiveKeys()
         w, h = self.GetSize()
         dc = wx.AutoBufferedPaintDC(self)
         dc.SetBrush(self.brush_black)
@@ -1703,18 +1694,17 @@ class ZB_Keyboard(wx.Panel):
         dc.DrawRectangle(0, 0, w, h)
         dc.SetFont(self.key_font)
         gradient_start_col = self.gradient_start_col
+        dc.SetPen(self.pen_cccccc)
         for i, rec in enumerate(self.whiteKeys):
             if i in self.whiteSelected:
                 amp = int(self.whiteVelocities[i] * 1.5)
                 dc.SetBrush(self.brush_cccccc)
-                dc.SetPen(self.pen_cccccc)
                 dc.GradientFillLinear(rec, gradient_start_col, (amp, amp, amp), wx.SOUTH)
             else:
                 if self.c_key_idx - 35 > i or self.c_key_idx + 39 < i:
                     dc.SetBrush(self.brush_444444)
                 else:
                     dc.SetBrush(self.brush_white)
-                dc.SetPen(self.pen_cccccc)
                 dc.DrawRectangle(rec)
             if i == self.c_key_idx:
                 if i in self.whiteSelected:

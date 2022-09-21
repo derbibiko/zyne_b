@@ -480,7 +480,7 @@ class BasePanel(wx.Panel):
         self.knobSizerTop.Add(self.knobAtt, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobDec = ZyneB_ControlKnob(self, 0.001, 60.0, 0.1, log=True, label='Decay', outFunction=self.changeDecay)
         self.knobSizerTop.Add(self.knobDec, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
-        self.knobSus = ZyneB_ControlKnob(self, 0.001, 1.0, 0.7, label='Sustain', outFunction=self.changeSustain)
+        self.knobSus = ZyneB_ControlKnob(self, 0.0, 1.0, 0.7, label='Sustain', outFunction=self.changeSustain)
         self.knobSizerTop.Add(self.knobSus, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)
         self.knobRel = ZyneB_ControlKnob(self, 0.001, 60.0, 1.0, log=True, label='Release', outFunction=self.changeRelease)
         self.knobSizerTop.Add(self.knobRel, 0, wx.BOTTOM | wx.LEFT | wx.RIGHT, 0)

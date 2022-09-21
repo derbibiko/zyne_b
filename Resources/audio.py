@@ -187,7 +187,7 @@ class FSServer:
         self._stRev = STRev(self._outSig, inpos=[0.0, 1.0], revtime=2,
                             cutoff=5000, bal=0.25, roomSize=1).stop()
         self._outRev = self._stRev.mix(2).stop()
-        self._outRevMix = self._outRev.mix(1)
+        self._outRevMix = self._outRev.mix(2)
 
         self._compLevel = Compress(self._outSigMix, thresh=-3, ratio=2, risetime=.01,
                                    falltime=.1, lookahead=0, knee=0.5, outputAmp=True).stop()
@@ -302,55 +302,56 @@ class FSServer:
             self._outSig.out()
 
         elif self.eqOn and not self.revOn and not self.compOn:
+            self._fbEq.setInput(self._outSig, fadetime=2.0)
             self._fbEq.play()
             self._outEq.out()
 
         elif not self.eqOn and self.revOn and not self.compOn:
-            self._stRev.input = self._outSig
+            self._stRev.setInput(self._outSig, fadetime=2.0)
             self._stRev.play()
             self._outRev.out()
 
         elif not self.eqOn and not self.revOn and self.compOn:
-            self._compLevel.input = self._outSigMix
-            self._compDelay.input = self._outSig
+            self._compLevel.setInput(self._outSigMix, fadetime=2.0)
+            self._compDelay.setInput(self._outSig, fadetime=2.0)
             self._compLevel.play()
             self._compDelay.play()
             self._outComp.out()
 
         elif self.eqOn and self.revOn and not self.compOn:
+            self._stRev.setInput(self._outEq, fadetime=2.0)
             self._fbEq.play()
             self._outEq.play()
-            self._stRev.input = self._outEq
             self._stRev.play()
             self._outRev.out()
 
         elif self.eqOn and self.revOn and self.compOn:
+            self._stRev.setInput(self._outEq, fadetime=2.0)
+            self._compLevel.setInput(self._outRevMix, fadetime=2.0)
+            self._compDelay.setInput(self._outRev, fadetime=2.0)
             self._fbEq.play()
             self._outEq.play()
-            self._stRev.input = self._outEq
             self._stRev.play()
             self._outRev.play()
-            self._compLevel.input = self._outRevMix
-            self._compDelay.input = self._outRev
             self._compLevel.play()
             self._compDelay.play()
             self._outComp.out()
 
         elif not self.eqOn and self.revOn and self.compOn:
-            self._stRev.input = self._outSig
+            self._stRev.setInput(self._outSig, fadetime=2.0)
+            self._compLevel.setInput(self._outRevMix, fadetime=2.0)
+            self._compDelay.setInput(self._outRev, fadetime=2.0)
             self._stRev.play()
             self._outRev.play()
-            self._compLevel.input = self._outRevMix
-            self._compDelay.input = self._outRev
             self._compLevel.play()
             self._compDelay.play()
             self._outComp.out()
 
         elif self.eqOn and not self.revOn and self.compOn:
+            self._compLevel.setInput(self._outEqMix, fadetime=2.0)
+            self._compDelay.setInput(self._outEq, fadetime=2.0)
             self._fbEq.play()
             self._outEq.play()
-            self._compLevel.input = self._outEqMix
-            self._compDelay.input = self._outEq
             self._compLevel.play()
             self._compDelay.play()
             self._outComp.out()

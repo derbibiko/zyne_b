@@ -827,12 +827,6 @@ class ZyneFrame(wx.Frame):
                 lastModule.knobGRelMode.SetValue(graphRel_mode)
                 lastModule.setEnvMode(envmode)
 
-        for i, paramset in enumerate(params):
-            if len(paramset) == 10:  # old zy
-                paramset = paramset[:5] + [1.] + paramset[5:]
-            for j, param in enumerate(paramset):
-                self.modules[i].sliders[j].SetValue(param)
-
         slider_idx = 0
         for i, ctl_paramset in enumerate(ctl_params):
             for j, ctl_param in enumerate(ctl_paramset):
@@ -856,6 +850,13 @@ class ZyneFrame(wx.Frame):
 
         for i, lfo_param in enumerate(lfo_params):
             self.modules[i].reinitLFOS(lfo_param)
+
+        for i, paramset in enumerate(params):
+            if len(paramset) == 10:  # old zy
+                paramset = paramset[:5] + [1.] + paramset[5:]
+            for j, param in enumerate(paramset):
+                self.modules[i].sliders[j].SetValue(param)
+
         self.refresh()
 
     def setServerPanelFooter(self, s=None):

@@ -27,8 +27,6 @@ class ServerPanel(wx.Panel):
         self.sampletype = vars.vars["BITS"]
         self.virtualNotePressed = {}
         self.virtualNotePressedHold = {}
-        self.virtualNotePressedHold = {}
-        self.virtualNoteActiveHold = {}
         self.keyboardShown = 0
         self.serverSettings = []
         self.selected_output_driver_name = None
@@ -352,7 +350,6 @@ class ServerPanel(wx.Panel):
                         synth._trigamp[voice].setValue(0)
             self.virtualNotePressed = {}
             self.virtualNotePressedHold = {}
-            self.virtualNoteActiveHold = {}
 
     def retrigVirtualNotes(self):
         notes = self.keyboard.getCurrentNotes()
@@ -374,6 +371,7 @@ class ServerPanel(wx.Panel):
                     if i not in vals:
                         break
                 voice = self.virtualNotePressed[pit] = i
+
             elif vel == 0 and pit in self.virtualNotePressed.keys():
                 voice = self.virtualNotePressed[pit]
                 del self.virtualNotePressed[pit]
@@ -384,6 +382,7 @@ class ServerPanel(wx.Panel):
                     if j not in vals:
                         break
                 voiceHold = self.virtualNotePressedHold[pit] = j
+
             elif vel > 0 and pit in self.virtualNotePressedHold.keys():
                 voiceHold = self.virtualNotePressedHold[pit]
                 velHold = 0.0
@@ -395,6 +394,7 @@ class ServerPanel(wx.Panel):
                         and pit >= synth.first \
                         and pit <= synth.last \
                         and (note[1] == 0 or (note[1] >= synth.firstVel and note[1] <= synth.lastVel)):
+
                     if voice is not None and synth.keymode == 0:  # no Hold
                         synth._virtualpit[voice].setValue(pit)
                         synth._trigamp[voice].setValue(vel)
@@ -402,75 +402,44 @@ class ServerPanel(wx.Panel):
                     elif voiceHold is not None and synth.keymode == 1:  # Hold
                         synth._virtualpit[voiceHold].setValue(pit)
                         synth._trigamp[voiceHold].setValue(velHold)
-                        if velHold > 0:
-                            self.virtualNoteActiveHold[pit] = note[1]
-                        else:
-                            if pit in self.virtualNoteActiveHold:
-                                del self.virtualNoteActiveHold[pit]
 
                     elif voiceHold is not None and synth.keymode == 2:  # OnOff Hold
                         v = 1.0 if velHold > 0 else velHold
                         synth._virtualpit[voiceHold].setValue(pit)
                         synth._trigamp[voiceHold].setValue(v)
-                        if velHold > 0:
-                            self.virtualNoteActiveHold[pit] = 127
-                        else:
-                            if pit in self.virtualNoteActiveHold:
-                                del self.virtualNoteActiveHold[pit]
 
                     elif voiceHold is not None and synth.keymode == 3:  # 1 Key Hold
-                        del_keys = set()
-                        for k in self.virtualNoteActiveHold.keys():
-                            if k == pit:
-                                continue
-                            for akey, avoice in self.virtualNotePressedHold.items():
-                                if akey == k:
-                                    synth._virtualpit[avoice].setValue(akey)
-                                    synth._trigamp[avoice].setValue(0.0)
-                                    del_keys.add(akey)
-                        for k in del_keys:
-                            del self.virtualNoteActiveHold[k]
-                            del self.virtualNotePressedHold[k]
-
+                        vels = synth._trigamp.get(all=True)
+                        pits = synth._virtualpit.get(all=True)
+                        for i, (v, p) in enumerate(zip(vels, pits)):
+                            if v > 0.:
+                                synth._virtualpit[i].setValue(p)
+                                synth._trigamp[i].setValue(0.0)
+                                if int(p) != pit and int(p) in self.virtualNotePressedHold:
+                                    del self.virtualNotePressedHold[int(p)]
                         synth._virtualpit[voiceHold].setValue(pit)
                         synth._trigamp[voiceHold].setValue(velHold)
-                        if velHold > 0:
-                            self.virtualNoteActiveHold[pit] = note[1]
-                        else:
-                            if pit in self.virtualNoteActiveHold:
-                                del self.virtualNoteActiveHold[pit]
 
                     elif voiceHold is not None and synth.keymode == 4:  # 1 Key OnOff Hold
+                        vels = synth._trigamp.get(all=True)
+                        pits = synth._virtualpit.get(all=True)
+                        for i, (v, p) in enumerate(zip(vels, pits)):
+                            if v > 0.:
+                                synth._virtualpit[i].setValue(p)
+                                synth._trigamp[i].setValue(0.0)
+                                if int(p) != pit and int(p) in self.virtualNotePressedHold:
+                                    del self.virtualNotePressedHold[int(p)]
                         v = 1.0 if velHold > 0 else velHold
-                        del_keys = set()
-                        for k in self.virtualNoteActiveHold.keys():
-                            if k == pit:
-                                continue
-                            for akey, avoice in self.virtualNotePressedHold.items():
-                                if akey == k:
-                                    synth._virtualpit[avoice].setValue(akey)
-                                    synth._trigamp[avoice].setValue(0.0)
-                                    del_keys.add(akey)
-                        for k in del_keys:
-                            del self.virtualNoteActiveHold[k]
-                            del self.virtualNotePressedHold[k]
-
                         synth._virtualpit[voiceHold].setValue(pit)
                         synth._trigamp[voiceHold].setValue(v)
-                        if velHold > 0:
-                            self.virtualNoteActiveHold[pit] = 127
-                        else:
-                            if pit in self.virtualNoteActiveHold:
-                                del self.virtualNoteActiveHold[pit]
 
-            self.keyboard.redrawActiveKeys()
+            wx.CallLater(10, self.keyboard.Refresh)
 
         except Exception as e:
             print('keyboard reset due to error', e)
             self.keyboard.reset()
 
     def handleAudio(self, evt):
-        modules = self.mainFrame.modules
         if evt.GetInt() == 1:
             self.changeAmp(self.sliderAmp.GetValue())
             if self.keyboardShown:
@@ -492,24 +461,24 @@ class ServerPanel(wx.Panel):
                     kt._enable = False
                     kt.Refresh()
                     hasModule = True
-            self.start()
             if hasModule and self.mainFrame.serverPanel.sliderAmp.midictlnumber is not None:
                 slider = self.mainFrame.serverPanel.sliderAmp
                 slider.midictl = Midictl(slider.midictlnumber, -60, 18, slider.GetValue())
-                slider.trigFunc = TrigFunc(self.mainFrame.modules[0].synth._midi_metro, slider.valToWidget)
+                slider.trigFunc = TrigFunc(modules[0].synth._midi_metro, slider.valToWidget)
             if self.keyboardShown:
                 self.mainFrame.keyboard.SetFocus()
+            self.start()
         else:
             # reduce crackles while switching off
             current_amp = int(self.sliderAmp.GetValue())
-            for amp in [-10., -30., -50, -85]:
-                if amp > current_amp:
-                    continue
+            for amp in range(current_amp, -100, -5):
                 self.changeAmp(amp)
-                time.sleep(.1)
-            time.sleep(.2)
+                time.sleep(.025)
+            time.sleep(.15)
+            self.stop()
 
-            self.fsserver._stRev.reset()
+            wx.CallAfter(self.setDriverSetting)
+
             for popup in self.popups:
                 if popup != self.popupDriver or vars.vars["AUDIO_HOST"] != "Jack":
                     popup.Enable()
@@ -522,17 +491,15 @@ class ServerPanel(wx.Panel):
                 menuItem = self.mainFrame.menubar.FindItemById(menuId)
                 if menuItem is not None:
                     menuItem.Enable(True)
-            for module in self.mainFrame.modules:
-                if module.gdadsron is not None:
-                    module.gdadsron = None
-                for kt in module.keytriggers:
-                    kt._enable = True
-                    # kt.Refresh()
-            wx.CallAfter(self.meter.setRms, *[0 for i in range(self.meter.numSliders)])
             if self.mainFrame.serverPanel.sliderAmp.midictl is not None:
                 self.mainFrame.serverPanel.sliderAmp.midictl = None
                 self.mainFrame.serverPanel.sliderAmp.trigFunc = None
-            self.setDriverSetting()
+
+            if self.keyboardShown:
+                self.resetVirtualKeyboard()
+                self.mainFrame.keyboard.SetFocus()
+            else:
+                self.SetFocus()
 
     def handleRec(self, evt):
         if evt.GetInt() == 1:
@@ -630,7 +597,7 @@ class ServerPanel(wx.Panel):
                 widget.SetValue(comp[i])
 
     def setDriverSetting(self, func=None, val=0):
-        self.mainFrame.panel.Freeze()
+        self.mainFrame.upperSplitWindow.Freeze()
         if vars.vars["VIRTUAL"]:
             self.resetVirtualKeyboard()
         modules, params, lfo_params, ctl_params = self.mainFrame.getModulesAndParams()
@@ -642,7 +609,7 @@ class ServerPanel(wx.Panel):
         self.boot()
         self.mainFrame.setModulesAndParams(modules, params, lfo_params, ctl_params)
         self.setPostProcSettings(postProcSettings)
-        self.mainFrame.panel.Thaw()
+        self.mainFrame.upperSplitWindow.Thaw()
         if self.keyboardShown:
             self.mainFrame.keyboard.SetFocus()
         else:
