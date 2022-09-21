@@ -103,7 +103,7 @@ class TutorialFrame(wx.Frame):
 
 
 class SamplingDialog(wx.Dialog):
-    def __init__(self, parent, title="Export Samples...", pos=wx.DefaultPosition, size=wx.DefaultSize):
+    def __init__(self, parent, title="Export Samples...", pos=wx.DefaultPosition, size=wx.DefaultSize, chords=False):
         wx.Dialog.__init__(self, parent, id=1, title=title, pos=pos, size=size)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(wx.StaticText(self, -1, "Export settings for sampled sounds."), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
@@ -116,15 +116,28 @@ class SamplingDialog(wx.Dialog):
 
         box = wx.BoxSizer(wx.HORIZONTAL)
         box.Add(wx.StaticText(self, -1, "First:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
-        self.first = wx.TextCtrl(self, -1, "0", size=(40, -1))
+        self.first = wx.TextCtrl(self, -1, "60", size=(40, -1))
         box.Add(self.first, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
         box.Add(wx.StaticText(self, -1, "Last:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
-        self.last = wx.TextCtrl(self, -1, "128", size=(40, -1))
+        self.last = wx.TextCtrl(self, -1, "72", size=(40, -1))
         box.Add(self.last, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
         box.Add(wx.StaticText(self, -1, "Step:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
         self.step = wx.TextCtrl(self, -1, "1", size=(40, -1))
         box.Add(self.step, 1, wx.ALIGN_CENTRE | wx.ALL, 5)
         sizer.Add(box, 0, wx.GROW | wx.ALL, 5)
+
+        if chords:
+            box = wx.BoxSizer(wx.VERTICAL)
+            box.Add(wx.StaticText(self, -1, "Chords as 'relative cent/velocity' (default velocity is 100):"), 0, wx.ALIGN_LEFT | wx.ALL, 5)
+            self.notechords = wx.TextCtrl(self, -1, "+4/120,-1/40,12", size=(350, -1))
+            box.Add(self.notechords, 1, wx.EXPAND | wx.ALIGN_LEFT | wx.ALL, 5)
+            sizer.Add(box, 0, wx.GROW | wx.ALL, 5)
+        else:
+            box = wx.BoxSizer(wx.HORIZONTAL)
+            box.Add(wx.StaticText(self, -1, "MIDI velocity (1-127):"), 0, wx.ALIGN_LEFT | wx.ALL, 5)
+            self.velocity = wx.TextCtrl(self, -1, "90", size=(350, -1))
+            box.Add(self.velocity, 1, wx.EXPAND | wx.ALIGN_LEFT | wx.ALL, 5)
+            sizer.Add(box, 0, wx.GROW | wx.ALL, 5)
 
         box = wx.BoxSizer(wx.HORIZONTAL)
         box.Add(wx.StaticText(self, -1, "Noteon dur:"), 0, wx.ALIGN_CENTRE | wx.ALL, 5)
@@ -675,12 +688,14 @@ class ZyneFrame(wx.Frame):
     def onExport(self, evt):
         if self.serverPanel.onOff.GetValue():
             return
+        chords = False
         if evt.GetId() == vars.constants["ID"]["Export"]:
             mode = "Samples"
             title = "Export samples..."
             title2 = "Exporting samples..."
             num_modules = 1
         elif evt.GetId() in [vars.constants["ID"]["ExportChord"], vars.constants["ID"]["ExportChordTracks"]]:
+            chords = True
             if evt.GetId() == vars.constants["ID"]["ExportChord"]:
                 mode = "Chords"
                 title = "Export chords..."
@@ -691,23 +706,53 @@ class ZyneFrame(wx.Frame):
                 title = "Export chords as separated tracks..."
                 title2 = "Exporting chords as separated tracks..."
                 num_modules = len(self.modules)
-            notes = self.keyboard.getCurrentNotes()
-            if len(notes) == 0:
-                wx.LogMessage("Press some notes on the virtual keyboard in Hold mode before calling the export chords function.")
-                return
-            midi_pitches = [tup[0] for tup in notes]
-            midi_velocities = [tup[1] for tup in notes]
-            min_pitch = min(midi_pitches)
-            pitch_factors = [pit - min_pitch for pit in midi_pitches]
-            amp_factors = [amp / 127.0 for amp in midi_velocities]
         elif evt.GetId() == vars.constants["ID"]["ExportTracks"]:
             mode = "Tracks"
             title = "Export samples as separated tracks..."
             title2 = "Exporting samples as separated tracks..."
             num_modules = len(self.modules)
-        dlg = SamplingDialog(self, title=title, size=(450, 270))
+        dlg = SamplingDialog(self, title=title, size=(450, 310), chords=chords)
         dlg.CenterOnParent()
         if dlg.ShowModal() == wx.ID_OK:
+
+            if chords:
+                try:
+                    chrds = dlg.notechords.GetValue().split(',')
+                    notes = []
+                    for c in chrds:
+                        s = c.split('/')
+                        if len(s) == 1:
+                            s.append(100)
+                        notes.append((int(s[0]), abs(int(s[1]))))
+                except Exception as e:
+                    wx.LogMessage("Please check input of chords. It may only contain positive and negative integers separated"
+                                  "by a comma or a slash.")
+                    return
+
+                pitch_factors = [n[0] for n in notes]
+                amp_factors_ = [n / 127 for n in [127 if n[1] > 127 else n[1] for n in notes]]
+                m_amp = sum(amp_factors_)
+                if m_amp < 1.:
+                    m_map = 1.
+                amp_factors = [a / m_amp for a in amp_factors_]
+            else:
+                try:
+                    velocity = abs(int(dlg.velocity.GetValue()))
+                    if velocity > 127:
+                        velocity = 1.
+                    elif velocity < 1:
+                        velocity = 1 / 127
+                    else:
+                        velocity /= 127
+                    velocity *= .33
+                except Exception as e:
+                    wx.LogMessage("Please check input for velocity. It may only contain a positive integer between 1 and 127.")
+                    return
+
+            keyboard_visible = self.serverPanel.keyboardShown
+            if keyboard_visible:
+                self.showKeyboard(False)
+
             if vars.vars["EXPORT_PATH"] and os.path.isdir(vars.vars["EXPORT_PATH"]):
                 rootpath = vars.vars["EXPORT_PATH"]
             else:
@@ -740,13 +785,13 @@ class ZyneFrame(wx.Frame):
             for i in range(first, last, step):
                 if mode == "Samples":
                     vars.vars["MIDIPITCH"] = i
-                    vars.vars["MIDIVELOCITY"] = 0.707
+                    vars.vars["MIDIVELOCITY"] = velocity
                 elif mode == "Chords":
                     vars.vars["MIDIPITCH"] = [i + fac for fac in pitch_factors]
                     vars.vars["MIDIVELOCITY"] = amp_factors
                 elif mode == "Tracks":
                     vars.vars["MIDIPITCH"] = i
-                    vars.vars["MIDIVELOCITY"] = 0.707
+                    vars.vars["MIDIVELOCITY"] = velocity
                 elif mode == "ChordsTracks":
                     vars.vars["MIDIPITCH"] = [i + fac for fac in pitch_factors]
                     vars.vars["MIDIVELOCITY"] = amp_factors
@@ -759,9 +804,11 @@ class ZyneFrame(wx.Frame):
                     (keepGoing, skip) = dlg2.Update(count, "Exporting %s" % name)
                     self.serverPanel.setRecordOptions(dur=duration, filename=path)
                     self.serverPanel.start()
+                    time.sleep(0.25)
                     self.deleteAllModules()
                     self.serverPanel.shutdown()
                     self.serverPanel.boot()
+                    time.sleep(0.25)
                 else:
                     for j in range(num_modules):
                         self.setModulesAndParams(modules, params, lfo_params, ctl_params, True)
@@ -773,16 +820,20 @@ class ZyneFrame(wx.Frame):
                         (keepGoing, skip) = dlg2.Update(count, "Exporting %s" % name)
                         self.serverPanel.setRecordOptions(dur=duration, filename=path)
                         self.serverPanel.start()
+                        time.sleep(0.25)
                         self.deleteAllModules()
                         self.serverPanel.shutdown()
-                        time.sleep(0.25)
                         self.serverPanel.boot()
+                        time.sleep(0.25)
             dlg2.Destroy()
             self.serverPanel.reinitServer(vars.vars["SLIDERPORT"], vars.vars["AUDIO_HOST"], serverSettings, postProcSettings)
             vars.vars["MIDIPITCH"] = None
             vars.vars["MIDIVELOCITY"] = 0.707
             self.serverPanel.setAmpCallable()
             self.setModulesAndParams(modules, params, lfo_params, ctl_params)
+            if keyboard_visible:
+                self.showKeyboard(True)
+            self.serverPanel.meter.setRms(*[0., 0.])
         dlg.Destroy()
 
     def getModulesAndParams(self):
@@ -798,7 +849,7 @@ class ZyneFrame(wx.Frame):
             dic = MODULES[name]
             titleDic = dic.get("slider_title_dicts", None)
             lastModule = GenericPanel(self.panel, name, dic["title"], dic["synth"],
-                                             dic["p1"], dic["p2"], dic["p3"], titleDic)
+                                      dic["p1"], dic["p2"], dic["p3"], titleDic)
             self.modules.append(lastModule)
             self.addModule(lastModule)
 
@@ -816,7 +867,7 @@ class ZyneFrame(wx.Frame):
 
             if len(modparams) == 13 and modparams[12] is not None:
                 envmode, graphAtt_pts, graphRel_pts, graphAtt_exp, graphRel_exp, \
-                graphAtt_dur, graphRel_dur, graphAtt_mode, graphRel_mode = modparams[12]
+                    graphAtt_dur, graphRel_dur, graphAtt_mode, graphRel_mode = modparams[12]
                 lastModule.synth.graphAttAmp.SetList(graphAtt_pts)
                 lastModule.synth.graphRelAmp.SetList(graphRel_pts)
                 lastModule.knobGAttExp.SetValue(graphAtt_exp)
@@ -911,7 +962,7 @@ class ZyneFrame(wx.Frame):
 
         dic = _f({
             "server": serverSettings, "postproc": postProcSettings,
-            "modules": modules, "params":params, "lfo_params": lfo_params,
+            "modules": modules, "params": params, "lfo_params": lfo_params,
             "ctl_params": ctl_params,
             "output_driver": out_drv, "midi_interface": midi_itf
         })
