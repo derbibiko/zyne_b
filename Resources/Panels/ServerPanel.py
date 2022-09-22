@@ -468,6 +468,7 @@ class ServerPanel(wx.Panel):
             if self.keyboardShown:
                 self.mainFrame.keyboard.SetFocus()
             self.start()
+            self.onOff.SetLabel('Off')
         else:
             # reduce crackles while switching off
             current_amp = int(self.sliderAmp.GetValue())
@@ -500,6 +501,7 @@ class ServerPanel(wx.Panel):
                 self.mainFrame.keyboard.SetFocus()
             else:
                 self.SetFocus()
+            self.onOff.SetLabel('On')
 
     def handleRec(self, evt):
         if evt.GetInt() == 1:
@@ -516,8 +518,10 @@ class ServerPanel(wx.Panel):
                     return
             self.setRecordOptions(dur=-1, filename=path)
             self.fsserver.recstart()
+            self.rec.SetLabel('Stop')
         else:
             self.fsserver.recstop()
+            self.rec.SetLabel('Start')
 
     def changeAmp(self, value):
         self.fsserver.setAmp(p_mathpow(10.0, float(value) * 0.05))
